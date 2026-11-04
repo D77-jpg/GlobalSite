@@ -1,0 +1,3291 @@
+openapi: 3.0.3
+info:
+  title: GlobalSite Foundation API
+  version: 0.1.0
+  description: >-
+    S2 independent account and organization API. This is not the GlobalCRM Integration API. Cookie sessions
+    use 15-minute access and 14-day refresh lifetime; writes require exact PUBLIC_URL Origin and session-bound
+    double-submit CSRF. Login locks after five failures for 15 minutes. OTP expires in five minutes with five
+    attempts. Auth requests are limited to 40/IP/minute, other requests 240/IP/minute, shared via MongoDB.
+    Development email receipts never appear in production. Collection pages sort by descending ObjectId; null
+    cursor ends a page series.
+servers:
+  - url: http://localhost:5080/api/v1
+    description: Compose
+  - url: http://localhost:5001/api/v1
+    description: Local API
+paths:
+  /health/live:
+    get:
+      operationId: foundation1
+      summary: Process liveness
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                    required:
+                      - ok
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /health/ready:
+    get:
+      operationId: foundation2
+      summary: MongoDB readiness
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                    required:
+                      - ok
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                    required:
+                      - ok
+                required:
+                  - success
+                  - data
+  /auth/register:
+    post:
+      operationId: foundation3
+      summary: Create user, organization and administrator atomically
+      x-roles: []
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Accepted"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Registration"
+  /auth/verify-email:
+    post:
+      operationId: foundation4
+      summary: Consume one-time verification link
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      verified:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - verified
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+  /auth/resend-verification:
+    post:
+      operationId: foundation5
+      summary: Send verification if account exists
+      x-roles: []
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Accepted"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+  /auth/forgot-password:
+    post:
+      operationId: foundation6
+      summary: Send reset instructions without account enumeration
+      x-roles: []
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Accepted"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+  /auth/reset-password:
+    post:
+      operationId: foundation7
+      summary: Reset password and revoke every session
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      reset:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - reset
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordReset"
+  /auth/login:
+    post:
+      operationId: foundation8
+      summary: Sign in or issue email OTP challenge
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    oneOf:
+                      - type: object
+                        properties:
+                          authenticated:
+                            type: boolean
+                            enum:
+                              - true
+                        required:
+                          - authenticated
+                      - $ref: "#/components/schemas/Challenge"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "423":
+          description: Account locked for 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Login"
+  /auth/2fa/verify:
+    post:
+      operationId: foundation9
+      summary: Consume login OTP; issue HttpOnly cookies
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      authenticated:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - authenticated
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpRequest"
+  /auth/refresh:
+    post:
+      operationId: foundation10
+      summary: Rotate access/refresh cookies; replay revokes session
+      x-roles: []
+      security:
+        - refreshCookie: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      authenticated:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - authenticated
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+  /auth/me:
+    get:
+      operationId: foundation11
+      summary: Current verified user and organization role
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Me"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/logout:
+    post:
+      operationId: foundation12
+      summary: Revoke current session and clear cookies
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      loggedOut:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - loggedOut
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+  /auth/sessions:
+    get:
+      operationId: foundation13
+      summary: List own sessions in current organization
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/SessionPage"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+  /auth/sessions/{id}:
+    delete:
+      operationId: foundation14
+      summary: Revoke an own session immediately
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      revoked:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - revoked
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+  /auth/2fa/challenge:
+    post:
+      operationId: foundation15
+      summary: Reauthenticate before changing two-step verification
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Challenge"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordRequest"
+  /auth/2fa:
+    put:
+      operationId: foundation16
+      summary: Consume security OTP and revoke other sessions
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                    required:
+                      - enabled
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorUpdate"
+  /organizations:
+    get:
+      operationId: foundation17
+      summary: List own active organizations
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/OrganizationPage"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+  /organizations/{id}/select:
+    post:
+      operationId: foundation18
+      summary: Switch to an active membership and rotate session
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      selected:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - selected
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+  /organization:
+    get:
+      operationId: foundation19
+      summary: Current organization
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Organization"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: foundation20
+      summary: Update current organization name
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Organization"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationUpdate"
+  /members:
+    get:
+      operationId: foundation21
+      summary: List current organization members
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/MemberPage"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+  /invitations:
+    post:
+      operationId: foundation22
+      summary: Allocate plan seat and invite recipient
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        pattern: ^[a-f0-9]{24}$
+                      devReceipt:
+                        type: string
+                        minLength: 1
+                        maxLength: 200
+                    required:
+                      - id
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Invitation"
+  /members/{id}:
+    patch:
+      operationId: foundation23
+      summary: Change role/revoke; owner cannot be demoted
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      updated:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - updated
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+  /invitations/accept:
+    post:
+      operationId: foundation24
+      summary: Accept one-time invitation matching verified email
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      organizationId:
+                        type: string
+                        pattern: ^[a-f0-9]{24}$
+                    required:
+                      - organizationId
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+  /usage:
+    get:
+      operationId: foundation25
+      summary: Organization quota usage/reservations
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Usage"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /plans:
+    get:
+      operationId: foundation26
+      summary: Plan limits, no payment processing
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      trial:
+                        $ref: "#/components/schemas/Limits"
+                      starter:
+                        $ref: "#/components/schemas/Limits"
+                      growth:
+                        $ref: "#/components/schemas/Limits"
+                    required:
+                      - trial
+                      - starter
+                      - growth
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /ai/provider:
+    get:
+      operationId: foundation27
+      summary: Provider settings with secret omitted
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Provider"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: foundation28
+      summary: Save independent encrypted organization provider
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Provider"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderUpdate"
+  /ai/provider/test:
+    post:
+      operationId: foundation29
+      summary: Bounded paid test; unknown outcome stays reserved
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                      tokens:
+                        type: integer
+                        minimum: 0
+                        maximum: 4096
+                    required:
+                      - ok
+                      - tokens
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: AI provider failed or outcome/usage uncertain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+  /assets:
+    post:
+      operationId: foundation30
+      summary: Store quota-bound PNG/JPEG, maximum 10 MiB
+      x-roles:
+        - admin
+        - editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/Asset"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+  /assets/{id}:
+    get:
+      operationId: foundation31
+      summary: Download own-organization image attachment
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Attachment
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+    delete:
+      operationId: foundation32
+      summary: Delete own-organization asset and release storage
+      x-roles:
+        - admin
+        - editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+                        enum:
+                          - true
+                    required:
+                      - deleted
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+  /audit-logs:
+    get:
+      operationId: foundation33
+      summary: Organization audit events, no bodies or secrets
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    $ref: "#/components/schemas/AuditPage"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+  /metrics:
+    get:
+      operationId: foundation34
+      summary: Bounded process metrics (organization admin only)
+      x-roles:
+        - admin
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Prometheus text
+          content:
+            text/plain:
+              schema:
+                type: string
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dev/mail/{receipt}:
+    get:
+      operationId: foundation35
+      summary: Development-only capability protected email preview
+      x-roles: []
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      subject:
+                        type: string
+                        minLength: 1
+                        maxLength: 300
+                      text:
+                        type: string
+                        minLength: 1
+                        maxLength: 5000
+                    required:
+                      - subject
+                      - text
+                required:
+                  - success
+                  - data
+        "400":
+          description: Validation, expired/used token or OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Origin, CSRF, role or membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict or plan quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Shared request rate limit
+          headers:
+            Retry-After:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: receipt
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      x-development-only: true
+      description: Unavailable in production. Receipt expires after one hour. No email address is returned.
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: gs_access
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: gs_refresh
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: Must match PUBLIC_URL origin exactly.
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 80
+            requestId:
+              type: string
+              format: uuid
+          required:
+            - code
+            - requestId
+      required:
+        - success
+        - error
+    Accepted:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+          enum:
+            - true
+        devReceipt:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - accepted
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: email
+        emailVerified:
+          type: boolean
+        twoFactorEnabled:
+          type: boolean
+        locale:
+          type: string
+          enum:
+            - zh
+            - en
+      required:
+        - id
+        - name
+        - email
+        - emailVerified
+        - twoFactorEnabled
+        - locale
+    Me:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        organizationId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        role:
+          type: string
+          enum:
+            - admin
+            - editor
+            - viewer
+      required:
+        - user
+        - organizationId
+        - role
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        plan:
+          type: string
+          enum:
+            - trial
+            - starter
+            - growth
+      required:
+        - id
+        - name
+        - plan
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        userId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: email
+        role:
+          type: string
+          enum:
+            - admin
+            - editor
+            - viewer
+        status:
+          type: string
+          enum:
+            - invited
+            - active
+            - revoked
+      required:
+        - id
+        - role
+        - status
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        current:
+          type: boolean
+        userAgent:
+          type: string
+          minLength: 0
+          maxLength: 120
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - current
+        - userAgent
+        - createdAt
+        - expiresAt
+    Challenge:
+      type: object
+      properties:
+        challengeId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        devReceipt:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - challengeId
+    Limits:
+      type: object
+      properties:
+        members:
+          type: integer
+          minimum: 1
+        sites:
+          type: integer
+          minimum: 1
+        ai_tokens:
+          type: integer
+          minimum: 1
+        builds:
+          type: integer
+          minimum: 1
+        storage_bytes:
+          type: integer
+          minimum: 1
+      required:
+        - members
+        - sites
+        - ai_tokens
+        - builds
+        - storage_bytes
+    Usage:
+      type: object
+      properties:
+        period:
+          type: string
+          minLength: 1
+          maxLength: 7
+        limits:
+          $ref: "#/components/schemas/Limits"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              metric:
+                type: string
+                enum:
+                  - ai_tokens
+                  - builds
+                  - storage_bytes
+              consumed:
+                type: integer
+                minimum: 0
+              reserved:
+                type: integer
+                minimum: 0
+            required:
+              - metric
+              - consumed
+              - reserved
+      required:
+        - period
+        - limits
+        - items
+    Provider:
+      type: object
+      properties:
+        modelName:
+          type: string
+          minLength: 0
+          maxLength: 120
+        baseUrl:
+          type: string
+          enum:
+            - https://api.openai.com/v1
+        enabled:
+          type: boolean
+        configured:
+          type: boolean
+      required:
+        - modelName
+        - baseUrl
+        - enabled
+        - configured
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        bytes:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        mime:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+      required:
+        - id
+        - bytes
+        - mime
+    Audit:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        action:
+          type: string
+          minLength: 1
+          maxLength: 120
+        actorId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        targetId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        requestId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - action
+        - createdAt
+    MemberPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        nextCursor:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+          nullable: true
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - nextCursor
+        - hasMore
+    SessionPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+        nextCursor:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+          nullable: true
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - nextCursor
+        - hasMore
+    OrganizationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Organization"
+        nextCursor:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+          nullable: true
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - nextCursor
+        - hasMore
+    AuditPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Audit"
+        nextCursor:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+          nullable: true
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - nextCursor
+        - hasMore
+    Registration:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: email
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        organizationName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        locale:
+          type: string
+          enum:
+            - zh
+            - en
+          default: zh
+      required:
+        - email
+        - password
+        - name
+        - organizationName
+      additionalProperties: false
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: email
+        password:
+          type: string
+          minLength: 0
+          maxLength: 128
+      required:
+        - email
+        - password
+      additionalProperties: false
+    EmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: email
+      required:
+        - email
+      additionalProperties: false
+    TokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+        - token
+      additionalProperties: false
+    PasswordReset:
+      type: object
+      properties:
+        token:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+      required:
+        - token
+        - password
+      additionalProperties: false
+    OtpRequest:
+      type: object
+      properties:
+        challengeId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
+      required:
+        - challengeId
+        - code
+      additionalProperties: false
+    PasswordRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+      required:
+        - password
+      additionalProperties: false
+    TwoFactorUpdate:
+      type: object
+      properties:
+        challengeId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
+        enabled:
+          type: boolean
+      required:
+        - challengeId
+        - code
+        - enabled
+      additionalProperties: false
+    OrganizationUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+      required:
+        - name
+      additionalProperties: false
+    Invitation:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: email
+        role:
+          type: string
+          enum:
+            - admin
+            - editor
+            - viewer
+      required:
+        - email
+        - role
+      additionalProperties: false
+    MemberUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - admin
+            - editor
+            - viewer
+        status:
+          type: string
+          enum:
+            - active
+            - revoked
+      required: []
+      additionalProperties: false
+    ProviderUpdate:
+      type: object
+      properties:
+        modelName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        baseUrl:
+          type: string
+          enum:
+            - https://api.openai.com/v1
+        enabled:
+          type: boolean
+        apiKey:
+          type: string
+          minLength: 1
+          maxLength: 512
+      required:
+        - modelName
+        - baseUrl
+        - enabled
+      additionalProperties: false

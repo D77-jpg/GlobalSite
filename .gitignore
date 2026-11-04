@@ -21,3 +21,9 @@ backups/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Tests, caches and generated browser reports
+.cache/
+test-results/
+playwright-report/
+*.tsbuildinfo

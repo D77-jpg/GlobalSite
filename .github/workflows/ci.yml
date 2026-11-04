@@ -1,0 +1,71 @@
+name: GlobalSite foundation
+"on":
+  pull_request: null
+  push:
+    branches:
+      - main
+      - feat/**
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      MONGOMS_VERSION: 7.0.14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.19"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - name: Audit all locked dependencies
+        run: npm audit --audit-level=high
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan history with pinned Gitleaks
+        shell: bash
+        run: >
+          curl -fsSL
+          https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_linux_x64.tar.gz -o
+          /tmp/gitleaks_8.24.0_linux_x64.tar.gz
+
+          curl -fsSL
+          https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_checksums.txt -o
+          /tmp/gitleaks-checksums.txt
+
+          (cd /tmp && sha256sum --check --ignore-missing gitleaks-checksums.txt)
+
+          tar -xzf /tmp/gitleaks_8.24.0_linux_x64.tar.gz -C /tmp gitleaks
+
+          /tmp/gitleaks git . --log-opts=--all --redact --no-banner --exit-code 1
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.19"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: docker compose up -d --build --wait --wait-timeout 120
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-previews
+          path: test-results/*.png
+          if-no-files-found: ignore
+      - run: docker compose down
+        if: always()
