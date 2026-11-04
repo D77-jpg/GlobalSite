@@ -1,5 +1,7 @@
 export const messages = {
   zh: {
+    builtForGlobal: "为全球生意而建",
+    nextChapter: "开启全新篇章",
     app: "GlobalSite",
     tagline: "让世界看见你的生意",
     workspace: "工作空间",
@@ -142,6 +144,8 @@ export const messages = {
     bytes: "字节",
   },
   en: {
+    builtForGlobal: "BUILT FOR GLOBAL BUSINESS",
+    nextChapter: "YOUR NEXT CHAPTER",
     app: "GlobalSite",
     tagline: "Bring your business to the world",
     workspace: "Workspace",

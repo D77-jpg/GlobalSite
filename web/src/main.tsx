@@ -245,12 +245,12 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
         <div className="story-content">
-          <span className="eyebrow">BUILT FOR GLOBAL BUSINESS</span>
+          <span className="eyebrow">{t("builtForGlobal")}</span>
           <h1>{t("tagline")}</h1>
           <p>{t("workspaceSub")}</p>
           <div className="orbit" aria-hidden="true">
             <Globe2 />
-            <span className="orbit-label">YOUR NEXT CHAPTER</span>
+            <span className="orbit-label">{t("nextChapter")}</span>
           </div>
         </div>
         <p className="story-footer">{t("independentSub")}</p>
@@ -887,7 +887,10 @@ function SecurityPage() {
                     )}
                   </p>
                   <small>
-                    {t("expires")}: {new Date(s.expiresAt).toLocaleDateString()}
+                    {t("expires")}:{" "}
+                    {new Date(s.expiresAt).toLocaleDateString(
+                      locale === "zh" ? "zh-CN" : "en-US",
+                    )}
                   </small>
                 </div>
                 {s.current ? (
