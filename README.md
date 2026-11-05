@@ -2,7 +2,7 @@
 
 独立的 AI 建站与运营产品，面向 B2B 外贸企业，可单独使用，也可选择连接 GlobalCRM。
 
-当前已完成 **S2 基础能力与 S3 产品/资料/事实库**：独立账号与组织、邮箱验证、Cookie 会话、刷新轮换、CSRF、邮箱两步验证、忘记密码、账号锁定、成员邀请与三种角色、审计、套餐额度、文件存储、后台任务租约、AI 服务商配置，以及中英双语管理台。另有产品键值/表格规格、图片与 PDF/证书、Excel 映射与错误行、事实来源/人工审核/历史、AI 候选提取、遵守 robots.txt 与 SSRF 防护的旧站读取。建站 Agent、发布与 CRM 连接按 S4–S7 继续实现。
+当前已完成 **S2 基础能力、S3 产品/事实库与 S4 站点/Agent/审核**：独立账号与组织、邮箱验证、Cookie 会话、刷新轮换、CSRF、邮箱两步验证、忘记密码、账号锁定、成员邀请与三种角色、审计、套餐额度、文件存储、后台任务租约、AI 服务商配置，以及中英双语管理台。另有产品键值/表格规格、图片与 PDF/证书、Excel 映射与错误行、事实来源/人工审核/历史、AI 候选提取、遵守 robots.txt 与 SSRF 防护的旧站读取。现已支持访谈候选事实、关键词与可编辑地图、逐页内容/单段重写、事实门禁与人工审批；完整构建、发布与 CRM 连接由后续阶段提供。
 
 ## 一键启动（本地开发）
 
@@ -55,7 +55,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-迁移 s2-foundation-v1 与 s3-products-facts-v1 创建 globalsite 集合/索引并写入迁移账本，可重复执行；api/worker 启动时也会执行。它不会连接或修改 CRM 数据库。
+迁移 s2-foundation-v1、s3-products-facts-v1 与 s4-agents-v1 创建 globalsite 集合/索引并写入迁移账本，可重复执行；api/worker 启动时也会执行。它不会连接或修改 CRM 数据库。
 
 ## 邮件、AI 与安全
 
@@ -69,11 +69,13 @@ npm run test:e2e
 ## 文档与契约
 
 - [MVP 技术设计](docs/design/MVP-设计.md)
+- [S4 站点、Agent 与审核](docs/design/S4-Agent与审核.md)
+- [S4 运行与验收](docs/operations/S4-运行与验收.md)
 - [S3 产品、资料与事实库](docs/design/S3-产品与事实.md)
 - [S3 运行与验收](docs/operations/S3-运行与验收.md)
 - [S2 模块、数据与安全边界](docs/design/S2-基础模块.md)
 - [运行与验收记录](docs/operations/S2-运行与验收.md)
-- [GlobalSite 基础 API OpenAPI](docs/api/foundation.openapi.yaml)：59 个本站私有操作，不包含 CRM Integration API。
+- [GlobalSite 基础 API OpenAPI](docs/api/foundation.openapi.yaml)：82 个本站私有操作，不包含 CRM Integration API。
 - [协作规则](AGENTS.md)
 - CRM 唯一对接依据：[OpenAPI](https://github.com/D77-jpg/GlobalCRM/blob/60cdbc48035301c152a58b924558b08a850fa36a/docs/integration/integration-v1.openapi.yaml) 与[双方对接设计](https://github.com/D77-jpg/GlobalCRM/blob/60cdbc48035301c152a58b924558b08a850fa36a/docs/integration/globalsite-%E5%AF%B9%E6%8E%A5%E8%AE%BE%E8%AE%A1.md)。本站不复制该契约、不 import 或 npm link CRM 代码。
 

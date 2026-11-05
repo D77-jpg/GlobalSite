@@ -1,3 +1,4 @@
+import { processSiteAgent } from "../services/site-agents.service";
 import mongoose from "mongoose";
 import { fenceTask } from "../services/product-import.service";
 import { WebsiteError } from "../services/website/public-web";
@@ -83,6 +84,11 @@ export async function tick() {
       void renewTask(task).catch(() => {});
     }, 20000);
     try {
+      if (task.kind === "site.agent") {
+        const outcome = await processSiteAgent(task);
+        await finishTask(task, outcome.status, outcome.error);
+        return;
+      }
       if (task.kind.startsWith("catalog.")) {
         const model =
           task.kind === "catalog.import"
@@ -134,6 +140,7 @@ export async function tick() {
       transport.close();
       await finishTask(task, "done");
     } catch (error) {
+      if (task.kind === "site.agent") throw error;
       if (task.kind.startsWith("catalog.")) {
         const code =
           error instanceof AppError

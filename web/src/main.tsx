@@ -1,3 +1,4 @@
+import { SitesPage, SiteWorkspace, PageReview } from "./sites";
 import {
   ProductsPage,
   ProductEditor,
@@ -1145,6 +1146,7 @@ function Workspace() {
     );
   const nav: Array<[string, Key, typeof Globe2]> = [
     ["/", "overview", LayoutDashboard],
+    ["/sites", "sites", Globe2],
     ["/products", "products", Building2],
     ["/assets", "assets", Building2],
     ["/facts", "facts", ShieldCheck],
@@ -1232,8 +1234,12 @@ function Workspace() {
               <span>/</span>
               <strong>
                 {t(
-                  (nav.find(([to]) => to === location.pathname)?.[1] ??
-                    "workspace") as Key,
+                  (nav.find(
+                    ([to]) =>
+                      to === location.pathname ||
+                      (to === "/sites" &&
+                        /^\/(sites|pages)\//.test(location.pathname)),
+                  )?.[1] ?? "workspace") as Key,
                 )}
               </strong>
             </div>
@@ -1248,6 +1254,18 @@ function Workspace() {
           <main id="main" className="content">
             <Routes>
               <Route index element={<Overview />} />
+              <Route
+                path="sites"
+                element={<SitesPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="sites/:id"
+                element={<SiteWorkspace locale={locale} role={me.role} />}
+              />
+              <Route
+                path="pages/:id"
+                element={<PageReview locale={locale} role={me.role} />}
+              />
               <Route
                 path="products"
                 element={<ProductsPage locale={locale} role={me.role} />}

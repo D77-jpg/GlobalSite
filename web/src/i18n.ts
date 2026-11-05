@@ -1,5 +1,6 @@
 export const messages = {
   zh: {
+    sites: "站点",
     products: "产品库",
     assets: "资料库",
     facts: "企业事实库",
@@ -148,6 +149,7 @@ export const messages = {
     bytes: "字节",
   },
   en: {
+    sites: "Sites",
     products: "Products",
     assets: "Assets",
     facts: "Business facts",

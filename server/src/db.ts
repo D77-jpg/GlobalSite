@@ -17,6 +17,13 @@ export async function migrate() {
   for (const model of models) await model.init();
   await runIdentity(() =>
     Migration.updateOne(
+      { key: "s4-agents-v1" },
+      { $setOnInsert: { completedAt: new Date() } },
+      { upsert: true },
+    ),
+  );
+  await runIdentity(() =>
+    Migration.updateOne(
       { key: "s2-foundation-v1" }, // gitleaks:allow (non-secret migration ID)
       { $setOnInsert: { completedAt: new Date() } },
       { upsert: true },

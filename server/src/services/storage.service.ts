@@ -4,7 +4,15 @@ import path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import mongoose from "mongoose";
 import sharp from "sharp";
-import { Asset, Product, FactSheet, AgentRun, UsageBucket } from "../models";
+import {
+  Asset,
+  Product,
+  FactSheet,
+  AgentRun,
+  UsageBucket,
+  Site,
+  SiteBlock,
+} from "../models";
 import { tenantContext } from "../models/tenant-context";
 import { ensure, AppError } from "../errors";
 import { config } from "../config";
@@ -193,6 +201,8 @@ export async function removeAsset(id: string) {
     ensure(asset, 404, "NOT_FOUND");
     ensure(
       !(await Product.exists({ assetIds: id }).session(session)) &&
+        !(await Site.exists({ logoId: id }).session(session)) &&
+        !(await SiteBlock.exists({ assetId: id }).session(session)) &&
         !(await FactSheet.exists({
           "source.kind": "asset",
           "source.refId": id,
