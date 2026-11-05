@@ -52,6 +52,7 @@ export const Organization = entity<OrganizationRow>(
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     ownerUserId: ref,
+    siteLock: { type: Number, default: 0 },
     plan: {
       type: String,
       enum: ["trial", "starter", "growth"],
@@ -305,6 +306,7 @@ export const Product = entity<any>(
 export const FactSheet = entity<any>(
   "FactSheet",
   {
+    referenceVersion: { type: Number, default: 0 },
     subjectType: {
       type: String,
       enum: ["organization", "product"],
@@ -375,6 +377,18 @@ export const AgentRun = entity<any>(
   "AgentRun",
   {
     kind: String,
+    siteId: Schema.Types.ObjectId,
+    step: String,
+    lockKey: String,
+    active: Boolean,
+    requestKey: String,
+    requestHash: String,
+    cancelRequested: { type: Boolean, default: false },
+    inputSnapshot: Schema.Types.Mixed,
+    inputSummary: Schema.Types.Mixed,
+    steps: { type: [Schema.Types.Mixed], default: [] },
+    retryGeneration: { type: Number, default: 0 },
+    elapsedMs: { type: Number, default: 0 },
     source: Schema.Types.Mixed,
     actorId: ref,
     status: { type: String, default: "queued" },
@@ -385,7 +399,20 @@ export const AgentRun = entity<any>(
     pendingResult: Schema.Types.Mixed,
   },
   {},
-  [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
+  [
+    [{ organizationId: 1, createdAt: -1, _id: -1 }],
+    [
+      { organizationId: 1, siteId: 1, lockKey: 1 },
+      { unique: true, partialFilterExpression: { active: true } },
+    ],
+    [
+      { organizationId: 1, requestKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { requestKey: { $type: "string" } },
+      },
+    ],
+  ],
 );
 export const WebsiteRead = entity<any>(
   "WebsiteRead",
@@ -404,7 +431,82 @@ export const WebsiteRead = entity<any>(
   [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
 );
 
+export const Site = entity<any>(
+  "Site",
+  {
+    name: { type: String, required: true },
+    templateId: String,
+    targetMarkets: [String],
+    language: { type: String, default: "en" },
+    brandColor: String,
+    logoId: Schema.Types.ObjectId,
+    productIds: [Schema.Types.ObjectId],
+    status: { type: String, default: "draft" },
+    revision: { type: Number, default: 1 },
+    lockVersion: { type: Number, default: 0 },
+    planRevision: { type: Number, default: 1 },
+    plan: Schema.Types.Mixed,
+    confirmedPlanHash: String,
+    planReviewedBy: Schema.Types.ObjectId,
+    planReviewedAt: Date,
+  },
+  {},
+  [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
+);
+export const SitePage = entity<any>(
+  "SitePage",
+  {
+    siteId: ref,
+    nodeKey: String,
+    retiredPath: String,
+    path: String,
+    type: String,
+    productId: Schema.Types.ObjectId,
+    title: String,
+    metaDescription: String,
+    refs: Schema.Types.Mixed,
+    revision: { type: Number, default: 1 },
+    reviewStatus: { type: String, default: "draft" },
+    approvedHash: String,
+    reviewedBy: Schema.Types.ObjectId,
+    reviewedAt: Date,
+    reviewReason: String,
+    originRunId: Schema.Types.ObjectId,
+  },
+  {},
+  [
+    [{ organizationId: 1, siteId: 1, nodeKey: 1 }, { unique: true }],
+    [{ organizationId: 1, siteId: 1, path: 1 }, { unique: true }],
+  ],
+);
+export const SiteBlock = entity<any>(
+  "SiteBlock",
+  {
+    siteId: ref,
+    pageId: ref,
+    key: String,
+    type: String,
+    heading: String,
+    body: String,
+    table: Schema.Types.Mixed,
+    faq: Schema.Types.Mixed,
+    assetId: Schema.Types.ObjectId,
+    alt: String,
+    refs: Schema.Types.Mixed,
+    order: Number,
+    revision: { type: Number, default: 1 },
+  },
+  {},
+  [
+    [{ organizationId: 1, pageId: 1, key: 1 }, { unique: true }],
+    [{ organizationId: 1, siteId: 1, pageId: 1, order: 1 }],
+  ],
+);
+
 export const models = [
+  Site,
+  SitePage,
+  SiteBlock,
   Product,
   FactSheet,
   FactRevision,

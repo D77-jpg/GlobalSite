@@ -1,0 +1,184 @@
+import { z } from "zod";
+import { objectId, revision } from "./catalog.validator";
+export const templates = [
+  { id: "machinery", name: "Machinery & equipment", industry: "machinery" },
+  {
+    id: "building-hardware",
+    name: "Building materials & hardware",
+    industry: "building",
+  },
+  { id: "packaging-bags", name: "Packaging & bags", industry: "packaging" },
+];
+export const siteInput = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    templateId: z.enum(["machinery", "building-hardware", "packaging-bags"]),
+    targetMarkets: z.array(z.string().trim().min(1).max(80)).min(1).max(10),
+    language: z.literal("en"),
+    brandColor: z.string().regex(/^#[a-fA-F0-9]{6}$/),
+    logoId: objectId.nullable(),
+    productIds: z.array(objectId).max(50),
+    status: z.enum(["draft", "archived"]).default("draft"),
+  })
+  .strict()
+  .refine((x) => new Set(x.productIds).size === x.productIds.length);
+export const sitePatch = z.object({ revision, data: siteInput }).strict();
+export const intent = z.enum(["learn", "compare", "specify", "source", "buy"]);
+const key = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]*$/)
+  .max(60);
+export const node = z
+  .object({
+    key,
+    path: z.string().min(1).max(160),
+    title: z.string().trim().min(1).max(120),
+    type: z.enum([
+      "home",
+      "category",
+      "product",
+      "about",
+      "factory",
+      "certifications",
+      "faq",
+      "contact",
+    ]),
+    parentKey: key.nullable(),
+    productId: objectId.nullable(),
+    keywords: z.array(z.string().trim().min(1).max(120)).max(10),
+    intent,
+  })
+  .strict();
+export const keyword = z
+  .object({
+    term: z.string().trim().min(1).max(120),
+    intent,
+    cluster: z.string().min(1).max(80),
+  })
+  .strict();
+export const cluster = z
+  .object({
+    key,
+    label: z.string().min(1).max(120),
+    intent,
+    keywords: z.array(z.string().min(1).max(120)).max(20),
+  })
+  .strict();
+export const plan = z
+  .object({
+    nodes: z.array(node).min(1).max(50),
+    keywords: z.array(keyword).max(100),
+    clusters: z.array(cluster).max(30),
+  })
+  .strict();
+export const planPatch = z
+  .object({
+    revision,
+    nodes: z.array(node).min(1).max(50),
+    keywords: z.array(keyword).max(100),
+    clusters: z.array(cluster).max(30),
+  })
+  .strict();
+export const factRef = z.object({ factId: objectId, revision }).strict();
+export const table = z
+  .object({
+    columns: z.array(z.string().min(1).max(100)).min(1).max(10),
+    rows: z.array(z.array(z.string().max(300)).max(10)).max(50),
+  })
+  .strict()
+  .refine((x) => x.rows.every((r) => r.length === x.columns.length));
+export const faq = z
+  .object({
+    question: z.string().trim().min(1).max(300),
+    answer: z.string().trim().min(1).max(1800),
+    detail: z.string().max(2500),
+  })
+  .strict();
+export const block = z
+  .object({
+    key,
+    type: z.enum(["text", "specs", "faq", "image"]),
+    heading: z.string().max(160),
+    body: z.string().max(6000),
+    table: table.nullable(),
+    faq: z.array(faq).max(20),
+    assetId: objectId.nullable(),
+    alt: z.string().max(200),
+    refs: z.array(factRef).max(50),
+  })
+  .strict();
+export const pageInput = z
+  .object({
+    title: z.string().trim().min(1).max(100),
+    metaDescription: z.string().max(200),
+    refs: z.array(factRef).max(50),
+    blocks: z.array(block).min(1).max(20),
+  })
+  .strict()
+  .refine((x) => new Set(x.blocks.map((b) => b.key)).size === x.blocks.length);
+export const pagePatch = z.object({ revision, data: pageInput }).strict();
+export const review = z
+  .object({ revision, reason: z.string().trim().max(500).optional() })
+  .strict();
+export const agentInput = z
+  .object({
+    step: z.enum(["interview", "research", "content", "rewrite"]),
+    consent: z.literal(true),
+    pageKey: key.optional(),
+    pageId: objectId.optional(),
+    blockKey: key.optional(),
+    instructions: z.string().trim().max(1000).optional(),
+  })
+  .strict()
+  .refine((x) => x.step !== "rewrite" || (!!x.pageId && !!x.blockKey))
+  .refine((x) => x.step === "rewrite" || (!x.pageId && !x.blockKey));
+export const answerInput = z
+  .object({
+    runId: objectId,
+    answers: z
+      .array(
+        z
+          .object({
+            questionId: key,
+            answer: z.string().trim().min(1).max(800),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(10),
+  })
+  .strict()
+  .refine(
+    (x) =>
+      new Set(x.answers.map((a) => a.questionId)).size === x.answers.length,
+  );
+export const interviewOutput = z
+  .object({
+    questions: z
+      .array(
+        z
+          .object({
+            id: key,
+            type: z.string().min(1).max(80),
+            question: z.string().min(1).max(240),
+            subjectId: objectId.nullable(),
+          })
+          .strict(),
+      )
+      .max(10),
+  })
+  .strict();
+export const productSections = [
+  "specs",
+  "material",
+  "application",
+  "certifications",
+  "oem",
+  "moq",
+  "samples",
+  "packaging",
+];
+export type PageInput = z.infer<typeof pageInput>;
+export type Plan = z.infer<typeof plan>;
+
+export const newPageInput = z.object({ nodeKey: key }).strict();

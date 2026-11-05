@@ -2,9 +2,9 @@
 
 ## 当前阶段与仓库边界
 
-- 本仓库 D:/Trade/genesis/GlobalSite，当前 S3 产品/资料/事实库；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
+- 本仓库 D:/Trade/genesis/GlobalSite，当前 S4 站点/Agent/事实校验/审核；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
 - 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，只读参考；废弃旧目录禁止读取或修改。
-- 本次分支 feat/s3-products-facts。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
+- 本次分支 feat/s4-agents。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
 - GlobalSite 仅连接自己的 globalsite 数据库；CRM 只能通过 Integration API，不能 import/npm link 对方代码。复制须保留源路径、源 commit 和改造说明并补测试。
 
 ## 契约和架构
@@ -16,7 +16,7 @@
 - 栈固定 Node >=20.19、Express 4、TS、Mongoose 8、zod；React 18/Vite/Tailwind/router6/react-hook-form；node:test+tsx。不升级无关依赖。
 - 所有模型注册 tenant 插件。User/Organization/Migration/RateLimit 为受限 identity 模式；Membership/Session/AuthToken 只允许有约束的身份查找；其他组织业务必须有 organizationId。禁止业务中使用 Model.collection 或原始驱动绕过；迁移、测试清理例外需明确。
 - 查询在 AsyncLocalStorage 上下文内执行；不要将未执行的 Mongoose Query 带出上下文。任务只在专用 scheduler 上下文领取，执行恢复指定组织，所有完成/续租必须含 owner+fencingToken。
-- api 和 worker 使用同一主密钥与独立数据库；builder/CRM 调用不在 S3 实现。
+- api 和 worker 使用同一主密钥与独立数据库；builder/发布/CRM 调用不在 S4 实现。
 
 ## 安全与交付
 
@@ -39,3 +39,11 @@
 - 已获用户持续授权：完成后创建 PR，CI 全绿且无冲突时直接合并；不直接推送 main。
 
 - CI 浏览器作业固定 ubuntu-24.04，匹配锁定的 Playwright 1.56；不要改回未验证的 ubuntu-latest。
+
+## S4 维护约束
+
+- S4 行为见 docs/design/S4-Agent与审核.md；本站 Agent/UI API 以 foundation.openapi.yaml 为准。CRM 本阶段无修改/调用。
+- site.agent 的站点+步骤活动锁、Task 租约和派发代次必须同时成立；content/rewrite 共用锁。保留冻结输入、逐页结果先存再结算、已完成页恢复幂等、未知用量不重复调用。
+- 数字/认证/年份/产能必须引用匹配的当前 confirmed 事实；API 审批和 requirePublishableSite 都必须重新校验。正文只接受文本/白名单区块，不能执行生成的 HTML/脚本。
+- 规划、站点、内容或事实变更撤回批准；后续 builder/发布必须执行时复查，不把 readiness 查询当永久许可。S4 无实际发布端点。
+- 不配置真实 AI 密钥或发起付费验证；优先模拟服务。浏览器回归触发 429 时遵守 Retry-After，不提高限流门槛；可使用独立临时 Compose 项目，保留真实数据卷。

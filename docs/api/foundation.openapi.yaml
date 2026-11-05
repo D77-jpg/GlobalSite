@@ -4710,6 +4710,1917 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /site-templates:
+    get:
+      operationId: s4getsitetemplates
+      summary: S4 /site-templates; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          minLength: 1
+                          maxLength: 200
+                        name:
+                          type: string
+                        industry:
+                          type: string
+                      required:
+                        - id
+                        - name
+                        - industry
+                      additionalProperties: false
+                    maxItems: 50
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /sites:
+    get:
+      operationId: s4getsites
+      summary: S4 /sites; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Site"
+                        maxItems: 100
+                      hasMore:
+                        type: boolean
+                      nextCursor:
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - items
+                      - hasMore
+                      - nextCursor
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+    post:
+      operationId: s4postsites
+      summary: S4 /sites; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters: []
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteInput"
+  /sites/{id}:
+    get:
+      operationId: s4getsitesid
+      summary: S4 /sites/{id}; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+    patch:
+      operationId: s4patchsitesid
+      summary: S4 /sites/{id}; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SitePatch"
+  /sites/{id}/plan:
+    put:
+      operationId: s4putsitesidplan
+      summary: S4 /sites/{id}/plan; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SitePlanInput"
+  /sites/{id}/plan/confirm:
+    post:
+      operationId: s4postsitesidplanconfirm
+      summary: S4 /sites/{id}/plan/confirm; tenant scoped admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteReviewInput"
+  /sites/{id}/sources:
+    get:
+      operationId: s4getsitesidsources
+      summary: S4 /sites/{id}/sources; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      facts:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CatalogFact"
+                        maxItems: 200
+                      products:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CatalogProduct"
+                        maxItems: 50
+                    required:
+                      - facts
+                      - products
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /sites/{id}/agent-runs:
+    post:
+      operationId: s4postsitesidagentruns
+      summary: S4 /sites/{id}/agent-runs; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+            pattern: ^[A-Za-z0-9_-]{8,100}$
+          description: >-
+            Replay returns same run; one active run per site/step (content and rewrite share the content
+            lock).
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteAgent"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteAgentInput"
+    get:
+      operationId: s4getsitesidagentruns
+      summary: S4 /sites/{id}/agent-runs; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SiteAgent"
+                        maxItems: 100
+                      hasMore:
+                        type: boolean
+                      nextCursor:
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - items
+                      - hasMore
+                      - nextCursor
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /agent-runs/{id}:
+    get:
+      operationId: s4getagentrunsid
+      summary: S4 /agent-runs/{id}; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteAgent"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /agent-runs/{id}/cancel:
+    post:
+      operationId: s4postagentrunsidcancel
+      summary: S4 /agent-runs/{id}/cancel; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteAgent"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+  /agent-runs/{id}/retry:
+    post:
+      operationId: s4postagentrunsidretry
+      summary: S4 /agent-runs/{id}/retry; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteAgent"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+  /sites/{id}/interview/answers:
+    post:
+      operationId: s4postsitesidinterviewanswers
+      summary: S4 /sites/{id}/interview/answers; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      factIds:
+                        type: array
+                        items:
+                          type: string
+                          pattern: ^[a-f0-9]{24}$
+                        maxItems: 10
+                    required:
+                      - factIds
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteInterviewAnswer"
+  /sites/{id}/pages:
+    get:
+      operationId: s4getsitesidpages
+      summary: S4 /sites/{id}/pages; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SitePage"
+                        maxItems: 100
+                      hasMore:
+                        type: boolean
+                      nextCursor:
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - items
+                      - hasMore
+                      - nextCursor
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+    post:
+      operationId: s4postsitesidpages
+      summary: S4 /sites/{id}/pages; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SitePage"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nodeKey:
+                  type: string
+                  minLength: 1
+                  maxLength: 60
+              required:
+                - nodeKey
+              additionalProperties: false
+  /pages/{id}:
+    get:
+      operationId: s4getpagesid
+      summary: S4 /pages/{id}; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SitePage"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+    patch:
+      operationId: s4patchpagesid
+      summary: S4 /pages/{id}; tenant scoped editor
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SitePage"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SitePagePatch"
+  /pages/{id}/approve:
+    post:
+      operationId: s4postpagesidapprove
+      summary: S4 /pages/{id}/approve; tenant scoped admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SitePage"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteReviewInput"
+  /pages/{id}/reject:
+    post:
+      operationId: s4postpagesidreject
+      summary: S4 /pages/{id}/reject; tenant scoped admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SitePage"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteReviewInput"
+  /pages/{id}/preview:
+    get:
+      operationId: s4getpagesidpreview
+      summary: S4 /pages/{id}/preview; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      html:
+                        type: string
+                      issues:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SiteIssue"
+                        maxItems: 500
+                      hash:
+                        type: string
+                        minLength: 1
+                        maxLength: 200
+                    required:
+                      - html
+                      - issues
+                      - hash
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /sites/{id}/readiness:
+    get:
+      operationId: s4getsitesidreadiness
+      summary: S4 /sites/{id}/readiness; tenant scoped reader
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteReadiness"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /sites/{id}/publication-check:
+    post:
+      operationId: s4postsitesidpublicationcheck
+      summary: S4 /sites/{id}/publication-check; tenant scoped admin
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteReadiness"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
 components:
   securitySchemes:
     cookieAuth:
@@ -6374,6 +8285,825 @@ components:
       required:
         - url
       additionalProperties: false
+    SiteFactRef:
+      type: object
+      properties:
+        factId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        revision:
+          type: integer
+          minimum: 1
+      required:
+        - factId
+        - revision
+      additionalProperties: false
+    SitePlanNode:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 60
+          pattern: ^[a-z][a-z0-9-]*$
+        path:
+          type: string
+          minLength: 1
+          maxLength: 160
+          pattern: ^/
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        type:
+          enum:
+            - home
+            - category
+            - product
+            - about
+            - factory
+            - certifications
+            - faq
+            - contact
+        parentKey:
+          type:
+            - string
+            - "null"
+        productId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+        keywords:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 120
+          maxItems: 10
+        intent:
+          enum:
+            - learn
+            - compare
+            - specify
+            - source
+            - buy
+      required:
+        - key
+        - path
+        - title
+        - type
+        - parentKey
+        - productId
+        - keywords
+        - intent
+      additionalProperties: false
+    SiteKeyword:
+      type: object
+      properties:
+        term:
+          type: string
+          minLength: 1
+          maxLength: 120
+        intent:
+          enum:
+            - learn
+            - compare
+            - specify
+            - source
+            - buy
+        cluster:
+          type: string
+          minLength: 1
+          maxLength: 80
+      required:
+        - term
+        - intent
+        - cluster
+      additionalProperties: false
+    SiteCluster:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 60
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        intent:
+          enum:
+            - learn
+            - compare
+            - specify
+            - source
+            - buy
+        keywords:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 120
+          maxItems: 20
+      required:
+        - key
+        - label
+        - intent
+        - keywords
+      additionalProperties: false
+    SitePlanInput:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SitePlanNode"
+          maxItems: 50
+          minItems: 1
+        keywords:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteKeyword"
+          maxItems: 100
+        clusters:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteCluster"
+          maxItems: 30
+      required:
+        - revision
+        - nodes
+        - keywords
+        - clusters
+      additionalProperties: false
+    SiteInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        templateId:
+          enum:
+            - machinery
+            - building-hardware
+            - packaging-bags
+        targetMarkets:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+          maxItems: 10
+          minItems: 1
+        language:
+          const: en
+        brandColor:
+          type: string
+          pattern: ^#[a-fA-F0-9]{6}$
+        logoId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+        productIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+          maxItems: 50
+        status:
+          enum:
+            - draft
+            - archived
+      required:
+        - name
+        - templateId
+        - targetMarkets
+        - language
+        - brandColor
+        - logoId
+        - productIds
+      additionalProperties: false
+    SitePatch:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        data:
+          $ref: "#/components/schemas/SiteInput"
+      required:
+        - revision
+        - data
+      additionalProperties: false
+    SiteTable:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 10
+          minItems: 1
+        rows:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+              maxLength: 300
+            maxItems: 10
+          maxItems: 50
+      required:
+        - columns
+        - rows
+      additionalProperties: false
+    SiteFaq:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 300
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 1800
+        detail:
+          type: string
+          maxLength: 2500
+      required:
+        - question
+        - answer
+        - detail
+      additionalProperties: false
+    SiteBlockInput:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 60
+          pattern: ^[a-z][a-z0-9-]*$
+        type:
+          enum:
+            - text
+            - specs
+            - faq
+            - image
+        heading:
+          type: string
+          maxLength: 160
+        body:
+          type: string
+          maxLength: 6000
+        table:
+          anyOf:
+            - $ref: "#/components/schemas/SiteTable"
+            - type: "null"
+        faq:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteFaq"
+          maxItems: 20
+        assetId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+        alt:
+          type: string
+          maxLength: 200
+        refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteFactRef"
+          maxItems: 50
+      required:
+        - key
+        - type
+        - heading
+        - body
+        - table
+        - faq
+        - assetId
+        - alt
+        - refs
+      additionalProperties: false
+    SitePageInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        metaDescription:
+          type: string
+          maxLength: 200
+        refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteFactRef"
+          maxItems: 50
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteBlockInput"
+          maxItems: 20
+          minItems: 1
+      required:
+        - title
+        - metaDescription
+        - refs
+        - blocks
+      additionalProperties: false
+    SitePagePatch:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        data:
+          $ref: "#/components/schemas/SitePageInput"
+      required:
+        - revision
+        - data
+      additionalProperties: false
+    SiteReviewInput:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 500
+      required:
+        - revision
+      additionalProperties: false
+    SiteAgentInput:
+      type: object
+      properties:
+        step:
+          enum:
+            - interview
+            - research
+            - content
+            - rewrite
+        consent:
+          const: true
+        pageKey:
+          type: string
+          minLength: 1
+          maxLength: 60
+        pageId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        blockKey:
+          type: string
+          minLength: 1
+          maxLength: 60
+        instructions:
+          type: string
+          maxLength: 1000
+      required:
+        - step
+        - consent
+      additionalProperties: false
+    SiteInterviewAnswer:
+      type: object
+      properties:
+        runId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                type: string
+                minLength: 1
+                maxLength: 60
+              answer:
+                type: string
+                minLength: 1
+                maxLength: 800
+            required:
+              - questionId
+              - answer
+            additionalProperties: false
+          maxItems: 10
+          minItems: 1
+      required:
+        - runId
+        - answers
+      additionalProperties: false
+    SiteIssue:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        field:
+          type: string
+          minLength: 1
+          maxLength: 200
+        blockKey:
+          type:
+            - string
+            - "null"
+        token:
+          type: string
+          maxLength: 160
+      required:
+        - code
+        - field
+        - blockKey
+        - token
+      additionalProperties: false
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        revision:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        templateId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        targetMarkets:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          maxItems: 50
+        language:
+          const: en
+        brandColor:
+          type: string
+          minLength: 1
+          maxLength: 200
+        logoId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+        productIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+          maxItems: 50
+        status:
+          enum:
+            - draft
+            - archived
+        planRevision:
+          type: integer
+          minimum: 1
+        plan:
+          anyOf:
+            - type: object
+              properties:
+                nodes:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SitePlanNode"
+                  maxItems: 50
+                keywords:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SiteKeyword"
+                  maxItems: 100
+                clusters:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SiteCluster"
+                  maxItems: 30
+              required:
+                - nodes
+                - keywords
+                - clusters
+              additionalProperties: false
+            - type: "null"
+        planConfirmed:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - revision
+        - name
+        - templateId
+        - targetMarkets
+        - language
+        - brandColor
+        - logoId
+        - productIds
+        - status
+        - planRevision
+        - plan
+        - planConfirmed
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    SitePage:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        siteId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        nodeKey:
+          type: string
+          minLength: 1
+          maxLength: 200
+        path:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          type: string
+          minLength: 1
+          maxLength: 200
+        productId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+        revision:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        metaDescription:
+          type: string
+        refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteFactRef"
+          maxItems: 50
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteBlockInput"
+          maxItems: 20
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteIssue"
+          maxItems: 500
+        status:
+          enum:
+            - draft
+            - blocked
+            - approved
+            - rejected
+        hash:
+          type: string
+          minLength: 1
+          maxLength: 200
+        inPlan:
+          type: boolean
+        reviewedAt:
+          type:
+            - string
+            - "null"
+        reviewedBy:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+      required:
+        - id
+        - siteId
+        - nodeKey
+        - path
+        - type
+        - productId
+        - revision
+        - title
+        - metaDescription
+        - refs
+        - blocks
+        - issues
+        - status
+        - hash
+        - inPlan
+        - reviewedAt
+        - reviewedBy
+      additionalProperties: false
+    SiteAgentStep:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          minLength: 1
+          maxLength: 200
+        attempts:
+          type: integer
+        output: {}
+        tokens:
+          type: integer
+        elapsedMs:
+          type: integer
+        errorCode:
+          type:
+            - string
+            - "null"
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              attempt:
+                type: integer
+                minimum: 1
+              status:
+                type: string
+                minLength: 1
+                maxLength: 200
+              tokens:
+                type: integer
+              elapsedMs:
+                type: integer
+              errorCode:
+                type:
+                  - string
+                  - "null"
+            required:
+              - attempt
+              - status
+              - tokens
+              - elapsedMs
+              - errorCode
+            additionalProperties: false
+          maxItems: 30
+        inputSummary:
+          type: object
+          required:
+            - pageTitle
+            - products
+            - confirmedFacts
+            - inputHash
+          properties:
+            pageTitle:
+              type: string
+            products:
+              type: integer
+            confirmedFacts:
+              type: integer
+            inputHash:
+              type: string
+          additionalProperties: false
+      required:
+        - key
+        - status
+        - attempts
+        - output
+        - tokens
+        - elapsedMs
+        - errorCode
+        - history
+        - inputSummary
+      additionalProperties: false
+    SiteAgent:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        siteId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        step:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          enum:
+            - queued
+            - running
+            - paused
+            - succeeded
+            - failed
+            - cancelled
+        active:
+          type: boolean
+        cancelRequested:
+          type: boolean
+        inputSummary:
+          type: object
+          properties:
+            siteName:
+              type: string
+              minLength: 1
+              maxLength: 200
+            pages:
+              type: integer
+            products:
+              type: integer
+            confirmedFacts:
+              type: integer
+          required:
+            - siteName
+            - pages
+            - products
+            - confirmedFacts
+          additionalProperties: false
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteAgentStep"
+          maxItems: 50
+        tokens:
+          type: integer
+        elapsedMs:
+          type: integer
+        errorCode:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - siteId
+        - step
+        - status
+        - active
+        - cancelRequested
+        - inputSummary
+        - steps
+        - tokens
+        - elapsedMs
+        - errorCode
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    SiteReadiness:
+      type: object
+      properties:
+        ready:
+          type: boolean
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteIssue"
+          maxItems: 500
+        pages:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                pattern: ^[a-f0-9]{24}$
+              ready:
+                type: boolean
+              issues:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SiteIssue"
+                maxItems: 500
+            required:
+              - id
+              - ready
+              - issues
+            additionalProperties: false
+          maxItems: 50
+      required:
+        - ready
+        - issues
+        - pages
+      additionalProperties: false
 x-s3-catalog:
   status: implemented
   crmContract: >-
@@ -6386,3 +9116,21 @@ x-s3-catalog:
     - Mutating JSON input is strict; revisions enforce compare-and-swap. Files remain private and no-store.
     - Products are drafts until edited. AI and website facts are always candidates.
     - All asynchronous writes fence their task lease and recheck the initiator membership.
+x-s4-agents:
+  status: implemented
+  notes:
+    - >-
+      Site creation and private review only. Publication check enforces approval plus current confirmed facts;
+      deployment is S5.
+    - >-
+      Research is AI keyword suggestions, not live search data. Outputs are human editable and must be
+      explicitly confirmed.
+    - >-
+      Each run freezes input, persists unit outputs before billing settlement, fences writes, and supports
+      retry/cancel. Quota pauses instead of discarding work.
+    - >-
+      Product pages require specs/material/application/certifications/oem/moq/samples/packaging blocks; FAQ
+      answers begin with a 40–60 word lead.
+    - >-
+      All hard claims require valid same-tenant confirmed fact references. Editing, new plans or withdrawn
+      facts invalidate approval.

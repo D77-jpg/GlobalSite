@@ -1,3 +1,4 @@
+import sitesRoutes from "./routes/sites.routes";
 import catalogRoutes from "./routes/catalog.routes";
 import express, {
   type Request,
@@ -125,6 +126,8 @@ export function createApp() {
       }
     }),
   );
+  app.use("/api/v1/pages", express.json({ limit: "512kb" }));
+  app.use("/api/v1/sites", express.json({ limit: "128kb" }));
   app.use("/api", express.json({ limit: "32kb" }));
   app.use("/api", (req, res, next) => {
     void (async () => {
@@ -261,6 +264,7 @@ export function createApp() {
   );
   app.use("/api/v1", requireAuth);
   app.use("/api/v1", catalogRoutes);
+  app.use("/api/v1", sitesRoutes);
   app.get(
     "/api/v1/auth/me",
     wrap(async (req, res) => {
