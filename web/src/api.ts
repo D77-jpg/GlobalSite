@@ -24,11 +24,15 @@ export async function api<T = any>(
       method,
       credentials: "same-origin",
       headers: {
-        ...(data ? { "Content-Type": "application/json" } : {}),
+        ...(data && !(data instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
         "X-CSRF-Token": csrf(),
         ...headers,
       },
-      ...(data ? { body: JSON.stringify(data) } : {}),
+      ...(data
+        ? { body: data instanceof FormData ? data : JSON.stringify(data) }
+        : {}),
     });
   let response = await run();
   if (

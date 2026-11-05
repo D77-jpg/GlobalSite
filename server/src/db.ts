@@ -22,4 +22,11 @@ export async function migrate() {
       { upsert: true },
     ),
   );
+  await runIdentity(() =>
+    Migration.updateOne(
+      { key: "s3-products-facts-v1" },
+      { $setOnInsert: { completedAt: new Date() } },
+      { upsert: true },
+    ),
+  );
 }

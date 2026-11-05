@@ -1,0 +1,1474 @@
+import { useEffect, useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { useForm, useFieldArray } from "react-hook-form";
+import { api, ApiError } from "./api";
+import { catalogText, catalogMessages } from "./catalog-i18n";
+import type { Locale } from "./i18n";
+type Props = { locale: Locale; role: "admin" | "editor" | "viewer" };
+type Item = Record<string, any>;
+function useLoad(path: string, poll = false) {
+  const [data, setData] = useState<{ path: string; value: any }>(),
+    [error, setError] = useState<unknown>(),
+    [version, setVersion] = useState(0);
+  useEffect(() => {
+    let live = true;
+    setError(undefined);
+    setData(undefined);
+    const load = () =>
+      api(path)
+        .then((r) => {
+          if (live) {
+            setData({ path, value: r });
+            setError(undefined);
+          }
+        })
+        .catch((e) => {
+          if (live) setError(e);
+        });
+    void load();
+    const timer = poll ? setInterval(() => void load(), 2000) : undefined;
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [path, version, poll]);
+  return {
+    data: data?.path === path ? data.value : undefined,
+    error,
+    replace: (value: any) => setData({ path, value }),
+    reload: () => setVersion((v) => v + 1),
+  };
+}
+function useAction() {
+  const [error, setError] = useState<unknown>(),
+    [busy, setBusy] = useState(false),
+    [saved, setSaved] = useState(false);
+  return {
+    error,
+    busy,
+    saved,
+    run: async (fn: () => Promise<unknown>) => {
+      setBusy(true);
+      setError(undefined);
+      setSaved(false);
+      try {
+        await fn();
+        setSaved(true);
+      } catch (e) {
+        setError(e);
+      } finally {
+        setBusy(false);
+      }
+    },
+  };
+}
+function Notice({
+  error,
+  saved,
+  t,
+}: {
+  error?: unknown;
+  saved?: boolean;
+  t: ReturnType<typeof catalogText>;
+}) {
+  return error ? (
+    <p className="notice error" role="alert">
+      {t(
+        error instanceof ApiError && error.code in catalogMessages
+          ? error.code
+          : "failed",
+      )}
+    </p>
+  ) : saved ? (
+    <p className="notice success" role="status">
+      {t("saved")}
+    </p>
+  ) : null;
+}
+function Frame({
+  title,
+  sub,
+  t,
+  error,
+  children,
+  actions,
+}: {
+  title: string;
+  sub?: string;
+  t: ReturnType<typeof catalogText>;
+  error?: unknown;
+  children: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <div className="catalog">
+      <header className="catalog-heading">
+        <div>
+          <h1>{title}</h1>
+          {sub && <p className="muted">{sub}</p>}
+        </div>
+        <div className="catalog-actions">{actions}</div>
+      </header>
+      <Notice error={error} t={t} />
+      {children}
+    </div>
+  );
+}
+function Rows({
+  items,
+  t,
+  children,
+}: {
+  items?: Item[];
+  t: ReturnType<typeof catalogText>;
+  children: (r: Item) => React.ReactNode;
+}) {
+  return !items ? (
+    <p role="status">{t("loading")}</p>
+  ) : !items.length ? (
+    <p className="catalog-empty">{t("empty")}</p>
+  ) : (
+    <>{items.map(children)}</>
+  );
+}
+function More({
+  list,
+  setCursor,
+  t,
+}: {
+  list: any;
+  setCursor: (s: string) => void;
+  t: ReturnType<typeof catalogText>;
+}) {
+  return list?.hasMore ? (
+    <button className="secondary" onClick={() => setCursor(list.nextCursor)}>
+      {t("more")}
+    </button>
+  ) : null;
+}
+const fieldNames = [
+  "name",
+  "sku",
+  "category",
+  "description",
+  "material",
+  "application",
+  "certifications",
+  "moq",
+  "leadTime",
+  "specs",
+  "specTable",
+] as const;
+function Badge({
+  value,
+  t,
+}: {
+  value: string;
+  t: ReturnType<typeof catalogText>;
+}) {
+  return <span className={"catalog-badge " + value}>{t(value)}</span>;
+}
+export function ProductsPage({ locale, role }: Props) {
+  const t = catalogText(locale),
+    [q, setQ] = useState(""),
+    [query, setQuery] = useState(""),
+    [status, setStatus] = useState(""),
+    [cursor, setCursor] = useState("");
+  const { data, error } = useLoad(
+    "/products?" +
+      new URLSearchParams({
+        q: query,
+        ...(status ? { status } : {}),
+        ...(cursor ? { cursor } : {}),
+      }),
+  );
+  return (
+    <Frame
+      title={t("products")}
+      sub={t("productsSub")}
+      t={t}
+      error={error}
+      actions={
+        role !== "viewer" && (
+          <>
+            <Link className="button secondary" to="/products/imports">
+              {t("importExcel")}
+            </Link>
+            <Link className="button" to="/products/new">
+              {t("addProduct")}
+            </Link>
+          </>
+        )
+      }
+    >
+      <form
+        className="catalog-toolbar"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setCursor("");
+          setQuery(q);
+        }}
+      >
+        <input
+          aria-label={t("search")}
+          placeholder={t("search")}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select
+          aria-label={t("status")}
+          value={status}
+          onChange={(e) => {
+            setCursor("");
+            setStatus(e.target.value);
+          }}
+        >
+          <option value="">{t("all")}</option>
+          {["draft", "active", "archived"].map((s) => (
+            <option key={s} value={s}>
+              {t(s)}
+            </option>
+          ))}
+        </select>
+        <button className="secondary">{t("search")}</button>
+      </form>
+      <div className="catalog-list">
+        <Rows items={data?.items} t={t}>
+          {(p) => (
+            <article className="catalog-row" key={p.id}>
+              <div>
+                <Link className="catalog-name" to={"/products/" + p.id}>
+                  {p.name}
+                </Link>
+                <p className="muted">
+                  {p.sku} · {p.category ?? "—"}
+                </p>
+                <small>
+                  {t("updated")}: {new Date(p.updatedAt).toLocaleString(locale)}
+                </small>
+              </div>
+              <div className="catalog-actions">
+                <Badge value={p.source} t={t} />
+                <Badge value={p.status} t={t} />
+              </div>
+            </article>
+          )}
+        </Rows>
+      </div>
+      <More list={data} setCursor={setCursor} t={t} />
+    </Frame>
+  );
+}
+function Extraction({
+  kind,
+  id,
+  t,
+}: {
+  kind: "product" | "asset";
+  id: string;
+  t: ReturnType<typeof catalogText>;
+}) {
+  const [consent, setConsent] = useState(false),
+    [job, setJob] = useState<string>(),
+    a = useAction();
+  return (
+    <section className="catalog-subpanel">
+      <h3>{t("extract")}</h3>
+      <p className="muted">{t("extractHint")}</p>
+      <label className="catalog-check">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+        />
+        {t("consent")}
+      </label>
+      <button
+        type="button"
+        className="secondary"
+        disabled={!consent || a.busy}
+        onClick={() =>
+          void a.run(async () => {
+            const r = await api("/facts/extractions", "POST", {
+              kind,
+              id,
+              consent: true,
+            });
+            setJob(r.id);
+          })
+        }
+      >
+        {a.busy ? t("saving") : t("extract")}
+      </button>
+      <Notice error={a.error} t={t} />
+      {job && <RunStatus id={job} t={t} />}
+    </section>
+  );
+}
+function RunStatus({
+  id,
+  t,
+}: {
+  id: string;
+  t: ReturnType<typeof catalogText>;
+}) {
+  const { data, error } = useLoad("/facts/extractions/" + id, true);
+  return (
+    <div className="catalog-job" role="status">
+      <strong>{t("run")}</strong> {data && <Badge value={data.status} t={t} />}
+      <Notice
+        error={
+          error ??
+          (data?.errorCode ? new ApiError(data.errorCode, 400) : undefined)
+        }
+        t={t}
+      />
+      {data?.status === "complete" && (
+        <Link to="/facts?status=candidate">
+          {t("viewFacts")} ({data.resultIds.length})
+        </Link>
+      )}
+    </div>
+  );
+}
+export function ProductEditor(props: Props) {
+  const { id } = useParams(),
+    t = catalogText(props.locale),
+    load = useLoad(id ? "/products/" + id : "/products?limit=1");
+  if (!load.data)
+    return (
+      <Frame
+        title={t(id ? "editProduct" : "addProduct")}
+        t={t}
+        error={load.error}
+      >
+        <p>{t("loading")}</p>
+      </Frame>
+    );
+  return (
+    <ProductForm
+      key={id ?? "new"}
+      {...props}
+      product={id ? load.data : undefined}
+      onSaved={load.replace}
+    />
+  );
+}
+function ProductForm({
+  locale,
+  role,
+  product,
+  onSaved,
+}: Props & { product?: Item; onSaved: (value: any) => void }) {
+  const t = catalogText(locale),
+    navigate = useNavigate(),
+    a = useAction(),
+    readOnly = role === "viewer";
+  const defaults = product
+    ? { ...product, certifications: product.certifications.join("\n") }
+    : {
+        name: "",
+        sku: "",
+        category: "",
+        description: "",
+        material: "",
+        application: "",
+        certifications: "",
+        moq: "",
+        leadTime: "",
+        status: "draft",
+        assetIds: [],
+        specs: [],
+      };
+  const { register, control, handleSubmit, reset } = useForm<any>({
+    defaultValues: defaults,
+  });
+  const specs = useFieldArray({ control, name: "specs" }),
+    assets = useLoad("/assets?kind=image&limit=100"),
+    [selected, setSelected] = useState<string[]>(product?.assetIds ?? []);
+  const [columns, setColumns] = useState<string[]>(
+      product?.specTable?.columns ?? [],
+    ),
+    [rows, setRows] = useState<string[][]>(product?.specTable?.rows ?? []),
+    [headings, setHeadings] = useState(
+      (product?.specTable?.columns ?? []).join(", "),
+    );
+  return (
+    <Frame
+      title={t(product ? "editProduct" : "addProduct")}
+      t={t}
+      error={assets.error}
+      actions={
+        <Link className="button secondary" to="/products">
+          {t("back")}
+        </Link>
+      }
+    >
+      {readOnly && <p className="notice">{t("viewOnly")}</p>}
+      <form
+        className="catalog-panel"
+        onSubmit={handleSubmit((values) =>
+          a.run(async () => {
+            const data = Object.fromEntries(
+              fieldNames
+                .filter((k) => !["certifications", "specTable"].includes(k))
+                .map((k) => [k, values[k]]),
+            );
+            Object.assign(data, {
+              sku: values.sku?.trim() || undefined,
+              status: values.status,
+              certifications: String(values.certifications ?? "")
+                .split(/\r?\n/)
+                .map((s) => s.trim())
+                .filter(Boolean),
+              assetIds: selected,
+              specTable: columns.length ? { columns, rows } : null,
+            });
+            const p = await api(
+              product ? "/products/" + product.id : "/products",
+              product ? "PATCH" : "POST",
+              product ? { revision: product.revision, data } : data,
+            );
+            navigate("/products/" + p.id, { replace: true });
+            onSaved(p);
+            reset({ ...p, certifications: p.certifications.join("\n") });
+          }),
+        )}
+      >
+        <fieldset disabled={readOnly || a.busy}>
+          <div className="catalog-grid">
+            {(
+              [
+                "name",
+                "sku",
+                "category",
+                "moq",
+                "leadTime",
+                "material",
+                "application",
+              ] as const
+            ).map((key) => (
+              <label key={key}>
+                {t(key)}
+                <input
+                  {...register(key, {
+                    required: key === "name",
+                    maxLength:
+                      key === "name"
+                        ? 200
+                        : key === "sku"
+                          ? 80
+                          : key === "category" ||
+                              key === "moq" ||
+                              key === "leadTime"
+                            ? 120
+                            : 2000,
+                  })}
+                />
+              </label>
+            ))}
+            <label>
+              {t("status")}
+              <select aria-label={t("status")} {...register("status")}>
+                {["draft", "active", "archived"].map((s) => (
+                  <option key={s} value={s}>
+                    {t(s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label>
+            {t("description")}
+            <textarea rows={4} maxLength={4000} {...register("description")} />
+          </label>
+          <label>
+            {t("certifications")}
+            <textarea rows={3} {...register("certifications")} />
+          </label>
+          <h2>{t("specs")}</h2>
+          <div className="catalog-specs">
+            {specs.fields.map((f, i) => (
+              <div className="catalog-spec-row" key={f.id}>
+                {(["code", "name", "value", "unit"] as const).map((k) => (
+                  <label key={k}>
+                    {t(k === "name" ? "specName" : k)}
+                    <input
+                      {...register("specs." + i + "." + k, {
+                        required: k !== "unit",
+                      })}
+                    />
+                  </label>
+                ))}
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => specs.remove(i)}
+                >
+                  {t("remove")}
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="secondary"
+            disabled={specs.fields.length >= 100}
+            onClick={() =>
+              specs.append({
+                code: "SPEC_" + (specs.fields.length + 1),
+                name: "",
+                value: "",
+                unit: "",
+              })
+            }
+          >
+            {t("addSpec")}
+          </button>
+          <section className="catalog-subpanel">
+            <h2>{t("specTable")}</h2>
+            <label>
+              {t("columns")}
+              <input
+                value={headings}
+                onChange={(e) => {
+                  setHeadings(e.target.value);
+                  const next = e.target.value
+                    .split(/[,，]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .slice(0, 10);
+                  setColumns(next);
+                  setRows((old) =>
+                    old.map((r) => next.map((_, i) => r[i] ?? "")),
+                  );
+                }}
+              />
+            </label>
+            {columns.length > 0 && (
+              <>
+                <div className="catalog-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        {columns.map((c, i) => (
+                          <th key={i}>{c}</th>
+                        ))}
+                        <th>{t("remove")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, i) => (
+                        <tr key={i}>
+                          {columns.map((c, j) => (
+                            <td key={j}>
+                              <input
+                                aria-label={c + " " + (i + 1)}
+                                maxLength={200}
+                                value={r[j] ?? ""}
+                                onChange={(e) =>
+                                  setRows((prev) =>
+                                    prev.map((row, k) =>
+                                      k === i
+                                        ? row.map((v, l) =>
+                                            l === j ? e.target.value : v,
+                                          )
+                                        : row,
+                                    ),
+                                  )
+                                }
+                              />
+                            </td>
+                          ))}
+                          <td>
+                            <button
+                              className="secondary"
+                              type="button"
+                              onClick={() =>
+                                setRows((prev) =>
+                                  prev.filter((_, k) => k !== i),
+                                )
+                              }
+                            >
+                              {t("remove")}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={rows.length >= 50}
+                  onClick={() => setRows((r) => [...r, columns.map(() => "")])}
+                >
+                  {t("addRow")}
+                </button>
+              </>
+            )}
+          </section>
+          <h2>{t("images")}</h2>
+          <p className="muted">
+            {t("imageHint")} <Link to="/assets">{t("assets")}</Link>
+          </p>
+          <div className="catalog-picker">
+            {assets.data?.items.map((file: Item) => (
+              <label className="catalog-pick" key={file.id}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(file.id)}
+                  onChange={(e) =>
+                    setSelected((old) =>
+                      e.target.checked
+                        ? [...old, file.id]
+                        : old.filter((x) => x !== file.id),
+                    )
+                  }
+                />
+                <img src={file.thumbnailUrl ?? file.url} alt="" />
+                <span>{file.fileName}</span>
+              </label>
+            ))}
+          </div>
+          {!readOnly && (
+            <button type="submit" disabled={a.busy}>
+              {a.busy ? t("saving") : t("save")}
+            </button>
+          )}
+        </fieldset>
+        <Notice error={a.error} saved={a.saved} t={t} />
+      </form>
+      {product && !readOnly && (
+        <Extraction kind="product" id={product.id} t={t} />
+      )}
+    </Frame>
+  );
+}
+export function ImportPage({ locale, role }: Props) {
+  const t = catalogText(locale),
+    [batch, setBatch] = useState<Item>(),
+    [mapping, setMapping] = useState<Record<string, string>>({}),
+    [file, setFile] = useState<File>(),
+    a = useAction(),
+    history = useLoad("/products/imports"),
+    [pollVersion, setPollVersion] = useState(0);
+  useEffect(() => {
+    if (!batch || !["queued", "running"].includes(batch.status)) return;
+    const timer = setTimeout(
+      () =>
+        void api("/products/imports/" + batch.id)
+          .then((r) => {
+            setBatch(r);
+            setPollVersion((v) => v + 1);
+          })
+          .catch(() => setPollVersion((v) => v + 1)),
+      1500,
+    );
+    return () => clearTimeout(timer);
+  }, [batch, pollVersion]);
+  const pick = (r: Item) => {
+    setBatch(r);
+    setMapping(r.mapping);
+  };
+  return (
+    <Frame
+      title={t("importExcel")}
+      sub={t("importSub")}
+      t={t}
+      error={history.error}
+      actions={
+        <Link to="/products" className="button secondary">
+          {t("back")}
+        </Link>
+      }
+    >
+      <section className="catalog-panel">
+        <p>{t("importHint")}</p>
+        <details>
+          <summary>
+            {t("specs")} / {t("specTable")}
+          </summary>
+          <pre>
+            {
+              '{"Voltage":"220 V"}\n{"columns":["Model","Weight"],"rows":[["A","10 kg"]]}'
+            }
+          </pre>
+        </details>
+        {role !== "viewer" && (
+          <form
+            className="catalog-toolbar"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void a.run(async () => {
+                if (!file) return;
+                const form = new FormData();
+                form.set("file", file);
+                pick(await api("/products/imports", "POST", form));
+                history.reload();
+              });
+            }}
+          >
+            <label>
+              {t("file")}
+              <input
+                required
+                type="file"
+                accept=".xlsx,.csv"
+                onChange={(e) => setFile(e.target.files?.[0])}
+              />
+            </label>
+            <button disabled={a.busy || !file}>{t("upload")}</button>
+          </form>
+        )}
+        <Notice error={a.error} t={t} />
+      </section>
+      {batch && (
+        <section className="catalog-panel">
+          <div className="catalog-heading">
+            <h2>{batch.fileName}</h2>
+            <Badge value={batch.status} t={t} />
+            <Notice
+              error={
+                batch.errorCode ? new ApiError(batch.errorCode, 400) : undefined
+              }
+              t={t}
+            />
+          </div>
+          {batch.status === "preview" && role !== "viewer" && (
+            <>
+              <h3>{t("mapping")}</h3>
+              <div className="catalog-grid">
+                {fieldNames.map((f) => (
+                  <label key={f}>
+                    {t(f)}
+                    <select
+                      value={mapping[f] ?? ""}
+                      onChange={(e) =>
+                        setMapping((old) => {
+                          const next = { ...old };
+                          if (e.target.value) next[f] = e.target.value;
+                          else delete next[f];
+                          return next;
+                        })
+                      }
+                    >
+                      <option value="">{t("unmapped")}</option>
+                      {batch.headers.map((h: string) => (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              <button
+                className="secondary"
+                disabled={a.busy}
+                onClick={() =>
+                  void a.run(async () =>
+                    pick(
+                      await api("/products/imports/" + batch.id, "PATCH", {
+                        revision: batch.revision,
+                        mapping,
+                      }),
+                    ),
+                  )
+                }
+              >
+                {t("applyMapping")}
+              </button>
+            </>
+          )}
+          <p>
+            {t("total")}: {batch.report.total} · {t("validRows")}:{" "}
+            {batch.report.valid} · {t("errorRows")}: {batch.report.errorRows}
+          </p>
+          <div className="catalog-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t("row")}</th>
+                  <th>{t("name")}</th>
+                  <th>{t("status")}</th>
+                  <th>{t("errors")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batch.report.items.map((r: Item) => (
+                  <tr key={r.row}>
+                    <td>{r.row}</td>
+                    <td>{r.data?.name ?? "—"}</td>
+                    <td>{t(r.errors.length ? "invalid" : "valid")}</td>
+                    <td>
+                      {r.errors.map((e: Item, i: number) => (
+                        <div key={i}>
+                          {t(e.field.split(".")[0])}: {t(e.code)}
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="catalog-actions">
+            <a
+              className="button secondary"
+              href={"/api/v1/products/imports/" + batch.id + "/report.csv"}
+            >
+              {t("errorReport")}
+            </a>
+            {role !== "viewer" && batch.status === "preview" && (
+              <button
+                disabled={a.busy || !batch.report.valid}
+                onClick={() =>
+                  void a.run(async () =>
+                    setBatch(
+                      await api(
+                        "/products/imports/" + batch.id + "/confirm",
+                        "POST",
+                        { revision: batch.revision },
+                      ),
+                    ),
+                  )
+                }
+              >
+                {t("importValid")} ({batch.report.valid})
+              </button>
+            )}
+          </div>
+          {!!batch.results?.length && (
+            <p>
+              {t("imported")}:{" "}
+              {
+                batch.results.filter((r: Item) => r.status === "imported")
+                  .length
+              }{" "}
+              / {batch.results.length}
+            </p>
+          )}
+        </section>
+      )}
+      <section className="catalog-panel">
+        <h2>{t("importHistory")}</h2>
+        <Rows items={history.data?.items} t={t}>
+          {(r) => (
+            <div className="catalog-row" key={r.id}>
+              <button className="secondary" onClick={() => pick(r)}>
+                {r.fileName}
+              </button>
+              <Badge value={r.status} t={t} />
+            </div>
+          )}
+        </Rows>
+      </section>
+    </Frame>
+  );
+}
+export function AssetsPage({ locale, role }: Props) {
+  const t = catalogText(locale),
+    [kind, setKind] = useState(""),
+    [cursor, setCursor] = useState(""),
+    [file, setFile] = useState<File>(),
+    [uploadKind, setUploadKind] = useState("image"),
+    a = useAction(),
+    [extractId, setExtractId] = useState<string>();
+  const load = useLoad(
+    "/assets?" +
+      new URLSearchParams({
+        ...(kind ? { kind } : {}),
+        ...(cursor ? { cursor } : {}),
+      }),
+  );
+  return (
+    <Frame title={t("assets")} sub={t("assetsSub")} t={t} error={load.error}>
+      {role !== "viewer" && (
+        <form
+          className="catalog-panel"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void a.run(async () => {
+              if (!file) return;
+              const form = new FormData();
+              form.set("kind", uploadKind);
+              form.set("file", file);
+              await api("/assets", "POST", form);
+              setCursor("");
+              load.reload();
+            });
+          }}
+        >
+          <p>{t("fileHint")}</p>
+          <div className="catalog-toolbar">
+            <label>
+              {t("kind")}
+              <select
+                value={uploadKind}
+                onChange={(e) => setUploadKind(e.target.value)}
+              >
+                {["image", "document", "certificate"].map((k) => (
+                  <option key={k} value={k}>
+                    {t(k)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t("file")}
+              <input
+                required
+                type="file"
+                accept="image/png,image/jpeg,image/webp,application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0])}
+              />
+            </label>
+            <button disabled={!file || a.busy}>
+              {a.busy ? t("saving") : t("upload")}
+            </button>
+          </div>
+          <Notice error={a.error} saved={a.saved} t={t} />
+        </form>
+      )}
+      <label className="catalog-filter">
+        {t("kind")}
+        <select
+          value={kind}
+          onChange={(e) => {
+            setCursor("");
+            setKind(e.target.value);
+          }}
+        >
+          <option value="">{t("all")}</option>
+          {["image", "document", "certificate"].map((k) => (
+            <option key={k} value={k}>
+              {t(k)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="catalog-assets">
+        <Rows items={load.data?.items} t={t}>
+          {(r) => (
+            <article className="catalog-asset" key={r.id}>
+              <div className="catalog-preview">
+                {r.mime.startsWith("image/") ? (
+                  <img
+                    src={r.thumbnailUrl ?? r.url}
+                    alt={r.fileName}
+                    loading="lazy"
+                  />
+                ) : (
+                  <span>PDF</span>
+                )}
+              </div>
+              <h3>{r.fileName}</h3>
+              <p className="muted">
+                {t(r.kind)} · {Math.ceil(r.bytes / 1024)} KB
+                {r.width ? " · " + r.width + " × " + r.height : ""}
+              </p>
+              <div className="catalog-actions">
+                <a
+                  href={"/api/v1/assets/" + r.id + "/download"}
+                  className="button secondary"
+                >
+                  {t("download")}
+                </a>
+                {role !== "viewer" && (
+                  <>
+                    <button
+                      className="secondary"
+                      onClick={() => setExtractId(r.id)}
+                    >
+                      {t("extract")}
+                    </button>
+                    <button
+                      className="secondary"
+                      disabled={a.busy}
+                      onClick={() => {
+                        if (window.confirm(t("deleteAsk")))
+                          void a.run(async () => {
+                            await api("/assets/" + r.id, "DELETE");
+                            load.reload();
+                          });
+                      }}
+                    >
+                      {t("delete")}
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          )}
+        </Rows>
+      </div>
+      <More list={load.data} setCursor={setCursor} t={t} />
+      {extractId && (
+        <>
+          <Extraction key={extractId} kind="asset" id={extractId} t={t} />
+          <button className="secondary" onClick={() => setExtractId(undefined)}>
+            {t("close")}
+          </button>
+        </>
+      )}
+    </Frame>
+  );
+}
+export function FactsPage({ locale, role }: Props) {
+  const t = catalogText(locale),
+    [params] = useSearchParams(),
+    [status, setStatus] = useState(params.get("status") ?? "candidate"),
+    [cursor, setCursor] = useState(""),
+    [editing, setEditing] = useState<Item | null | undefined>(),
+    [historyId, setHistoryId] = useState<string>(),
+    a = useAction();
+  const load = useLoad(
+    "/facts?" +
+      new URLSearchParams({
+        ...(status ? { status } : {}),
+        ...(cursor ? { cursor } : {}),
+      }),
+  );
+  return (
+    <Frame
+      title={t("facts")}
+      sub={t("factsSub")}
+      t={t}
+      error={load.error}
+      actions={
+        role !== "viewer" && (
+          <button onClick={() => setEditing(null)}>{t("addFact")}</button>
+        )
+      }
+    >
+      <p className="catalog-review-hint">{t("reviewHint")}</p>
+      <Notice error={a.error} saved={a.saved} t={t} />
+      <label className="catalog-filter">
+        {t("status")}
+        <select
+          aria-label={t("status")}
+          value={status}
+          onChange={(e) => {
+            setCursor("");
+            setStatus(e.target.value);
+          }}
+        >
+          <option value="">{t("all")}</option>
+          {["candidate", "confirmed", "rejected"].map((s) => (
+            <option key={s} value={s}>
+              {t(s)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {editing !== undefined && (
+        <FactForm
+          key={editing?.id ?? "new"}
+          fact={editing}
+          t={t}
+          done={() => {
+            setEditing(undefined);
+            load.reload();
+          }}
+          close={() => setEditing(undefined)}
+        />
+      )}
+      <div className="catalog-list">
+        <Rows items={load.data?.items} t={t}>
+          {(f) => (
+            <article key={f.id} className="catalog-fact">
+              <div className="catalog-heading">
+                <div>
+                  <small>
+                    {f.type} · {t(f.subjectType)} · {t("revision")} {f.revision}
+                  </small>
+                  <h2>
+                    {f.value}
+                    {f.unit ? " " + f.unit : ""}
+                  </h2>
+                </div>
+                <Badge value={f.status} t={t} />
+              </div>
+              <Source fact={f} t={t} />
+              <div className="catalog-actions">
+                {role === "admin" && (
+                  <>
+                    <button
+                      disabled={a.busy || f.status === "confirmed"}
+                      onClick={() =>
+                        void a.run(async () => {
+                          await api("/facts/" + f.id + "/confirm", "POST", {
+                            revision: f.revision,
+                          });
+                          load.reload();
+                        })
+                      }
+                    >
+                      {t("confirm")}
+                    </button>
+                    <button
+                      className="secondary"
+                      disabled={a.busy || f.status === "rejected"}
+                      onClick={() =>
+                        void a.run(async () => {
+                          await api("/facts/" + f.id + "/reject", "POST", {
+                            revision: f.revision,
+                          });
+                          load.reload();
+                        })
+                      }
+                    >
+                      {t("reject")}
+                    </button>
+                  </>
+                )}
+                {role !== "viewer" && (
+                  <button className="secondary" onClick={() => setEditing(f)}>
+                    {t("edit")}
+                  </button>
+                )}
+                <button
+                  className="secondary"
+                  onClick={() =>
+                    setHistoryId(historyId === f.id ? undefined : f.id)
+                  }
+                >
+                  {t("history")}
+                </button>
+              </div>
+              {historyId === f.id && <FactHistory id={f.id} t={t} />}
+            </article>
+          )}
+        </Rows>
+      </div>
+      <More list={load.data} setCursor={setCursor} t={t} />
+    </Frame>
+  );
+}
+function Source({
+  fact: f,
+  t,
+}: {
+  fact: Item;
+  t: ReturnType<typeof catalogText>;
+}) {
+  const s = f.source;
+  return (
+    <div className="catalog-evidence">
+      <p>
+        <strong>
+          {t("source")}: {t(s.kind)}
+        </strong>
+        {s.label ? " · " + s.label : ""}
+      </p>
+      <blockquote>{s.quote}</blockquote>
+      {s.kind === "asset" && (
+        <a href={"/api/v1/assets/" + s.refId + "/download"}>
+          {t("openSource")}
+        </a>
+      )}
+      {s.kind === "product" && (
+        <Link to={"/products/" + s.refId}>{t("openSource")}</Link>
+      )}
+      {s.url && /^https?:\/\//i.test(s.url) && (
+        <a href={s.url} target="_blank" rel="noreferrer">
+          {t("openSource")}
+        </a>
+      )}
+      {s.textVerified === false && <p className="muted">{t("machineRead")}</p>}
+    </div>
+  );
+}
+function FactHistory({
+  id,
+  t,
+}: {
+  id: string;
+  t: ReturnType<typeof catalogText>;
+}) {
+  const { data, error } = useLoad("/facts/" + id + "/history");
+  return (
+    <div className="catalog-subpanel">
+      <Notice error={error} t={t} />
+      <Rows items={data?.items} t={t}>
+        {(r) => (
+          <div className="catalog-row" key={r.id}>
+            <div>
+              <strong>
+                {t("revision")} {r.revision} · {t(r.after.status)}
+              </strong>
+              <p>{r.after.value}</p>
+              <Source fact={r.after} t={t} />
+              {r.before && (
+                <details>
+                  <summary>{t("history")}</summary>
+                  <p>
+                    {r.before.value} · {t(r.before.status)}
+                  </p>
+                </details>
+              )}
+            </div>
+            <time>{new Date(r.createdAt).toLocaleString()}</time>
+          </div>
+        )}
+      </Rows>
+    </div>
+  );
+}
+function FactForm({
+  fact,
+  t,
+  done,
+  close,
+}: {
+  fact: Item | null;
+  t: ReturnType<typeof catalogText>;
+  done: () => void;
+  close: () => void;
+}) {
+  const a = useAction(),
+    products = useLoad("/products?limit=100"),
+    { register, handleSubmit, watch } = useForm<any>({
+      defaultValues: fact ?? {
+        subjectType: "organization",
+        subjectId: "",
+        type: "",
+        value: "",
+        unit: "",
+        source: { kind: "manual", quote: "", label: "" },
+      },
+    });
+  return (
+    <form
+      className="catalog-panel"
+      onSubmit={handleSubmit((values) =>
+        a.run(async () => {
+          const data = {
+            subjectType: values.subjectType,
+            ...(values.subjectType === "product"
+              ? { subjectId: values.subjectId }
+              : {}),
+            type: values.type,
+            value: values.value,
+            unit: values.unit || null,
+            source: { ...values.source, revision: undefined },
+          };
+          await api(
+            fact ? "/facts/" + fact.id : "/facts",
+            fact ? "PATCH" : "POST",
+            fact ? { revision: fact.revision, data } : data,
+          );
+          done();
+        }),
+      )}
+    >
+      <h2>{t(fact ? "editFact" : "addFact")}</h2>
+      <fieldset disabled={a.busy}>
+        <div className="catalog-grid">
+          <label>
+            {t("subject")}
+            <select aria-label={t("subject")} {...register("subjectType")}>
+              <option value="organization">{t("organization")}</option>
+              <option value="product">{t("product")}</option>
+            </select>
+          </label>
+          {watch("subjectType") === "product" && (
+            <label>
+              {t("product")}
+              <select
+                aria-label={t("product")}
+                required
+                {...register("subjectId")}
+              >
+                <option value="">{t("select")}</option>
+                {products.data?.items.map((p: Item) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label>
+            {t("type")}
+            <input
+              required
+              maxLength={80}
+              placeholder={t("typeHint")}
+              {...register("type")}
+            />
+          </label>
+          <label>
+            {t("value")}
+            <input required maxLength={1200} {...register("value")} />
+          </label>
+          <label>
+            {t("unit")}
+            <input maxLength={40} {...register("unit")} />
+          </label>
+        </div>
+        <label>
+          {t("quote")}
+          <textarea
+            required
+            rows={3}
+            maxLength={1200}
+            {...register("source.quote")}
+          />
+        </label>
+        <label>
+          {t("sourceLabel")}
+          <input maxLength={200} {...register("source.label")} />
+        </label>
+        <p className="muted">{t("reviewHint")}</p>
+        <div className="catalog-actions">
+          <button>{t("save")}</button>
+          <button type="button" className="secondary" onClick={close}>
+            {t("close")}
+          </button>
+        </div>
+      </fieldset>
+      <Notice error={a.error} t={t} />
+    </form>
+  );
+}
+export function WebsitePage({ locale, role }: Props) {
+  const t = catalogText(locale),
+    { register, handleSubmit } = useForm({
+      defaultValues: { url: "", maxPages: 5 },
+    }),
+    a = useAction(),
+    [runId, setRunId] = useState(""),
+    history = useLoad("/website-reads", true),
+    detail = useLoad(
+      runId ? "/website-reads/" + runId : "/website-reads?limit=1",
+      true,
+    ),
+    run = runId ? detail.data : undefined;
+  return (
+    <Frame
+      title={t("website")}
+      sub={t("websiteSub")}
+      t={t}
+      error={history.error}
+    >
+      {role !== "viewer" && (
+        <form
+          className="catalog-panel"
+          onSubmit={handleSubmit((values) =>
+            a.run(async () => {
+              const r = await api("/website-reads", "POST", values);
+              setRunId(r.id);
+              history.reload();
+            }),
+          )}
+        >
+          <p>{t("readHint")}</p>
+          <fieldset disabled={a.busy}>
+            <div className="catalog-grid">
+              <label>
+                {t("url")}
+                <input
+                  required
+                  type="url"
+                  placeholder="https://example.com"
+                  {...register("url", { required: true })}
+                />
+              </label>
+              <label>
+                {t("maxPages")}
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  max={8}
+                  {...register("maxPages", {
+                    valueAsNumber: true,
+                    min: 1,
+                    max: 8,
+                  })}
+                />
+              </label>
+            </div>
+            <button>{a.busy ? t("saving") : t("read")}</button>
+          </fieldset>
+          <Notice error={a.error} t={t} />
+        </form>
+      )}
+      <section className="catalog-panel">
+        <h2>{t("history")}</h2>
+        <Rows items={history.data?.items} t={t}>
+          {(r) => (
+            <div key={r.id} className="catalog-row">
+              <button
+                className="secondary catalog-url"
+                onClick={() => setRunId(r.id)}
+              >
+                {r.url}
+              </button>
+              <Badge value={r.status} t={t} />
+            </div>
+          )}
+        </Rows>
+      </section>
+      {run && (
+        <section className="catalog-panel">
+          <div className="catalog-heading">
+            <h2 className="catalog-url">{run.url}</h2>
+            <Badge value={run.status} t={t} />
+          </div>
+          <Notice
+            error={
+              run.errorCode ? new ApiError(run.errorCode, 400) : detail.error
+            }
+            t={t}
+          />
+          <p>
+            {t("newDrafts")}: {run.resultIds.length} · {t("newFacts")}:{" "}
+            {run.factIds.length}
+          </p>
+          {run.truncated && <p>{t("truncated")}</p>}
+          <div className="catalog-actions">
+            <a
+              className="button secondary"
+              href={"/api/v1/website-reads/" + run.id + "/migration.csv"}
+            >
+              {t("migration")}
+            </a>
+            <Link className="button secondary" to="/facts?status=candidate">
+              {t("viewFacts")}
+            </Link>
+            <Link className="button secondary" to="/products">
+              {t("products")}
+            </Link>
+          </div>
+          <h3>{t("pages")}</h3>
+          {run.pages.map((p: Item) => (
+            <article key={p.url} className="catalog-subpanel">
+              <strong>{p.title || "—"}</strong>
+              <p className="catalog-url">{p.url}</p>
+              <Badge
+                value={p.status === "read" ? "readStatus" : p.status}
+                t={t}
+              />
+              {p.headings?.length > 0 && (
+                <ul>
+                  {p.headings.map((h: any, i: number) => (
+                    <li key={i}>{typeof h === "string" ? h : h.text}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+        </section>
+      )}
+    </Frame>
+  );
+}

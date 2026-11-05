@@ -2280,37 +2280,37 @@ paths:
                   - success
                   - data
         "400":
-          description: Validation, expired/used token or OTP
+          description: Invalid input
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Invalid credentials or session
+          description: Session expired
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403":
-          description: Origin, CSRF, role or membership rejected
+          description: Role or CSRF rejected
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "404":
-          description: Not found within current organization
+          description: Unavailable in this organization
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Conflict or plan quota exceeded
+          description: Revision, source, reference or quota conflict
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "413":
-          description: File too large
+          description: Upload or workbook limit exceeded
           content:
             application/json:
               schema:
@@ -2325,6 +2325,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
       parameters:
         - $ref: "#/components/parameters/Origin"
       requestBody:
@@ -2333,12 +2339,111 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              required:
+                - file
               properties:
                 file:
                   type: string
                   format: binary
-              required:
-                - file
+                kind:
+                  type: string
+                  enum:
+                    - image
+                    - document
+                    - certificate
+              additionalProperties: false
+    get:
+      operationId: cataloggetassets
+      summary: CatalogAssetListResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Last item ID from previous page; descending stable ID cursor
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Organization-scoped filter
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+          description: image/document/certificate
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogAssetListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /assets/{id}:
     get:
       operationId: foundation31
@@ -2366,31 +2471,37 @@ paths:
                 type: string
                 format: binary
         "400":
-          description: Validation, expired/used token or OTP
+          description: Invalid input
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Invalid credentials or session
+          description: Session expired
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403":
-          description: Origin, CSRF, role or membership rejected
+          description: Role or CSRF rejected
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "404":
-          description: Not found within current organization
+          description: Unavailable in this organization
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Conflict or plan quota exceeded
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
           content:
             application/json:
               schema:
@@ -2405,6 +2516,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
       parameters:
         - name: id
           in: path
@@ -2412,6 +2529,14 @@ paths:
           schema:
             type: string
             pattern: ^[a-f0-9]{24}$
+        - name: variant
+          in: query
+          schema:
+            type: string
+            enum:
+              - thumb
+              - webp
+          description: Omit for sanitized original; derivatives are WebP
     delete:
       operationId: foundation32
       summary: Delete own-organization asset and release storage
@@ -2446,31 +2571,37 @@ paths:
                   - success
                   - data
         "400":
-          description: Validation, expired/used token or OTP
+          description: Invalid input
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Invalid credentials or session
+          description: Session expired
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403":
-          description: Origin, CSRF, role or membership rejected
+          description: Role or CSRF rejected
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "404":
-          description: Not found within current organization
+          description: Unavailable in this organization
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Conflict or plan quota exceeded
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
           content:
             application/json:
               schema:
@@ -2481,6 +2612,12 @@ paths:
             Retry-After:
               schema:
                 type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
           content:
             application/json:
               schema:
@@ -2711,6 +2848,1868 @@ paths:
             maxLength: 200
       x-development-only: true
       description: Unavailable in production. Receipt expires after one hour. No email address is returned.
+  /products:
+    get:
+      operationId: cataloggetproducts
+      summary: CatalogProductListResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Last item ID from previous page; descending stable ID cursor
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Organization-scoped filter
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Organization-scoped filter
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Organization-scoped filter
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "products: draft/active/archived; facts: candidate/confirmed/rejected"
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogProductListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: catalogpostproducts
+      summary: CatalogProductResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters: []
+      responses:
+        "201":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogProductResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogProductInput"
+  /products/{id}:
+    get:
+      operationId: cataloggetproductsid
+      summary: CatalogProductResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogProductResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: catalogpatchproductsid
+      summary: CatalogProductResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogProductResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogProductPatch"
+  /products/imports:
+    get:
+      operationId: cataloggetproductsimports
+      summary: CatalogImportListResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Last item ID from previous page; descending stable ID cursor
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Organization-scoped filter
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogImportListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: catalogpostproductsimports
+      summary: CatalogImportResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters: []
+      responses:
+        "201":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogImportResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+              additionalProperties: false
+  /products/imports/{id}:
+    get:
+      operationId: cataloggetproductsimportsid
+      summary: CatalogImportResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogImportResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: catalogpatchproductsimportsid
+      summary: CatalogImportResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogImportResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogImportMapping"
+  /products/imports/{id}/confirm:
+    post:
+      operationId: catalogpostproductsimportsidconfirm
+      summary: CatalogImportResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "202":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogImportResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogImportConfirm"
+  /facts:
+    get:
+      operationId: cataloggetfacts
+      summary: CatalogFactListResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Last item ID from previous page; descending stable ID cursor
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Organization-scoped filter
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "products: draft/active/archived; facts: candidate/confirmed/rejected"
+        - name: subjectId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Organization-scoped filter
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogFactListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: catalogpostfacts
+      summary: CatalogFactResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters: []
+      responses:
+        "201":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogFactResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogFactInput"
+  /facts/{id}:
+    patch:
+      operationId: catalogpatchfactsid
+      summary: CatalogFactResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogFactResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogFactPatch"
+  /facts/{id}/confirm:
+    post:
+      operationId: catalogpostfactsidconfirm
+      summary: CatalogFactResponse；权限 admin，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogFactResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogTransition"
+  /facts/{id}/reject:
+    post:
+      operationId: catalogpostfactsidreject
+      summary: CatalogFactResponse；权限 admin，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogFactResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogTransition"
+  /facts/{id}/history:
+    get:
+      operationId: cataloggetfactsidhistory
+      summary: CatalogHistoryListResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Last item ID from previous page; descending stable ID cursor
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Organization-scoped filter
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogHistoryListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /facts/extractions:
+    post:
+      operationId: catalogpostfactsextractions
+      summary: CatalogRunResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters: []
+      responses:
+        "202":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogExtraction"
+  /facts/extractions/{id}:
+    get:
+      operationId: cataloggetfactsextractionsid
+      summary: CatalogRunResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /website-reads:
+    get:
+      operationId: cataloggetwebsitereads
+      summary: CatalogRunListResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Last item ID from previous page; descending stable ID cursor
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Organization-scoped filter
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: catalogpostwebsitereads
+      summary: CatalogRunResponse；权限 editor，组织隔离。
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters: []
+      responses:
+        "202":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogWebsiteInput"
+  /website-reads/{id}:
+    get:
+      operationId: cataloggetwebsitereadsid
+      summary: CatalogRunResponse；权限 reader，组织隔离。
+      security:
+        - cookieAuth: []
+      x-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 成功；私有资料，不可作为已确认事实公开。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: 数据不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: 外部服务失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /products/imports/{id}/report.csv:
+    get:
+      operationId: catalogDownloadproductsimportsidreportcsv
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 私有附件下载；nosniff+attachment，CSV转义公式。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /website-reads/{id}/migration.csv:
+    get:
+      operationId: catalogDownloadwebsitereadsidmigrationcsv
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 私有附件下载；nosniff+attachment，CSV转义公式。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /assets/{id}/download:
+    get:
+      operationId: catalogDownloadassetsiddownload
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: 私有附件下载；nosniff+attachment，CSV转义公式。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, source, reference or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Upload or workbook limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   securitySchemes:
     cookieAuth:
@@ -3001,8 +5000,10 @@ components:
         mime:
           type: string
           enum:
-            - image/jpeg
             - image/png
+            - image/jpeg
+            - image/webp
+            - application/pdf
       required:
         - id
         - bytes
@@ -3289,3 +5290,1099 @@ components:
         - baseUrl
         - enabled
       additionalProperties: false
+    CatalogSpec:
+      type: object
+      required:
+        - code
+        - name
+        - value
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        value:
+          type: string
+        unit:
+          type:
+            - string
+            - "null"
+    CatalogProduct:
+      type: object
+      required:
+        - id
+        - sku
+        - name
+        - category
+        - description
+        - material
+        - application
+        - certifications
+        - moq
+        - leadTime
+        - specs
+        - specTable
+        - assetIds
+        - source
+        - externalRef
+        - provenance
+        - status
+        - revision
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        sku:
+          type: string
+        name:
+          type: string
+        category:
+          type:
+            - string
+            - "null"
+        description:
+          type:
+            - string
+            - "null"
+        material:
+          type:
+            - string
+            - "null"
+        application:
+          type:
+            - string
+            - "null"
+        certifications:
+          type: array
+          items:
+            type: string
+        moq:
+          type:
+            - string
+            - "null"
+        leadTime:
+          type:
+            - string
+            - "null"
+        specs:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogSpec"
+        specTable:
+          type:
+            - object
+            - "null"
+        assetIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        source:
+          enum:
+            - local
+            - globalcrm
+        externalRef:
+          type:
+            - object
+            - "null"
+        provenance:
+          type:
+            - object
+            - "null"
+        status:
+          enum:
+            - draft
+            - active
+            - archived
+        revision:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CatalogProductResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/CatalogProduct"
+    CatalogProductListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CatalogProduct"
+            nextCursor:
+              type:
+                - string
+                - "null"
+            hasMore:
+              type: boolean
+    CatalogSource:
+      type: object
+      required:
+        - kind
+        - quote
+      properties:
+        kind:
+          enum:
+            - manual
+            - asset
+            - product
+            - website
+            - globalcrm
+        refId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        quote:
+          type: string
+        url:
+          type: string
+          format: uri
+        sha256:
+          type: string
+        revision:
+          type: integer
+        capturedAt:
+          type: string
+          format: date-time
+        label:
+          type: string
+        textVerified:
+          type: boolean
+    CatalogFact:
+      type: object
+      required:
+        - id
+        - subjectType
+        - subjectId
+        - type
+        - value
+        - unit
+        - source
+        - status
+        - revision
+        - reviewedBy
+        - reviewedAt
+        - reason
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        subjectType:
+          enum:
+            - organization
+            - product
+        subjectId:
+          type:
+            - string
+            - "null"
+        type:
+          type: string
+        value:
+          type: string
+        unit:
+          type:
+            - string
+            - "null"
+        source:
+          $ref: "#/components/schemas/CatalogSource"
+        status:
+          enum:
+            - candidate
+            - confirmed
+            - rejected
+        revision:
+          type: integer
+          minimum: 1
+        reviewedBy:
+          type:
+            - string
+            - "null"
+        reviewedAt:
+          type:
+            - string
+            - "null"
+        reason:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    CatalogFactResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/CatalogFact"
+    CatalogFactListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CatalogFact"
+            nextCursor:
+              type:
+                - string
+                - "null"
+            hasMore:
+              type: boolean
+    CatalogAsset:
+      type: object
+      required:
+        - id
+        - fileName
+        - kind
+        - mime
+        - bytes
+        - totalBytes
+        - sha256
+        - width
+        - height
+        - createdAt
+        - url
+        - thumbnailUrl
+        - webpUrl
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        fileName:
+          type: string
+        kind:
+          type: string
+        mime:
+          type: string
+        bytes:
+          type: integer
+          minimum: 1
+        totalBytes:
+          type: integer
+          minimum: 1
+        sha256:
+          type: string
+        width:
+          type:
+            - integer
+            - "null"
+        height:
+          type:
+            - integer
+            - "null"
+        createdAt:
+          type: string
+        url:
+          type: string
+        thumbnailUrl:
+          type:
+            - string
+            - "null"
+        webpUrl:
+          type:
+            - string
+            - "null"
+    CatalogAssetResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/CatalogAsset"
+    CatalogAssetListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CatalogAsset"
+            nextCursor:
+              type:
+                - string
+                - "null"
+            hasMore:
+              type: boolean
+    CatalogImport:
+      type: object
+      required:
+        - id
+        - fileName
+        - headers
+        - mapping
+        - report
+        - status
+        - revision
+        - results
+        - errorCode
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        fileName:
+          type: string
+        headers:
+          type: array
+          items:
+            type: string
+        mapping:
+          type: object
+        report:
+          type: object
+        status:
+          enum:
+            - preview
+            - queued
+            - running
+            - complete
+            - failed
+        revision:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+        errorCode:
+          type:
+            - string
+            - "null"
+    CatalogImportResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/CatalogImport"
+    CatalogImportListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CatalogImport"
+            nextCursor:
+              type:
+                - string
+                - "null"
+            hasMore:
+              type: boolean
+    CatalogRun:
+      type: object
+      required:
+        - id
+        - status
+        - errorCode
+        - resultIds
+        - createdAt
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        status:
+          enum:
+            - queued
+            - running
+            - complete
+            - failed
+        errorCode:
+          type:
+            - string
+            - "null"
+        resultIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        createdAt:
+          type: string
+    CatalogRunResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/CatalogRun"
+    CatalogRunListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CatalogRun"
+            nextCursor:
+              type:
+                - string
+                - "null"
+            hasMore:
+              type: boolean
+    CatalogHistory:
+      type: object
+      required:
+        - id
+        - factId
+        - revision
+        - action
+        - actorId
+        - before
+        - after
+        - createdAt
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        factId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        revision:
+          type: integer
+        action:
+          type: string
+        actorId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        before:
+          type:
+            - object
+            - "null"
+        after:
+          type: object
+        createdAt:
+          type: string
+    CatalogHistoryResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/CatalogHistory"
+    CatalogHistoryListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required:
+            - items
+            - nextCursor
+            - hasMore
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CatalogHistory"
+            nextCursor:
+              type:
+                - string
+                - "null"
+            hasMore:
+              type: boolean
+    CatalogProductInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 80
+        category:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        description:
+          anyOf:
+            - type: string
+              maxLength: 4000
+            - type: "null"
+        material:
+          anyOf:
+            - type: string
+              maxLength: 2000
+            - type: "null"
+        application:
+          anyOf:
+            - type: string
+              maxLength: 2000
+            - type: "null"
+        certifications:
+          default: []
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 300
+        moq:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        leadTime:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        specs:
+          default: []
+          maxItems: 100
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                minLength: 1
+                maxLength: 60
+              name:
+                type: string
+                minLength: 1
+                maxLength: 120
+              value:
+                type: string
+                minLength: 1
+                maxLength: 500
+              unit:
+                anyOf:
+                  - type: string
+                    maxLength: 40
+                  - type: "null"
+            required:
+              - code
+              - name
+              - value
+            additionalProperties: false
+        specTable:
+          anyOf:
+            - type: object
+              properties:
+                columns:
+                  minItems: 1
+                  maxItems: 10
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                rows:
+                  maxItems: 50
+                  type: array
+                  items:
+                    maxItems: 10
+                    type: array
+                    items:
+                      type: string
+                      maxLength: 200
+              required:
+                - columns
+                - rows
+              additionalProperties: false
+            - type: "null"
+        assetIds:
+          default: []
+          maxItems: 20
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        status:
+          default: draft
+          type: string
+          enum:
+            - draft
+            - active
+            - archived
+      required:
+        - name
+      additionalProperties: false
+    CatalogProductPatch:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        data:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+              maxLength: 200
+            sku:
+              type: string
+              minLength: 1
+              maxLength: 80
+            category:
+              anyOf:
+                - type: string
+                  maxLength: 120
+                - type: "null"
+            description:
+              anyOf:
+                - type: string
+                  maxLength: 4000
+                - type: "null"
+            material:
+              anyOf:
+                - type: string
+                  maxLength: 2000
+                - type: "null"
+            application:
+              anyOf:
+                - type: string
+                  maxLength: 2000
+                - type: "null"
+            certifications:
+              default: []
+              maxItems: 50
+              type: array
+              items:
+                type: string
+                minLength: 1
+                maxLength: 300
+            moq:
+              anyOf:
+                - type: string
+                  maxLength: 120
+                - type: "null"
+            leadTime:
+              anyOf:
+                - type: string
+                  maxLength: 120
+                - type: "null"
+            specs:
+              default: []
+              maxItems: 100
+              type: array
+              items:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    minLength: 1
+                    maxLength: 60
+                  name:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                  value:
+                    type: string
+                    minLength: 1
+                    maxLength: 500
+                  unit:
+                    anyOf:
+                      - type: string
+                        maxLength: 40
+                      - type: "null"
+                required:
+                  - code
+                  - name
+                  - value
+                additionalProperties: false
+            specTable:
+              anyOf:
+                - type: object
+                  properties:
+                    columns:
+                      minItems: 1
+                      maxItems: 10
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                        maxLength: 80
+                    rows:
+                      maxItems: 50
+                      type: array
+                      items:
+                        maxItems: 10
+                        type: array
+                        items:
+                          type: string
+                          maxLength: 200
+                  required:
+                    - columns
+                    - rows
+                  additionalProperties: false
+                - type: "null"
+            assetIds:
+              default: []
+              maxItems: 20
+              type: array
+              items:
+                type: string
+                pattern: ^[a-f0-9]{24}$
+            status:
+              default: draft
+              type: string
+              enum:
+                - draft
+                - active
+                - archived
+          required:
+            - name
+          additionalProperties: false
+      required:
+        - revision
+        - data
+      additionalProperties: false
+    CatalogFactInput:
+      type: object
+      properties:
+        subjectType:
+          type: string
+          enum:
+            - organization
+            - product
+        subjectId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        type:
+          type: string
+          minLength: 1
+          maxLength: 80
+        value:
+          type: string
+          minLength: 1
+          maxLength: 1200
+        unit:
+          anyOf:
+            - type: string
+              maxLength: 40
+            - type: "null"
+        source:
+          type: object
+          properties:
+            kind:
+              type: string
+              enum:
+                - manual
+                - product
+                - asset
+                - website
+                - globalcrm
+            refId:
+              type: string
+              pattern: ^[a-f0-9]{24}$
+            url:
+              type: string
+              maxLength: 1200
+              format: uri
+            revision:
+              type: integer
+              exclusiveMinimum: 0
+              maximum: 9007199254740991
+            sha256:
+              type: string
+              pattern: ^[a-f0-9]{64}$
+            quote:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            label:
+              type: string
+              maxLength: 200
+            capturedAt:
+              type: string
+              format: date-time
+              pattern: >-
+                ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+            textVerified:
+              type: boolean
+          required:
+            - kind
+            - quote
+          additionalProperties: false
+      required:
+        - subjectType
+        - type
+        - value
+        - source
+      additionalProperties: false
+    CatalogFactPatch:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        data:
+          type: object
+          properties:
+            subjectType:
+              type: string
+              enum:
+                - organization
+                - product
+            subjectId:
+              type: string
+              pattern: ^[a-f0-9]{24}$
+            type:
+              type: string
+              minLength: 1
+              maxLength: 80
+            value:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            unit:
+              anyOf:
+                - type: string
+                  maxLength: 40
+                - type: "null"
+            source:
+              type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - manual
+                    - product
+                    - asset
+                    - website
+                    - globalcrm
+                refId:
+                  type: string
+                  pattern: ^[a-f0-9]{24}$
+                url:
+                  type: string
+                  maxLength: 1200
+                  format: uri
+                revision:
+                  type: integer
+                  exclusiveMinimum: 0
+                  maximum: 9007199254740991
+                sha256:
+                  type: string
+                  pattern: ^[a-f0-9]{64}$
+                quote:
+                  type: string
+                  minLength: 1
+                  maxLength: 1200
+                label:
+                  type: string
+                  maxLength: 200
+                capturedAt:
+                  type: string
+                  format: date-time
+                  pattern: >-
+                    ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+                textVerified:
+                  type: boolean
+              required:
+                - kind
+                - quote
+              additionalProperties: false
+          required:
+            - subjectType
+            - type
+            - value
+            - source
+          additionalProperties: false
+      required:
+        - revision
+        - data
+      additionalProperties: false
+    CatalogTransition:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        reason:
+          type: string
+          maxLength: 500
+      required:
+        - revision
+      additionalProperties: false
+    CatalogImportMapping:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        mapping:
+          type: object
+          propertyNames:
+            type: string
+            enum:
+              - name
+              - sku
+              - category
+              - description
+              - material
+              - application
+              - certifications
+              - moq
+              - leadTime
+              - specs
+              - specTable
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 120
+      required:
+        - revision
+        - mapping
+      additionalProperties: false
+    CatalogImportConfirm:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        rows:
+          maxItems: 500
+          type: array
+          items:
+            type: integer
+            minimum: 2
+            maximum: 1048576
+      required:
+        - revision
+      additionalProperties: false
+    CatalogExtraction:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - product
+            - asset
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        consent:
+          type: boolean
+          const: true
+      required:
+        - kind
+        - id
+        - consent
+      additionalProperties: false
+    CatalogWebsiteInput:
+      type: object
+      properties:
+        url:
+          type: string
+          minLength: 1
+          maxLength: 1200
+        maxPages:
+          default: 5
+          type: integer
+          minimum: 1
+          maximum: 8
+      required:
+        - url
+      additionalProperties: false
+x-s3-catalog:
+  status: implemented
+  crmContract: >-
+    GlobalCRM docs/integration/integration-v1.openapi.yaml C1 @60cdbc48035301c152a58b924558b08a850fa36a;
+    read-only mapping, no CRM calls in S3
+  notes:
+    - >-
+      All routes use the current cookie organization; 24-hex tenant-owned IDs only. Editors write; only
+      administrators confirm/reject facts.
+    - Mutating JSON input is strict; revisions enforce compare-and-swap. Files remain private and no-store.
+    - Products are drafts until edited. AI and website facts are always candidates.
+    - All asynchronous writes fence their task lease and recheck the initiator membership.

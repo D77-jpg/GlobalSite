@@ -1,3 +1,12 @@
+import mongoose from "mongoose";
+import { fenceTask } from "../services/product-import.service";
+import { WebsiteError } from "../services/website/public-web";
+import { processImport } from "../services/product-import.service";
+import { processWebsite } from "../services/website-read.service";
+import { processExtraction } from "../services/catalog-run.service";
+import { authorizeActor } from "../services/catalog-authority";
+import { ProductImport, WebsiteRead, AgentRun } from "../models";
+import { AppError } from "../errors";
 // Adapted from GlobalCRM server/src/background/runtime.ts @ a94a285.
 // Mongo lease + fencing, no marketing/inbox schedulers or unrestricted tenant bypass.
 import { randomUUID } from "node:crypto";
@@ -54,22 +63,46 @@ export async function finishTask(
     },
   );
 }
+export async function renewTask(task: any) {
+  return Task.updateOne(
+    {
+      _id: task._id,
+      owner: task.owner,
+      fencingToken: task.fencingToken,
+      status: "running",
+      leaseUntil: { $gt: new Date() },
+    },
+    { $set: { leaseUntil: new Date(Date.now() + 60000) } },
+  );
+}
 export async function tick() {
   const task = await claimTask();
   if (!task) return;
   await runWithTenant(String(task.organizationId), async () => {
     const heartbeat = setInterval(() => {
-      void Task.updateOne(
-        {
-          _id: task._id,
-          owner: task.owner,
-          fencingToken: task.fencingToken,
-          status: "running",
-        },
-        { $set: { leaseUntil: new Date(Date.now() + 60000) } },
-      ).catch(() => {});
+      void renewTask(task).catch(() => {});
     }, 20000);
     try {
+      if (task.kind.startsWith("catalog.")) {
+        const model =
+          task.kind === "catalog.import"
+            ? ProductImport
+            : task.kind === "catalog.website"
+              ? WebsiteRead
+              : AgentRun;
+        const run = await model.findById(task.payload.runId);
+        if (!run) throw new AppError(404, "NOT_FOUND");
+        await authorizeActor(String(run.actorId));
+        if (run.status !== "complete") {
+          if (task.kind === "catalog.import") await processImport(task);
+          else if (task.kind === "catalog.website") await processWebsite(task);
+          else if (task.kind === "catalog.extract")
+            await processExtraction(task);
+          else throw new AppError(400, "UNSUPPORTED_TASK");
+        }
+        await finishTask(task, "done");
+        return;
+      }
       if (task.kind !== "mail") throw new Error("UNSUPPORTED_TASK");
       if (!config.smtpHost) {
         await finishTask(
@@ -100,7 +133,46 @@ export async function tick() {
       });
       transport.close();
       await finishTask(task, "done");
-    } catch {
+    } catch (error) {
+      if (task.kind.startsWith("catalog.")) {
+        const code =
+          error instanceof AppError
+            ? error.code
+            : error instanceof WebsiteError
+              ? "WEBSITE_" + error.code.toUpperCase()
+              : "CATALOG_PROCESS_FAILED";
+        const live = await Task.exists({
+          _id: task._id,
+          owner: task.owner,
+          fencingToken: task.fencingToken,
+          status: "running",
+          leaseUntil: { $gt: new Date() },
+        });
+        if (live) {
+          const model =
+            task.kind === "catalog.import"
+              ? ProductImport
+              : task.kind === "catalog.website"
+                ? WebsiteRead
+                : AgentRun;
+          const retry =
+            task.kind === "catalog.import" &&
+            !(error instanceof AppError) &&
+            task.attempts < 8;
+          await mongoose.connection.transaction(async (session) => {
+            await fenceTask(task, session);
+            await model.updateOne(
+              { _id: task.payload.runId },
+              {
+                $set: { status: retry ? "queued" : "failed", errorCode: code },
+              },
+              { session },
+            );
+          });
+          await finishTask(task, retry ? "pending" : "dead", code);
+        }
+        return;
+      }
       await finishTask(
         task,
         task.attempts >= 8 ? "dead" : "pending",

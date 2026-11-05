@@ -1,10 +1,10 @@
+import catalogRoutes from "./routes/catalog.routes";
 import express, {
   type Request,
   type Response,
   type NextFunction,
 } from "express";
 import helmet from "helmet";
-import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
 import mongoose from "mongoose";
@@ -36,7 +36,6 @@ import { usage, limits } from "./services/usage.service";
 import { plans } from "./constants/plans";
 import { metrics } from "./services/metrics.service";
 import { reportError } from "./services/error-monitor.service";
-import { store, readAsset, removeAsset } from "./services/storage.service";
 import { getProvider, saveProvider, testProvider } from "./services/ai.service";
 const email = z.string().trim().toLowerCase().email().max(200),
   password = z.string().min(12).max(128),
@@ -261,6 +260,7 @@ export function createApp() {
     wrap(async (req, res) => ok(res, await previewMail(req.params.receipt))),
   );
   app.use("/api/v1", requireAuth);
+  app.use("/api/v1", catalogRoutes);
   app.get(
     "/api/v1/auth/me",
     wrap(async (req, res) => {
@@ -677,41 +677,6 @@ export function createApp() {
       ok(res, await testProvider(op));
     }),
   );
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 0 },
-  });
-  app.post(
-    "/api/v1/assets",
-    requireRole("admin", "editor"),
-    upload.single("file"),
-    wrap(async (req, res) => {
-      ensure(req.file, 400, "FILE_REQUIRED");
-      const asset = await store(req.file.buffer, req.file.mimetype);
-      ok(
-        res,
-        { id: String(asset._id), bytes: asset.bytes, mime: asset.mime },
-        201,
-      );
-    }),
-  );
-  app.get(
-    "/api/v1/assets/:id",
-    wrap(async (req, res) => {
-      const { asset, body: bytes } = await readAsset(id.parse(req.params.id));
-      res.setHeader("Content-Type", asset.mime);
-      res.setHeader("Content-Disposition", 'attachment; filename="asset"');
-      res.send(bytes);
-    }),
-  );
-  app.delete(
-    "/api/v1/assets/:id",
-    requireRole("admin", "editor"),
-    wrap(async (req, res) => {
-      await removeAsset(id.parse(req.params.id));
-      ok(res, { deleted: true });
-    }),
-  );
   app.get("/api/v1/metrics", requireRole("admin"), (_req, res) =>
     res.type("text/plain").send(metrics()),
   );
@@ -727,20 +692,26 @@ export function createApp() {
         ? error.status
         : error instanceof ZodError
           ? 400
-          : error.type === "entity.parse.failed"
-            ? 400
-            : error.name === "CastError"
-              ? 404
-              : error.code === 11000
-                ? 409
-                : error.type === "entity.too.large" ||
-                    error.code === "LIMIT_FILE_SIZE"
-                  ? 413
-                  : 500;
+          : error.name === "MulterError"
+            ? error.code === "LIMIT_FILE_SIZE"
+              ? 413
+              : 400
+            : error.type === "entity.parse.failed"
+              ? 400
+              : error.name === "CastError"
+                ? 404
+                : error.code === 11000
+                  ? 409
+                  : error.type === "entity.too.large" ||
+                      error.code === "LIMIT_FILE_SIZE"
+                    ? 413
+                    : 500;
     const code =
       error instanceof AppError
         ? error.code
-        : error instanceof ZodError || error.type === "entity.parse.failed"
+        : error instanceof ZodError ||
+            error.type === "entity.parse.failed" ||
+            (status === 400 && error.name === "MulterError")
           ? "VALIDATION_ERROR"
           : status === 404
             ? "NOT_FOUND"

@@ -15,7 +15,7 @@ import type {
 } from "./types";
 import mongoose, { Schema } from "mongoose";
 import { applyTenant } from "./tenant-setup";
-function entity<T>(
+export function entity<T>(
   name: string,
   fields: Record<string, any>,
   options: {
@@ -182,6 +182,13 @@ export const Asset = entity<AssetRow>(
   {
     key: { type: String, required: true },
     bytes: Number,
+    fileName: String,
+    kind: { type: String, default: "image" },
+    totalBytes: Number,
+    variants: Schema.Types.Mixed,
+    width: Number,
+    height: Number,
+    referenceVersion: { type: Number, default: 0 },
     mime: String,
     sha256: String,
     status: { type: String, default: "ready" },
@@ -240,7 +247,170 @@ export const Migration = entity<MigrationRow>(
   { key: { type: String, unique: true }, completedAt: Date },
   { identity: true },
 );
+
+export const Product = entity<any>(
+  "Product",
+  {
+    referenceVersion: { type: Number, default: 0 },
+    sku: { type: String, required: true },
+    name: { type: String, required: true },
+    category: String,
+    description: String,
+    specs: { type: [Schema.Types.Mixed], default: [] },
+    specTable: Schema.Types.Mixed,
+    material: String,
+    application: String,
+    certifications: { type: [String], default: [] },
+    moq: String,
+    leadTime: String,
+    assetIds: { type: [Schema.Types.ObjectId], default: [] },
+    source: { type: String, enum: ["local", "globalcrm"], default: "local" },
+    externalRef: Schema.Types.Mixed,
+    provenance: Schema.Types.Mixed,
+    status: {
+      type: String,
+      enum: ["draft", "active", "archived"],
+      default: "draft",
+    },
+    revision: { type: Number, default: 1 },
+    importKey: String,
+  },
+  {},
+  [
+    [{ organizationId: 1, sku: 1 }, { unique: true }],
+    [{ organizationId: 1, status: 1, updatedAt: -1, _id: -1 }],
+    [
+      { organizationId: 1, importKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { importKey: { $type: "string" } },
+      },
+    ],
+    [
+      {
+        organizationId: 1,
+        "externalRef.connectionId": 1,
+        "externalRef.remoteId": 1,
+      },
+      {
+        unique: true,
+        partialFilterExpression: {
+          "externalRef.connectionId": { $type: "string" },
+          "externalRef.remoteId": { $type: "string" },
+        },
+      },
+    ],
+  ],
+);
+export const FactSheet = entity<any>(
+  "FactSheet",
+  {
+    subjectType: {
+      type: String,
+      enum: ["organization", "product"],
+      required: true,
+    },
+    subjectId: Schema.Types.ObjectId,
+    type: { type: String, required: true },
+    value: { type: String, required: true },
+    unit: String,
+    source: { type: Schema.Types.Mixed, required: true },
+    status: {
+      type: String,
+      enum: ["candidate", "confirmed", "rejected"],
+      default: "candidate",
+    },
+    revision: { type: Number, default: 1 },
+    reviewedBy: Schema.Types.ObjectId,
+    reviewedAt: Date,
+    reason: String,
+    originKey: String,
+  },
+  {},
+  [
+    [{ organizationId: 1, status: 1, updatedAt: -1, _id: -1 }],
+    [{ organizationId: 1, subjectType: 1, subjectId: 1, type: 1 }],
+    [
+      { organizationId: 1, originKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { originKey: { $type: "string" } },
+      },
+    ],
+  ],
+);
+export const FactRevision = entity<any>(
+  "FactRevision",
+  {
+    factId: ref,
+    revision: Number,
+    actorId: Schema.Types.ObjectId,
+    action: String,
+    before: Schema.Types.Mixed,
+    after: Schema.Types.Mixed,
+  },
+  {},
+  [[{ organizationId: 1, factId: 1, revision: 1 }, { unique: true }]],
+);
+export const ProductImport = entity<any>(
+  "ProductImport",
+  {
+    errorCode: String,
+    fileName: String,
+    headers: [String],
+    rows: Schema.Types.Mixed,
+    mapping: Schema.Types.Mixed,
+    report: Schema.Types.Mixed,
+    selectedRows: [Number],
+    confirmedRevision: Number,
+    status: { type: String, default: "preview" },
+    revision: { type: Number, default: 1 },
+    actorId: ref,
+    results: { type: [Schema.Types.Mixed], default: [] },
+  },
+  {},
+  [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
+);
+export const AgentRun = entity<any>(
+  "AgentRun",
+  {
+    kind: String,
+    source: Schema.Types.Mixed,
+    actorId: ref,
+    status: { type: String, default: "queued" },
+    errorCode: String,
+    resultIds: { type: [Schema.Types.ObjectId], default: [] },
+    rejectedCount: Number,
+    tokens: Number,
+    pendingResult: Schema.Types.Mixed,
+  },
+  {},
+  [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
+);
+export const WebsiteRead = entity<any>(
+  "WebsiteRead",
+  {
+    url: String,
+    maxPages: Number,
+    actorId: ref,
+    status: { type: String, default: "queued" },
+    errorCode: String,
+    pages: { type: [Schema.Types.Mixed], default: [] },
+    resultIds: { type: [Schema.Types.ObjectId], default: [] },
+    factIds: { type: [Schema.Types.ObjectId], default: [] },
+    truncated: Boolean,
+  },
+  {},
+  [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
+);
+
 export const models = [
+  Product,
+  FactSheet,
+  FactRevision,
+  ProductImport,
+  AgentRun,
+  WebsiteRead,
   User,
   Organization,
   Membership,

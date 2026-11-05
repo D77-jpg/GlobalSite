@@ -1,5 +1,9 @@
 export const messages = {
   zh: {
+    products: "产品库",
+    assets: "资料库",
+    facts: "企业事实库",
+    website: "旧官网读取",
     builtForGlobal: "为全球生意而建",
     nextChapter: "开启全新篇章",
     app: "GlobalSite",
@@ -144,6 +148,10 @@ export const messages = {
     bytes: "字节",
   },
   en: {
+    products: "Products",
+    assets: "Assets",
+    facts: "Business facts",
+    website: "Read existing website",
     builtForGlobal: "BUILT FOR GLOBAL BUSINESS",
     nextChapter: "YOUR NEXT CHAPTER",
     app: "GlobalSite",

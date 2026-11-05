@@ -1,3 +1,12 @@
+import {
+  ProductsPage,
+  ProductEditor,
+  ImportPage,
+  AssetsPage,
+  FactsPage,
+  WebsitePage,
+} from "./catalog";
+import "./catalog.css";
 import { safeReturnTo } from "./navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -1109,7 +1118,7 @@ function AcceptInvite() {
   );
 }
 function Workspace() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const [me, setMe] = useState<Me>();
@@ -1136,6 +1145,10 @@ function Workspace() {
     );
   const nav: Array<[string, Key, typeof Globe2]> = [
     ["/", "overview", LayoutDashboard],
+    ["/products", "products", Building2],
+    ["/assets", "assets", Building2],
+    ["/facts", "facts", ShieldCheck],
+    ["/website-reads", "website", Globe2],
     ["/organization", "organization", Building2],
     ["/members", "members", Users],
     ["/security", "security", ShieldCheck],
@@ -1235,6 +1248,34 @@ function Workspace() {
           <main id="main" className="content">
             <Routes>
               <Route index element={<Overview />} />
+              <Route
+                path="products"
+                element={<ProductsPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="products/new"
+                element={<ProductEditor locale={locale} role={me.role} />}
+              />
+              <Route
+                path="products/imports"
+                element={<ImportPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="products/:id"
+                element={<ProductEditor locale={locale} role={me.role} />}
+              />
+              <Route
+                path="assets"
+                element={<AssetsPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="facts"
+                element={<FactsPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="website-reads"
+                element={<WebsitePage locale={locale} role={me.role} />}
+              />
               <Route path="organization" element={<OrganizationPage />} />
               <Route path="members" element={<MembersPage />} />
               <Route path="security" element={<SecurityPage />} />
