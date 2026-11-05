@@ -1,5 +1,10 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  PUBLICATION_IN_PROGRESS: [
+    "正在发布，请等待发布结果核对完成后再编辑。",
+    "Publication is in progress. Wait for reconciliation before editing.",
+  ],
+  buildPublish: ["构建与发布", "Build & publish"],
   UNSOURCED_DETAIL: [
     "产品资料缺少匹配的已确认依据",
     "Product detail lacks matching confirmed evidence",

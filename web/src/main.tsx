@@ -1,3 +1,4 @@
+import { PublishPage } from "./publishing";
 import { SitesPage, SiteWorkspace, PageReview } from "./sites";
 import {
   ProductsPage,
@@ -957,34 +958,34 @@ function UsagePage() {
             <p>{t("quotaNotice")}</p>
           </div>
           <div className="usage-grid">
-            {(["ai_tokens", "builds", "storage_bytes"] as const).map(
-              (key, index) => {
-                const row = data.items.find((x: any) => x.metric === key) ?? {
-                  consumed: 0,
-                  reserved: 0,
-                };
-                const percent = Math.min(
-                  100,
-                  (100 * (row.consumed + row.reserved)) / data.limits[key],
-                );
-                return (
-                  <section className="panel usage-card" key={key}>
-                    <span className="eyebrow">
-                      0{index + 1} / {t(key)}
-                    </span>
-                    <h2>{fmt(row.consumed, key)}</h2>
-                    <p>
-                      {t("limit")} {fmt(data.limits[key], key)}
-                    </p>
-                    <progress max={100} value={percent} aria-label={t(key)} />
-                    <div className="detail-row">
-                      <span>{t("reserved")}</span>
-                      <strong>{fmt(row.reserved, key)}</strong>
-                    </div>
-                  </section>
-                );
-              },
-            )}
+            {(
+              ["ai_tokens", "builds", "publishes", "storage_bytes"] as const
+            ).map((key, index) => {
+              const row = data.items.find((x: any) => x.metric === key) ?? {
+                consumed: 0,
+                reserved: 0,
+              };
+              const percent = Math.min(
+                100,
+                (100 * (row.consumed + row.reserved)) / data.limits[key],
+              );
+              return (
+                <section className="panel usage-card" key={key}>
+                  <span className="eyebrow">
+                    0{index + 1} / {t(key)}
+                  </span>
+                  <h2>{fmt(row.consumed, key)}</h2>
+                  <p>
+                    {t("limit")} {fmt(data.limits[key], key)}
+                  </p>
+                  <progress max={100} value={percent} aria-label={t(key)} />
+                  <div className="detail-row">
+                    <span>{t("reserved")}</span>
+                    <strong>{fmt(row.reserved, key)}</strong>
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </>
       )}
@@ -1261,6 +1262,10 @@ function Workspace() {
               <Route
                 path="sites/:id"
                 element={<SiteWorkspace locale={locale} role={me.role} />}
+              />
+              <Route
+                path="sites/:id/publishing"
+                element={<PublishPage locale={locale} role={me.role} />}
               />
               <Route
                 path="pages/:id"

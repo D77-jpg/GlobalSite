@@ -1,3 +1,4 @@
+import { assertFactsEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -93,6 +94,10 @@ export async function saveProduct(
         "source.refId": id,
         status: "confirmed",
       }).session(session);
+      await assertFactsEditable(
+        affected.map((f) => String(f._id)),
+        session,
+      );
       for (const f of affected) {
         const before = factDto(f);
         f.status = "candidate";
@@ -209,6 +214,7 @@ export async function saveFact(
         session,
       );
       ensure(current, 409, "REVISION_CONFLICT");
+      await assertFactsEditable([String(current._id)], session);
       const before = factDto(current);
       result = await FactSheet.findOneAndUpdate(
         { _id: id, revision },
@@ -279,6 +285,7 @@ export async function transitionFact(
       session,
     );
     ensure(current, 409, "REVISION_CONFLICT");
+    await assertFactsEditable([String(current._id)], session);
     if (status === "confirmed") {
       if (["product", "asset", "manual"].includes(current.source.kind))
         await validateSource(

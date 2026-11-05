@@ -1,3 +1,4 @@
+import publishingRoutes from "./routes/publishing.routes";
 import sitesRoutes from "./routes/sites.routes";
 import catalogRoutes from "./routes/catalog.routes";
 import express, {
@@ -265,6 +266,7 @@ export function createApp() {
   app.use("/api/v1", requireAuth);
   app.use("/api/v1", catalogRoutes);
   app.use("/api/v1", sitesRoutes);
+  app.use("/api/v1", publishingRoutes);
   app.get(
     "/api/v1/auth/me",
     wrap(async (req, res) => {

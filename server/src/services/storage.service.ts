@@ -246,3 +246,40 @@ export async function removeAsset(id: string) {
     await Asset.deleteOne({ _id: id, status: "deleting" }, { session });
   });
 }
+
+/** Private immutable build objects, separate from uploaded business Assets. */
+export async function storeArtifact(body: Buffer, operationId: string) {
+  ensure(
+    body.length > 0 && body.length <= 100 * 1024 * 1024,
+    413,
+    "ARTIFACT_TOO_LARGE",
+  );
+  const key = operationId;
+  const l = location(key);
+  await reserve("storage_bytes", body.length, "artifact:" + key);
+  await fs.mkdir(l.root, { recursive: true });
+  try {
+    await fs.writeFile(l.target, body, { flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+    ensure(
+      createHash("sha256")
+        .update(await fs.readFile(l.target))
+        .digest("hex") === createHash("sha256").update(body).digest("hex"),
+      409,
+      "ARTIFACT_CONFLICT",
+    );
+  }
+  await settle("storage_bytes", "artifact:" + key, body.length);
+  return key;
+}
+export async function readArtifact(key: string) {
+  const t = location(key).target,
+    stat = await fs.lstat(t);
+  ensure(
+    stat.isFile() && !stat.isSymbolicLink() && stat.size <= 100 * 1024 * 1024,
+    404,
+    "NOT_FOUND",
+  );
+  return fs.readFile(t);
+}

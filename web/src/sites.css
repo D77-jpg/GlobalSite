@@ -164,3 +164,48 @@
     height: 600px;
   }
 }
+
+.publish fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.publish-table {
+  overflow-x: auto;
+}
+.publish table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.publish td,
+.publish th {
+  padding: 14px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #dce5df);
+  vertical-align: top;
+}
+.publish-colors {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.publish-colors button {
+  border-width: 4px;
+}
+.publish input[type="checkbox"] {
+  width: auto;
+  display: inline;
+  margin-right: 8px;
+}
+.publish .catalog-actions {
+  flex-wrap: wrap;
+}
+.publish td a {
+  display: inline-block;
+  min-height: 44px;
+  padding: 10px 0;
+}
+.publish .catalog-panel {
+  margin-bottom: 24px;
+}

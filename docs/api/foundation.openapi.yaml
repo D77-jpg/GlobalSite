@@ -6621,6 +6621,1534 @@ paths:
                 $ref: "#/components/schemas/Error"
       x-roles:
         - admin
+  /sites/{id}/publishing-settings:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /sites/{id}/publishing-settings
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/PublishSettings'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - S5 Build and Publish
+      summary: PUT /sites/{id}/publishing-settings
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/PublishSettings'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishSettingsInput'
+  /sites/{id}/brand-palette:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /sites/{id}/brand-palette
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/BrandPalette'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildInput'
+  /sites/{id}/preflight:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /sites/{id}/preflight
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/BuildReport'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sites/{id}/preflight/repair:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /sites/{id}/preflight/repair
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/BuildReport'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildInput'
+  /sites/{id}/builds:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /sites/{id}/builds
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 100
+      responses:
+        '202':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/SiteVersion'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildInput'
+  /sites/{id}/versions:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /sites/{id}/versions
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SiteVersion'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /site-versions/{id}:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /site-versions/{id}
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/SiteVersion'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /site-versions/{id}/export:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /site-versions/{id}/export
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 登录访问的静态内容；Cache-Control private,no-store；预览含 X-Robots-Tag:noindex
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /site-versions/{id}/preview/{file}:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /site-versions/{id}/preview/{file}
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 登录访问的静态内容；Cache-Control private,no-store；预览含 X-Robots-Tag:noindex
+          content:
+            text/html:
+              schema:
+                type: string
+                format: binary
+            text/css:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            text/plain:
+              schema:
+                type: string
+                format: binary
+            application/xml:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sites/{id}/deployments:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /sites/{id}/deployments
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SiteDeployment'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /sites/{id}/deployments
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 100
+      responses:
+        '202':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/SiteDeployment'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentInput'
+  /sites/{id}/rollback:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /sites/{id}/rollback
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 100
+      responses:
+        '202':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/SiteDeployment'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentInput'
+  /sites/{id}/domain-check:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /sites/{id}/domain-check
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/DomainCheck'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildInput'
+  /site-deployments/{id}/reconcile:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: 管理员核对不确定的发布结果
+      description: 仅重新查询已有派发的远端结果，不能创建第二次远端发布。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/SiteDeployment'
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildInput'
+  /site-versions/{id}/preview/:
+    get:
+      tags:
+        - S5 Build and Publish
+      summary: GET /site-versions/{id}/preview/{file}
+      description: Cookie 会话+组织隔离；写入需要 CSRF。build/preflight/修复/配色需要编辑权限，配置/发布/回滚/域名检测需要管理员。预览为登录访问且 noindex。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: 登录访问的静态内容；Cache-Control private,no-store；预览含 X-Robots-Tag:noindex
+          content:
+            text/html:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     cookieAuth:
@@ -6645,6 +8173,263 @@ components:
         format: uri
       description: Must match PUBLIC_URL origin exactly.
   schemas:
+    PublishSettings:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+        canonicalBaseUrl:
+          type:
+            - string
+            - 'null'
+        accountId:
+          type:
+            - string
+            - 'null'
+        projectName:
+          type:
+            - string
+            - 'null'
+        productionBranch:
+          type: string
+        domain:
+          type:
+            - string
+            - 'null'
+        configured:
+          type: boolean
+        httpsStatus:
+          type:
+            - string
+            - 'null'
+        checkedAt:
+          type:
+            - string
+            - 'null'
+      required:
+        - revision
+        - canonicalBaseUrl
+        - accountId
+        - projectName
+        - productionBranch
+        - domain
+        - configured
+        - httpsStatus
+        - checkedAt
+    PublishSettingsInput:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - canonicalBaseUrl
+        - accountId
+        - projectName
+        - productionBranch
+        - domain
+      properties:
+        revision:
+          type: integer
+          minimum: 0
+        canonicalBaseUrl:
+          type:
+            - string
+            - 'null'
+        accountId:
+          type:
+            - string
+            - 'null'
+        projectName:
+          type:
+            - string
+            - 'null'
+        productionBranch:
+          type: string
+        domain:
+          type:
+            - string
+            - 'null'
+        token:
+          type:
+            - string
+            - 'null'
+    BuildIssue:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        pageId:
+          type:
+            - string
+            - 'null'
+        path:
+          type:
+            - string
+            - 'null'
+        fixable:
+          type: boolean
+      required:
+        - code
+        - pageId
+        - path
+        - fixable
+    BuildReport:
+      type: object
+      additionalProperties: false
+      properties:
+        ready:
+          type: boolean
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/BuildIssue'
+        repaired:
+          type: integer
+      required:
+        - ready
+        - issues
+        - repaired
+    SiteVersion:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        siteId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        number:
+          type: integer
+        status:
+          enum:
+            - queued
+            - building
+            - ready
+            - failed
+        snapshotHash:
+          type: string
+        artifactHash:
+          type:
+            - string
+            - 'null'
+        bytes:
+          type: integer
+        errorCode:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+        report:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+      required:
+        - id
+        - siteId
+        - number
+        - status
+        - snapshotHash
+        - artifactHash
+        - bytes
+        - errorCode
+        - createdAt
+        - report
+    SiteDeployment:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        siteId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        versionId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        status:
+          enum:
+            - queued
+            - uploading
+            - verifying
+            - live
+            - failed
+            - unknown
+        kind:
+          enum:
+            - publish
+            - rollback
+        url:
+          type:
+            - string
+            - 'null'
+        errorCode:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: string
+        artifactHash:
+          type: string
+      required:
+        - id
+        - siteId
+        - versionId
+        - status
+        - kind
+        - url
+        - errorCode
+        - createdAt
+        - artifactHash
+    BuildInput:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    DeploymentInput:
+      type: object
+      additionalProperties: false
+      properties:
+        versionId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+      required:
+        - versionId
+    BrandPalette:
+      type: object
+      additionalProperties: false
+      properties:
+        colors:
+          type: array
+          items:
+            type: string
+            pattern: ^#[a-f0-9]{6}$
+      required:
+        - colors
+    DomainCheck:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          enum:
+            - unconfigured
+            - pending
+            - valid
+            - failed
+        domain:
+          type:
+            - string
+            - 'null'
+        checkedAt:
+          type: string
+      required:
+        - status
+        - domain
+        - checkedAt
     Error:
       type: object
       properties:
@@ -6838,12 +8623,16 @@ components:
         storage_bytes:
           type: integer
           minimum: 1
+        publishes:
+          type: integer
+          minimum: 0
       required:
         - members
         - sites
         - ai_tokens
         - builds
         - storage_bytes
+        - publishes
     Usage:
       type: object
       properties:
@@ -6852,7 +8641,7 @@ components:
           minLength: 1
           maxLength: 7
         limits:
-          $ref: "#/components/schemas/Limits"
+          $ref: '#/components/schemas/Limits'
         items:
           type: array
           items:
@@ -6864,6 +8653,7 @@ components:
                   - ai_tokens
                   - builds
                   - storage_bytes
+                  - publishes
               consumed:
                 type: integer
                 minimum: 0
