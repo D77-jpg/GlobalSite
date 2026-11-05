@@ -50,7 +50,8 @@ jobs:
 
           /tmp/gitleaks git . --log-opts=--all --redact --no-banner --exit-code 1
   browser:
-    runs-on: ubuntu-latest
+    # Locked Playwright 1.56 supports this image; ubuntu-latest now resolves to 26.04.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
