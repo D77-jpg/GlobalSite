@@ -1,4 +1,6 @@
 # GlobalSite MVP 技术设计（S1）
+
+> S1 历史设计基线。S2 基础能力已落地，当前实现、精简与运行方式见 [S2 基础模块](S2-基础模块.md) 和 [运行与验收](../operations/S2-运行与验收.md)；本站基础 API 以 [OpenAPI](../api/foundation.openapi.yaml) 为准，CRM 对接仍仅引用 CRM 契约。
 版本：2026-11-04；状态：开发设计，尚未实现。GlobalSite 为可独立销售的英文 B2B 建站与运营产品，CRM 连接完全可选。本任务仅初始化文档，不安装应用、不创建业务代码、不迁移数据库。
 
 ## 1. 边界、架构与部署
@@ -128,10 +130,10 @@ CRM 推送、幂等与字段以权威 CRM 契约为准（下一节），本站�
 
 ## 8. GlobalCRM 连接边界与唯一契约
 唯一对接依据：
-- [GlobalCRM OpenAPI（S1 固定草案提交）](https://github.com/D77-jpg/GlobalCRM/blob/9930762be20908ec50513a2f2b723e1dcdd93ca1/docs/integration/integration-v1.openapi.yaml)
-- [GlobalCRM 对接设计](https://github.com/D77-jpg/GlobalCRM/blob/9930762be20908ec50513a2f2b723e1dcdd93ca1/docs/integration/globalsite-%E5%AF%B9%E6%8E%A5%E8%AE%BE%E8%AE%A1.md)
+- [GlobalCRM OpenAPI（S1 固定草案提交）](https://github.com/D77-jpg/GlobalCRM/blob/a94a2854d59249de2983ed3a231d3102d46c312a/docs/integration/integration-v1.openapi.yaml)
+- [GlobalCRM 对接设计](https://github.com/D77-jpg/GlobalCRM/blob/a94a2854d59249de2983ed3a231d3102d46c312a/docs/integration/globalsite-%E5%AF%B9%E6%8E%A5%E8%AE%BE%E8%AE%A1.md)
 
-当前链接固定到 CRM S1 草案提交 9930762，避免分支继续变更造成漂移；实现时经双方批准后更新到正式冻结 commit。本站不复制或另建 Integration API 定义。具体端点/scope、CRM DTO 字段映射、游标、错误码及 C1–C4 草案均只在上述两文件维护。本站私有 API 见 §10，不代表 CRM 契约。
+当前链接固定到 CRM S1 已审核草案提交 a94a285，避免分支继续变更造成漂移；实现时经双方批准后更新到正式冻结 commit。本站不复制或另建 Integration API 定义。具体端点/scope、CRM DTO 字段映射、游标、错误码及 C1–C4 草案均只在上述两文件维护。本站私有 API 见 §10，不代表 CRM 契约。
 连接流程：管理员输入 CRM HTTPS 基址/项目/服务凭证 → 后端 SSRF 校验并调用已契约化健康检查 → 显示 scope 与连接能力 → 选择同步范围 → 拉取候选 → 人工确认。服务器禁止内网/环回/元数据/非 HTTPS 以及跨源重定向；本地开发只通过显式白名单模拟服务。
 同步：CRM 为来源，本地独立存储；remoteId 识别，CRM 修改进入候选差异，不覆盖本地人工覆盖字段或已确认事实；删除/归档隐藏新建页面入口，已发布版本提示审核后重新发布。产品/资料分页落盘后更新 CrmSyncState，定时 15 分钟、手工触发限流；成交事件 5 分钟轮询，按 eventId 去重，只关联已知 customerId；空页不清空已有游标。
 已知差异 GS-D01：现有客户状态/客户报价查询有未契约化的来源选项；经任务用户确认，本次登记并保持现状，GlobalSite MVP 不调用这两个接口。不得自行根据实现补猜调用规则。其他已有接口仍保持原行为。草案能力未实现时 UI 显示“尚不支持”，不把 404 猜作空数据。

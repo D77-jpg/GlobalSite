@@ -1,26 +1,29 @@
 # GlobalSite 协作规则
-## 仓库与授权
-- 本仓库 D:/Trade/genesis/GlobalSite，独立 B2B AI 建站产品，CRM 可选。
-- 每条命令与编辑前确认工作目录；git 只能在此仓库执行。另一个仓库只读，除非任务明确分别授权。
-- GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM；废弃旧目录禁止读取或修改。
-- 本任务 S1 仅可改 README.md、AGENTS.md、docs/、.gitignore；不写业务代码、环境文件或依赖。
-- 分别分支/提交/PR，禁止混仓；后续分支 feat/<任务编号>-<简述>，S1 docs/s1-design，不直接推 main。
 
-## 架构边界
-- 独立 MongoDB globalsite；不得直连 CRM 库，只通过 Integration API。
-- 不互相 import、不 npm link；复制代码须标明来源路径、源 commit、许可与改造并补测试。
-- 唯一 CRM 契约在 GlobalCRM docs/integration/integration-v1.openapi.yaml 和 globalsite-对接设计.md；本站不复制维护。
-- 接口变化按契约→CRM 实现→本站调用；发现不一致停止受影响工作并汇报。
-- GS-D01 已获用户同意：登记现有客户状态/报价查询未文档化来源参数；MVP 不调用，保持现状。
-- C1–C4 为 S1 提议拆分，草案未实现不得当在线能力；S2–S7 详见 MVP 设计。
+## 当前阶段与仓库边界
 
-## 实施约束
-- 开始前读相关文档/代码，简述仓库/文件/模型/迁移计划。
-- Node >=20.19、Express 4、TS、Mongoose 8、zod；React 18/Vite/Tailwind/router6/react-hook-form；node:test+tsx。
-- 组织业务模型接 tenant 插件，禁止无租户上下文放行；全局身份/组织根仅受限认证模式。
-- 人工确认事实才可生成硬声明；人工审核版本后方可发布；凭证/询盘不能进入静态产物、日志或测试快照。
-- 前端可见文案 zh/en i18n；可选服务未配置应降级，不导致全站启动失败。
-- 新环境变量在获准工程阶段写 .env.example 与 production.env.example；不提交真实密钥、.env、上传、.dsh 或临时产物。
-- 完成 typecheck/build/lint/test 与适用契约/E2E；S1 仅文档无工程脚本，明确记不可运行。
-- 任务结束更新相关文档与本规则。根 AGENTS 变更须在当前任务允许范围内。
-- 汇报仓库/分支/提交/PR、摘要、文件、契约、迁移、命令结果、限制及手动事项；不可将未跑或跳过测试说成通过。
+- 本仓库 D:/Trade/genesis/GlobalSite，当前 S2 基础工程；S1 的“仅文档”限制为历史任务，已由 S2 明确授权取代。
+- 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，只读参考；废弃旧目录禁止读取或修改。
+- 本次分支 feat/s2-foundation。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
+- GlobalSite 仅连接自己的 globalsite 数据库；CRM 只能通过 Integration API，不能 import/npm link 对方代码。复制须保留源路径、源 commit 和改造说明并补测试。
+
+## 契约和架构
+
+- 唯一 CRM 契约：GlobalCRM docs/integration/integration-v1.openapi.yaml 和 globalsite-对接设计.md；本站不复制维护。
+- 本站私有基础 API：docs/api/foundation.openapi.yaml；请求与响应变化先更新本站契约再实现、更新真实 HTTP 契约测试。
+- CRM 接口变化必须在明确双仓授权任务中按“CRM 契约→CRM 实现→本站调用”推进；发现不一致停止受影响工作并汇报。
+- GS-D01：已获用户同意登记旧客户状态/报价查询来源参数差异，MVP 不调用。C1–C4 草案不能当成已实现能力。
+- 栈固定 Node >=20.19、Express 4、TS、Mongoose 8、zod；React 18/Vite/Tailwind/router6/react-hook-form；node:test+tsx。不升级无关依赖。
+- 所有模型注册 tenant 插件。User/Organization/Migration/RateLimit 为受限 identity 模式；Membership/Session/AuthToken 只允许有约束的身份查找；其他组织业务必须有 organizationId。禁止业务中使用 Model.collection 或原始驱动绕过；迁移、测试清理例外需明确。
+- 查询在 AsyncLocalStorage 上下文内执行；不要将未执行的 Mongoose Query 带出上下文。任务只在专用 scheduler 上下文领取，执行恢复指定组织，所有完成/续租必须含 owner+fencingToken。
+- api 和 worker 使用同一主密钥与独立数据库；builder/CRM 不在 S2 实现。
+
+## 安全与交付
+
+- 不记录密码、token、验证码、重置链接、邮件正文、邮箱、AI 密钥；错误日志仅记录 requestId/固定事件码。开发邮件只记录通知编号，通过短期能力链接查看，生产禁用。
+- 写请求检查精确 Origin 和会话绑定 CSRF。刷新轮换、旧令牌重放吊销、authVersion、当前 Membership 不能删去。新增鉴权路径必须补越权与重放测试。
+- 新增配置写 .env.example 与 production.env.example；可选 SMTP/AI 未配置时降级，不能导致核心启动失败。
+- 前端文案 zh/en；不要在产品 UI 暴露实现细节。密码/密钥禁止 localStorage；语言设置可存 localStorage。
+- 不提交 .env、storage、node_modules、dist、.dsh、测试截图/缓存或真实数据。不要删除其他项目文件/卷/进程；清理前核对绝对路径。
+- 完成 npm run typecheck、npm run build、npm run lint、npm test；前端/鉴权改动跑 Compose+test:e2e，依赖改动跑生产依赖审计。CI 包含 Gitleaks。
+- 开始前阅读相关代码/文档并简述计划；结束更新文档和本文件，如实汇报未跑/失败/剩余风险，按用户要求的八项格式交付。
