@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.19"
+          node-version: "22.23.4"
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
@@ -56,17 +56,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.19"
+          node-version: "22.23.4"
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
       - run: docker compose up -d --build --wait --wait-timeout 120
       - run: npm run test:e2e
+      - run: npm run test:quality
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-previews
-          path: test-results/*.png
+          path: |
+            test-results/*.png
+            test-results/s5-*-lighthouse.html
+            test-results/s5-*-lighthouse.json
+            test-results/s5-quality-summary.json
           if-no-files-found: ignore
       - run: docker compose down
         if: always()

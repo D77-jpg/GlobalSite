@@ -1,5 +1,9 @@
 import type { Locale } from "./i18n";
 export const catalogMessages = {
+  PUBLICATION_IN_PROGRESS: [
+    "资料正在用于发布，请等待发布结束后再修改。",
+    "This data is being published. Wait for publication to finish before editing.",
+  ],
   products: ["产品库", "Products"],
   productsSub: [
     "整理产品资料，为内容生成准备可靠来源。",

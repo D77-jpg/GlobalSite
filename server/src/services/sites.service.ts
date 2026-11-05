@@ -1,3 +1,4 @@
+import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import {
   Site,
@@ -74,6 +75,7 @@ export async function saveSite(
     );
     if (id) {
       const before = await ownSite(id, session);
+      await assertSiteEditable(id, session);
       if (before.status === "archived" && data.status !== "archived") {
         const cap = plans[(org.plan ?? "trial") as keyof typeof plans].sites;
         ensure(
@@ -167,6 +169,7 @@ export async function savePlan(id: string, input: unknown, actor: string) {
   let result: any;
   await mongoose.connection.transaction(async (session) => {
     const s = await ownSite(id, session);
+    await assertSiteEditable(id, session);
     ensure(s.planRevision === d.revision, 409, "REVISION_CONFLICT");
     ensure(
       !(await AgentRun.exists({ siteId: id, active: true }).session(session)),
@@ -198,6 +201,7 @@ export async function confirmPlan(id: string, revision: number, actor: string) {
   let result: any;
   await mongoose.connection.transaction(async (session) => {
     const s = await ownSite(id, session);
+    await assertSiteEditable(id, session);
     ensure(s.plan && s.planRevision === revision, 409, "REVISION_CONFLICT");
     validatePlan(s.plan, s);
     ensure(
@@ -432,6 +436,7 @@ export async function writePage(
   expected: number,
   runId?: string,
 ) {
+  await assertSiteEditable(String(site._id), session);
   const data = v.pageInput.parse(dataInput);
   const refIds = [
     ...new Set(
@@ -565,6 +570,7 @@ export async function reviewPage(
     const page = await ownedPage(id, session);
     ensure(page.revision === revision, 409, "REVISION_CONFLICT");
     const site = await ownSite(String(page.siteId), session);
+    await assertSiteEditable(String(site._id), session);
     await Site.updateOne(
       { _id: site._id },
       { $inc: { lockVersion: 1 } },

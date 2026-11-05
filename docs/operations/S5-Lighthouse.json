@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-06",
+  "mode": "Lighthouse mobile simulated throttling, local synthetic fixture, cold navigation",
+  "results": [
+    {
+      "templateId": "machinery",
+      "performance": 100,
+      "seo": 100,
+      "buildMs": 1225,
+      "bytes": 20582,
+      "files": 9,
+      "lighthouseVersion": "13.6.0",
+      "html": "valid",
+      "mobileOverflow": false
+    },
+    {
+      "templateId": "building-hardware",
+      "performance": 100,
+      "seo": 100,
+      "buildMs": 1459,
+      "bytes": 20598,
+      "files": 9,
+      "lighthouseVersion": "13.6.0",
+      "html": "valid",
+      "mobileOverflow": false
+    },
+    {
+      "templateId": "packaging-bags",
+      "performance": 100,
+      "seo": 100,
+      "buildMs": 1263,
+      "bytes": 20592,
+      "files": 9,
+      "lighthouseVersion": "13.6.0",
+      "html": "valid",
+      "mobileOverflow": false
+    }
+  ],
+  "generatedAt": "2026-11-05T16:03:14.139Z"
+}

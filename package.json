@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.23.4"
   },
   "workspaces": [
     "server",
@@ -13,21 +13,25 @@
     "dev": "concurrently -n api,web,worker \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev:worker -w server\"",
     "build": "npm run build -w server && npm run build -w web",
     "typecheck": "npm run typecheck --workspaces",
-    "lint": "eslint server web e2e playwright.config.ts",
+    "lint": "eslint server web e2e playwright.config.ts scripts/s5-quality.mjs",
     "test": "npm test -w server && npm test -w web",
     "migrate": "npm run migrate -w server",
     "format": "prettier --write server/src server/tests web/src web/tests docs/api",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:quality": "npm run build -w server && node scripts/s5-quality.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@playwright/test": "^1.56.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "chrome-launcher": "1.2.2",
     "concurrently": "^9.1.0",
     "eslint": "^9.39.0",
     "globals": "^16.4.0",
+    "html-validate": "^9.7.1",
     "js-yaml": "^4.3.2",
+    "lighthouse": "^13.6.0",
     "prettier": "^3.6.2",
     "typescript-eslint": "^8.46.0"
   }

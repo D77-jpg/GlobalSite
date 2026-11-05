@@ -1,3 +1,4 @@
+import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import {
   Site,
@@ -99,6 +100,7 @@ export async function queueAgent(
   let result: any;
   await mongoose.connection.transaction(async (session) => {
     const site = await ownSite(siteId, session);
+    await assertSiteEditable(siteId, session);
     await Site.updateOne(
       { _id: siteId },
       { $inc: { lockVersion: 1 } },

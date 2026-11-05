@@ -385,9 +385,14 @@ export function SiteWorkspace({ locale, role }: Props) {
       t={t}
       error={load.error}
       actions={
-        <Link className="button secondary" to="/sites">
-          {t("back")}
-        </Link>
+        <>
+          <Link className="button secondary" to="/sites">
+            {t("back")}
+          </Link>
+          <Link className="button primary" to={"/sites/" + id + "/publishing"}>
+            {t("buildPublish")}
+          </Link>
+        </>
       }
     >
       <nav className="sites-tabs" aria-label={t("sites")}>

@@ -449,6 +449,8 @@ export const Site = entity<any>(
     confirmedPlanHash: String,
     planReviewedBy: Schema.Types.ObjectId,
     planReviewedAt: Date,
+    versionCounter: { type: Number, default: 0 },
+    currentDeploymentId: Schema.Types.ObjectId,
   },
   {},
   [[{ organizationId: 1, createdAt: -1, _id: -1 }]],
@@ -503,7 +505,84 @@ export const SiteBlock = entity<any>(
   ],
 );
 
+export const PublishingSettings = entity<any>(
+  "PublishingSettings",
+  {
+    siteId: ref,
+    revision: { type: Number, default: 1 },
+    canonicalBaseUrl: String,
+    accountId: String,
+    projectName: String,
+    productionBranch: { type: String, default: "main" },
+    domain: String,
+    secret: { type: Schema.Types.Mixed, select: false },
+    httpsStatus: String,
+    checkedAt: Date,
+  },
+  {},
+  [[{ organizationId: 1, siteId: 1 }, { unique: true }]],
+);
+export const SiteVersion = entity<any>(
+  "SiteVersion",
+  {
+    siteId: ref,
+    number: Number,
+    actorId: ref,
+    operationId: String,
+    requestHash: String,
+    status: { type: String, default: "queued" },
+    snapshot: Schema.Types.Mixed,
+    snapshotHash: String,
+    artifactKey: String,
+    artifactHash: String,
+    bytes: { type: Number, default: 0 },
+    errorCode: String,
+    report: Schema.Types.Mixed,
+    active: Boolean,
+  },
+  {},
+  [
+    [{ organizationId: 1, siteId: 1, number: 1 }, { unique: true }],
+    [{ organizationId: 1, operationId: 1 }, { unique: true }],
+    [
+      { organizationId: 1, siteId: 1, active: 1 },
+      { unique: true, partialFilterExpression: { active: true } },
+    ],
+  ],
+);
+export const SiteDeployment = entity<any>(
+  "SiteDeployment",
+  {
+    siteId: ref,
+    versionId: ref,
+    actorId: ref,
+    createdBy: ref,
+    operationId: String,
+    requestHash: String,
+    status: { type: String, default: "queued" },
+    kind: String,
+    artifactHash: String,
+    settingsRevision: Number,
+    providerId: String,
+    providerUrl: String,
+    url: String,
+    errorCode: String,
+    active: Boolean,
+    attemptedAt: Date,
+  },
+  {},
+  [
+    [{ organizationId: 1, operationId: 1 }, { unique: true }],
+    [
+      { organizationId: 1, siteId: 1, active: 1 },
+      { unique: true, partialFilterExpression: { active: true } },
+    ],
+  ],
+);
 export const models = [
+  PublishingSettings,
+  SiteVersion,
+  SiteDeployment,
   Site,
   SitePage,
   SiteBlock,
