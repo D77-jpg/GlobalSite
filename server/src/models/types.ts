@@ -76,6 +76,12 @@ export type BucketRow = TenantBase & {
 };
 export type AssetRow = TenantBase & {
   key: string;
+  fileName?: string;
+  kind?: string;
+  totalBytes?: number;
+  width?: number;
+  height?: number;
+  variants?: Record<string, { key: string; bytes: number; mime: string }>;
   bytes: number;
   mime: string;
   sha256: string;
@@ -83,7 +89,7 @@ export type AssetRow = TenantBase & {
 };
 export type TaskRow = TenantBase & {
   kind: string;
-  payload: { secret: EncryptedSecret; previewHash?: string };
+  payload: { secret: EncryptedSecret; previewHash?: string; runId?: string };
   operationId: string;
   status: string;
   attempts: number;

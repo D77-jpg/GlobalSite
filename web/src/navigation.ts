@@ -1,6 +1,12 @@
 const allowed = new Set([
   "/",
   "/organization",
+  "/products",
+  "/products/new",
+  "/products/imports",
+  "/assets",
+  "/facts",
+  "/website-reads",
   "/members",
   "/security",
   "/usage",
@@ -17,7 +23,9 @@ export function safeReturnTo(value: string | null, origin: string) {
     return "/";
   try {
     const url = new URL(value, origin);
-    return url.origin === origin && allowed.has(url.pathname)
+    return url.origin === origin &&
+      (allowed.has(url.pathname) ||
+        /^\/products\/[a-f0-9]{24}$/.test(url.pathname))
       ? url.pathname + url.search
       : "/";
   } catch {

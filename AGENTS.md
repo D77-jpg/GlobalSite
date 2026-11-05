@@ -2,9 +2,9 @@
 
 ## 当前阶段与仓库边界
 
-- 本仓库 D:/Trade/genesis/GlobalSite，当前 S2 基础工程；S1 的“仅文档”限制为历史任务，已由 S2 明确授权取代。
+- 本仓库 D:/Trade/genesis/GlobalSite，当前 S3 产品/资料/事实库；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
 - 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，只读参考；废弃旧目录禁止读取或修改。
-- 本次分支 feat/s2-foundation。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
+- 本次分支 feat/s3-products-facts。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
 - GlobalSite 仅连接自己的 globalsite 数据库；CRM 只能通过 Integration API，不能 import/npm link 对方代码。复制须保留源路径、源 commit 和改造说明并补测试。
 
 ## 契约和架构
@@ -12,11 +12,11 @@
 - 唯一 CRM 契约：GlobalCRM docs/integration/integration-v1.openapi.yaml 和 globalsite-对接设计.md；本站不复制维护。
 - 本站私有基础 API：docs/api/foundation.openapi.yaml；请求与响应变化先更新本站契约再实现、更新真实 HTTP 契约测试。
 - CRM 接口变化必须在明确双仓授权任务中按“CRM 契约→CRM 实现→本站调用”推进；发现不一致停止受影响工作并汇报。
-- GS-D01：已获用户同意登记旧客户状态/报价查询来源参数差异，MVP 不调用。C1–C4 草案不能当成已实现能力。
+- GS-D01：已获用户同意登记旧客户状态/报价查询来源参数差异，MVP 不调用。C1、C2 已实现；C3、C4 未实现草案不能当成已实现能力。
 - 栈固定 Node >=20.19、Express 4、TS、Mongoose 8、zod；React 18/Vite/Tailwind/router6/react-hook-form；node:test+tsx。不升级无关依赖。
 - 所有模型注册 tenant 插件。User/Organization/Migration/RateLimit 为受限 identity 模式；Membership/Session/AuthToken 只允许有约束的身份查找；其他组织业务必须有 organizationId。禁止业务中使用 Model.collection 或原始驱动绕过；迁移、测试清理例外需明确。
 - 查询在 AsyncLocalStorage 上下文内执行；不要将未执行的 Mongoose Query 带出上下文。任务只在专用 scheduler 上下文领取，执行恢复指定组织，所有完成/续租必须含 owner+fencingToken。
-- api 和 worker 使用同一主密钥与独立数据库；builder/CRM 不在 S2 实现。
+- api 和 worker 使用同一主密钥与独立数据库；builder/CRM 调用不在 S3 实现。
 
 ## 安全与交付
 
@@ -27,3 +27,15 @@
 - 不提交 .env、storage、node_modules、dist、.dsh、测试截图/缓存或真实数据。不要删除其他项目文件/卷/进程；清理前核对绝对路径。
 - 完成 npm run typecheck、npm run build、npm run lint、npm test；前端/鉴权改动跑 Compose+test:e2e，依赖改动跑生产依赖审计。CI 包含 Gitleaks。
 - 开始前阅读相关代码/文档并简述计划；结束更新文档和本文件，如实汇报未跑/失败/剩余风险，按用户要求的八项格式交付。
+
+## S3 维护约束
+
+- 产品/资料/事实/导入/AI 提取/旧站读取的实际行为见 docs/design/S3-产品与事实.md；本站新 API 先更新 foundation.openapi.yaml，再更新真实 HTTP 请求/响应测试。
+- 所有候选保持待确认；只有管理员可确认/驳回。编辑事实撤回确认，产品变化撤回产品来源事实；修订/审计须同事务。来源 ID 与文件引用必须校验本组织。
+- Excel 先预览/映射再确认；保留物理行号与错误报告，禁止宏/外链/公式，不能覆盖既有 SKU。任务逐行恢复，每次写入都校验租约及发起人当前权限。
+- 旧站每次连接/跳转都解析并固定公开 IPv4，保持证书校验与 robots 限制；不得加 Cookie、系统代理、绕过 WAF 或执行网站脚本。
+- AI 仅用组织配置模型，必须显式同意；文字候选需逐字证据，图片标未核对。未知调用用量保留预留，已保存结果恢复不得重复付费请求。
+- 新图片及缩略/WebP 一并计量，旧文件不启动重写；保留本地持久卷。开发/测试不得删除现有用户或真实数据卷。
+- 已获用户持续授权：完成后创建 PR，CI 全绿且无冲突时直接合并；不直接推送 main。
+
+- CI 浏览器作业固定 ubuntu-24.04，匹配锁定的 Playwright 1.56；不要改回未验证的 ubuntu-latest。

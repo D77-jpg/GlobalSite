@@ -573,7 +573,10 @@ test("storage magic bytes and tenant-bound access; no path or foreign asset read
   const storageService = await import("../src/services/storage.service");
   const asset = await contexts.runWithTenant(a.me.organizationId, () =>
     storageService.store(
-      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]),
+      Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWMQygoBAAFiANH+i+9fAAAAAElFTkSuQmCC",
+        "base64",
+      ),
       "image/png",
     ),
   );
