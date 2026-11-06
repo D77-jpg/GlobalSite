@@ -399,6 +399,18 @@ small,
   padding: 28px 18px 16px;
   z-index: 10;
 }
+.sidebar {
+  overflow-y: auto;
+}
+.sidebar > :not(nav) {
+  flex-shrink: 0;
+}
+.sidebar nav {
+  flex: 1;
+  min-height: 100px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
 .sidebar > .brand {
   margin: 0 10px 35px;
   color: #153f32;

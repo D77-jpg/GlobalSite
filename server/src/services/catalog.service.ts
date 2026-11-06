@@ -2,6 +2,7 @@ import { assertFactsEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  CrmImportedResource,
   Product,
   FactSheet,
   FactRevision,
@@ -77,6 +78,7 @@ export async function saveProduct(
   actor: string,
   id?: string,
   revision?: number,
+  afterWrite?: (product: any, session: mongoose.ClientSession) => Promise<void>,
 ) {
   const data = productInput.parse(input);
   let result: any;
@@ -130,6 +132,7 @@ export async function saveProduct(
         ],
         { session },
       );
+    if (afterWrite) await afterWrite(result, session);
     await auditTx(
       id ? "product.updated" : "product.created",
       actor,
@@ -190,6 +193,16 @@ export async function validateSource(
         run.pages.some((p: any) => p.url === source.url && p.status === "read"),
       404,
       "NOT_FOUND",
+    );
+  } else if (source.kind === "globalcrm") {
+    const r = await CrmImportedResource.findOne({
+      _id: source.refId,
+      withdrawn: false,
+    }).session(session);
+    ensure(
+      r && r.sha256 === source.sha256 && r.factValues.includes(source.quote),
+      409,
+      "SOURCE_CHANGED",
     );
   } else ensure(source.kind === "manual", 400, "SOURCE_NOT_LOCAL");
   source.capturedAt ??= new Date().toISOString();
@@ -287,7 +300,11 @@ export async function transitionFact(
     ensure(current, 409, "REVISION_CONFLICT");
     await assertFactsEditable([String(current._id)], session);
     if (status === "confirmed") {
-      if (["product", "asset", "manual"].includes(current.source.kind))
+      if (
+        ["product", "asset", "manual", "globalcrm"].includes(
+          current.source.kind,
+        )
+      )
         await validateSource(
           { ...current.source },
           current.subjectId ? String(current.subjectId) : undefined,

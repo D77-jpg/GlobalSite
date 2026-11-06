@@ -1,3 +1,4 @@
+import { enqueueCrmInquiry } from "./crm-delivery.service";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 import {
@@ -244,6 +245,7 @@ async function processInquiry(task: any) {
       },
       { session },
     );
+    await enqueueCrmInquiry(String(row._id), session);
     if (!current.duplicateOf)
       for (const userId of userIds) {
         const delivery = await InquiryDelivery.findOneAndUpdate(

@@ -1,3 +1,4 @@
+import { CrmInquiryPanel } from "./crm";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -423,6 +424,13 @@ export function InquiryDetailPage({ locale, role }: Props) {
               </form>
             )}
           </section>
+          <CrmInquiryPanel
+            crm={d.crm}
+            locale={locale}
+            role={role}
+            inquiryId={d.id}
+            onChange={load.reload}
+          />
           <section className="catalog-panel">
             <h2>{t("notification")}</h2>
             <p>{t(d.notificationStatus)}</p>

@@ -2,9 +2,9 @@
 
 ## 当前阶段与仓库边界
 
-- 本仓库 D:/Trade/genesis/GlobalSite，当前 S6 公开询盘/管理/通知；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
-- 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，只读参考；废弃旧目录禁止读取或修改。
-- 本次分支 feat/s6-inquiries。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
+- 本仓库 D:/Trade/genesis/GlobalSite，当前 J1 / S7 可选 CRM 连接；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
+- 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，J1 明确双仓分别授权，其他本站任务只读参考；废弃旧目录禁止读取或修改。
+- 本次分支 feat/globalsite-j1-connect。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
 - GlobalSite 仅连接自己的 globalsite 数据库；CRM 只能通过 Integration API，不能 import/npm link 对方代码。复制须保留源路径、源 commit 和改造说明并补测试。
 
 ## 契约和架构
@@ -12,11 +12,11 @@
 - 唯一 CRM 契约：GlobalCRM docs/integration/integration-v1.openapi.yaml 和 globalsite-对接设计.md；本站不复制维护。
 - 本站私有基础 API：docs/api/foundation.openapi.yaml；请求与响应变化先更新本站契约再实现、更新真实 HTTP 契约测试。
 - CRM 接口变化必须在明确双仓授权任务中按“CRM 契约→CRM 实现→本站调用”推进；发现不一致停止受影响工作并汇报。
-- GS-D01：已获用户同意登记旧客户状态/报价查询来源参数差异，MVP 不调用。C1、C2 已实现；C3、C4 未实现草案不能当成已实现能力。
+- GS-D01：已获用户同意登记旧客户状态/报价查询来源参数差异，MVP 不调用。C1–C3 已实现；C4 未实现草案不能当成已实现能力。
 - 栈固定 Node >=22.23.4（S5 Astro 安全版本要求）、Express 4、TS、Mongoose 8、zod；React 18/Vite/Tailwind/router6/react-hook-form；node:test+tsx。不升级无关依赖。
 - 所有模型注册 tenant 插件。User/Organization/Migration/RateLimit 为受限 identity 模式；Membership/Session/AuthToken 只允许有约束的身份查找；其他组织业务必须有 organizationId。禁止业务中使用 Model.collection 或原始驱动绕过；迁移、测试清理例外需明确。
 - 查询在 AsyncLocalStorage 上下文内执行；不要将未执行的 Mongoose Query 带出上下文。任务只在专用 scheduler 上下文领取，执行恢复指定组织，所有完成/续租必须含 owner+fencingToken。
-- api 和 worker 使用同一主密钥与独立数据库；S5 builder/发布独立任务；CRM 调用不在本阶段实现。
+- api 和 worker 使用同一主密钥与独立数据库；S5 builder/发布独立任务；CRM 调用在独立 crm.* Worker 任务执行。
 
 ## 安全与交付
 
@@ -69,3 +69,12 @@
 - 通知出站先记录 attemptedAt；未知 SMTP 结果停重试，已知失败可退避/人工重试；任务正在运行不能重置。所有异步提交仍需租约 fence。
 - 隐私政策默认模板，必须运营审核后启用表单；只导出显式审核的 confirmed 公司事实并纳入版本门禁。Cookie 选择按站点隔离，拒绝可选存储不影响提交。
 - 开启询盘的版本发布前必须验证公网 HTTPS 网关；原 zip/预览降级可用。手工 zip 主机需后续域名验证机制，不能直接放宽 CORS。
+
+## J1 / S7 维护约束
+
+- 见 docs/design/S7-GlobalCRM连接.md；CRM 唯一契约仍在 CRM 仓库，本站测试夹具为固定提交逐字快照，只用于验证，不作第二份权威文档。
+- CRM 精确来源白名单、固定公开 DNS/IP、无重定向、超时/体积限制、加密凭证及 connection generation/I/O lease/Task fence 必须同时保留；本地例外仅非生产显式 loopback。
+- 同步先落盘再推进，远端更新进候选；接受才替换，撤销来源撤回确认并阻止新构建/发布。禁止导出临时 URL、覆盖人工事实或旧投递改目标。
+- 询盘冻结内容与稳定幂等键，网络失败最多八次；鉴权/契约错误暂停，断开终止新网络请求。CRM 异常不能影响公开存档。
+- 新隐私快照 s7-v1 才可推送；旧版询盘禁止重试绕过。无外部服务凭证的联调使用隔离实例、虚构账号、人工内容，不配置真实 AI/SMTP/云发布。
+- J1 验收另运行 e2e/j1-connect.spec.ts，两应用独立进程/数据库，只通过 HTTP 连接；一次性凭证弹窗关闭后才截图，凭证禁止日志/浏览器存储。

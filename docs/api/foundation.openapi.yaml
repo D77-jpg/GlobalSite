@@ -9017,6 +9017,936 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /crm/connection:
+    get:
+      operationId: crmConnectionState
+      summary: crmConnectionState
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters: []
+      responses:
+        '200':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmState'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: saveCrmConnection
+      summary: saveCrmConnection
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmSave'
+      responses:
+        '201':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmConnection'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/connection/test:
+    post:
+      operationId: testCrmConnection
+      summary: testCrmConnection
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmEmpty'
+      responses:
+        '200':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmConnection'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/connection/disconnect:
+    post:
+      operationId: disconnectCrmConnection
+      summary: disconnectCrmConnection
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmDisconnect'
+      responses:
+        '200':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmConnection'
+                required:
+                  - success
+                  - data
+        '202':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmConnection'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/connection/sync:
+    post:
+      operationId: queueCrmSync
+      summary: queueCrmSync
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmSyncRequest'
+      responses:
+        '202':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      queued:
+                        type: integer
+                    required:
+                      - queued
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/deliveries/{id}/retry:
+    post:
+      operationId: retryCrmDelivery
+      summary: retryCrmDelivery
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmEmpty'
+      responses:
+        '202':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmDelivery'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /inquiries/{id}/crm/retry:
+    post:
+      operationId: pushInquiryToCrm
+      summary: pushInquiryToCrm
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmEmpty'
+      responses:
+        '202':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmDelivery'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/sync-candidates:
+    get:
+      operationId: listCrmSyncCandidates
+      summary: listCrmSyncCandidates
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        '200':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CrmCandidate'
+                      nextCursor:
+                        anyOf:
+                          - type: string
+                            pattern: ^[a-f0-9]{24}$
+                          - type: 'null'
+                      hasMore:
+                        type: boolean
+                    required:
+                      - items
+                      - nextCursor
+                      - hasMore
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/sync-candidates/{id}/review:
+    post:
+      operationId: reviewCrmProductCandidate
+      summary: reviewCrmProductCandidate
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmReview'
+      responses:
+        '200':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      reviewed:
+                        type: boolean
+                    required:
+                      - reviewed
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /crm/resources/{id}:
+    get:
+      operationId: crmResourceEvidence
+      summary: crmResourceEvidence
+      security:
+        - cookieAuth: []
+      x-required-roles:
+        - admin
+        - editor
+        - viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: Current cookie organization only; credentials never returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CrmResource'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Invalid input or safe CRM connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin permission required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found in current organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, connection or delivery conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Safe application error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: CRM temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     cookieAuth:
@@ -9041,6 +9971,377 @@ components:
         format: uri
       description: Must match PUBLIC_URL origin exactly.
   schemas:
+    CrmConnection:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        baseUrl:
+          type: string
+          format: uri
+        projectId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        projectName:
+          anyOf:
+            - type: string
+            - type: 'null'
+        revision:
+          type: integer
+        generation:
+          type: integer
+        status:
+          type: string
+          enum:
+            - checking
+            - connected
+            - degraded
+            - auth_failed
+            - contract_error
+            - disconnecting
+            - disconnected
+        active:
+          type: boolean
+        scopes:
+          type: array
+          items:
+            type: string
+        lastCheckedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        lastErrorCode:
+          anyOf:
+            - type: string
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - baseUrl
+        - projectId
+        - projectName
+        - revision
+        - generation
+        - status
+        - active
+        - scopes
+        - lastCheckedAt
+        - lastErrorCode
+        - createdAt
+    CrmSync:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        resource:
+          type: string
+          enum:
+            - products
+            - company
+            - playbook
+            - knowledge
+            - outcomes
+        status:
+          type: string
+        cursor:
+          anyOf:
+            - type: string
+            - type: 'null'
+        updatedSince:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        lastSuccessAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        lastErrorCode:
+          anyOf:
+            - type: string
+            - type: 'null'
+        nextDue:
+          type: string
+          format: date-time
+        imported:
+          type: integer
+        full:
+          type: boolean
+      required:
+        - id
+        - resource
+        - status
+        - cursor
+        - updatedSince
+        - lastSuccessAt
+        - lastErrorCode
+        - nextDue
+        - imported
+        - full
+    CrmDelivery:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        inquiryId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        connectionId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        status:
+          type: string
+          enum:
+            - pending
+            - sending
+            - sent
+            - retry
+            - paused
+            - failed
+        attempts:
+          type: integer
+        nextAttemptAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        lastErrorCode:
+          anyOf:
+            - type: string
+            - type: 'null'
+        remoteId:
+          anyOf:
+            - type: string
+            - type: 'null'
+        customerId:
+          anyOf:
+            - type: string
+            - type: 'null'
+        customerUrl:
+          anyOf:
+            - type: string
+            - type: 'null'
+      required:
+        - id
+        - inquiryId
+        - connectionId
+        - status
+        - attempts
+        - nextAttemptAt
+        - lastErrorCode
+        - remoteId
+        - customerId
+        - customerUrl
+    CrmState:
+      type: object
+      additionalProperties: false
+      properties:
+        connection:
+          anyOf:
+            - $ref: '#/components/schemas/CrmConnection'
+            - type: 'null'
+        syncStates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrmSync'
+        deliveries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrmDelivery'
+      required:
+        - connection
+        - syncStates
+        - deliveries
+    CrmSave:
+      type: object
+      additionalProperties: false
+      properties:
+        baseUrl:
+          type: string
+          format: uri
+          maxLength: 500
+        projectId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        credential:
+          type: string
+          minLength: 20
+          maxLength: 512
+        revision:
+          type: integer
+          minimum: 0
+      required:
+        - baseUrl
+        - projectId
+        - credential
+        - revision
+    CrmEmpty:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    CrmSyncRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        full:
+          type: boolean
+      required:
+        - full
+    CrmDisconnect:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+      required:
+        - revision
+    CrmInquiryLink:
+      type: object
+      additionalProperties: false
+      properties:
+        connectionId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        status:
+          type: string
+        lastErrorCode:
+          anyOf:
+            - type: string
+            - type: 'null'
+        customerId:
+          anyOf:
+            - type: string
+            - type: 'null'
+        inquiryId:
+          anyOf:
+            - type: string
+            - type: 'null'
+        customerUrl:
+          anyOf:
+            - type: string
+            - type: 'null'
+        outcome:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                eventId:
+                  type: string
+                toStatus:
+                  type: string
+                  enum:
+                    - won
+                    - lost
+                occurredAt:
+                  type: string
+                  format: date-time
+              required:
+                - eventId
+                - toStatus
+                - occurredAt
+            - type: 'null'
+      required:
+        - connectionId
+        - status
+        - lastErrorCode
+        - customerId
+        - inquiryId
+        - customerUrl
+        - outcome
+    CrmCandidate:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        revision:
+          type: integer
+        localName:
+          type: string
+        remoteName:
+          anyOf:
+            - type: string
+            - type: 'null'
+        candidateHash:
+          anyOf:
+            - type: string
+            - type: 'null'
+        sourceStatus:
+          type: string
+        data:
+          anyOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+      required:
+        - id
+        - revision
+        - localName
+        - remoteName
+        - candidateHash
+        - sourceStatus
+        - data
+    CrmReview:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        candidateHash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        decision:
+          type: string
+          enum:
+            - accept
+            - reject
+      required:
+        - revision
+        - candidateHash
+        - decision
+    CrmResource:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        kind:
+          type: string
+        remoteId:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        sha256:
+          type: string
+        withdrawn:
+          type: boolean
+        capturedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - kind
+        - remoteId
+        - payload
+        - sha256
+        - withdrawn
+        - capturedAt
     InquirySettings:
       type: object
       additionalProperties: false
@@ -9417,6 +10718,10 @@ components:
                 pattern: ^[a-f0-9]{24}$
               name:
                 type: string
+        crm:
+          anyOf:
+            - $ref: '#/components/schemas/CrmInquiryLink'
+            - type: 'null'
       required:
         - id
         - siteId
@@ -9438,6 +10743,7 @@ components:
         - duplicates
         - deliveries
         - products
+        - crm
     InquiryList:
       type: object
       additionalProperties: false

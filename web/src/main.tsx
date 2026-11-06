@@ -1,3 +1,4 @@
+import { CrmConnectionPage } from "./crm";
 import {
   InquiriesPage,
   InquiryDetailPage,
@@ -43,6 +44,7 @@ import {
   LogOut,
   Languages,
   Mail,
+  Plug,
   Monitor,
   KeyRound,
   Menu,
@@ -1177,7 +1179,10 @@ function Workspace() {
     ["/security", "security", ShieldCheck],
     ["/usage", "usage", ChartNoAxesCombined],
   ];
-  if (me.role === "admin") nav.push(["/ai", "ai", Sparkles]);
+  if (me.role === "admin") {
+    nav.push(["/ai", "ai", Sparkles]);
+    nav.push(["/crm", "crm", Plug]);
+  }
   return (
     <Auth.Provider value={{ me, reload }}>
       <div className={"workspace " + (open ? "nav-open" : "")}>
@@ -1277,6 +1282,10 @@ function Workspace() {
           <main id="main" className="content">
             <Routes>
               <Route index element={<Overview />} />
+              <Route
+                path="crm"
+                element={<CrmConnectionPage locale={locale} role={me.role} />}
+              />
               <Route
                 path="inquiries"
                 element={<InquiriesPage locale={locale} role={me.role} />}

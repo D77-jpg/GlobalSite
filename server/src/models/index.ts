@@ -185,6 +185,7 @@ export const Asset = entity<AssetRow>(
     key: { type: String, required: true },
     bytes: Number,
     fileName: String,
+    crmImportKey: String,
     kind: { type: String, default: "image" },
     totalBytes: Number,
     variants: Schema.Types.Mixed,
@@ -196,7 +197,16 @@ export const Asset = entity<AssetRow>(
     status: { type: String, default: "ready" },
   },
   {},
-  [[{ organizationId: 1, key: 1 }, { unique: true }]],
+  [
+    [{ organizationId: 1, key: 1 }, { unique: true }],
+    [
+      { organizationId: 1, crmImportKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { crmImportKey: { $type: "string" } },
+      },
+    ],
+  ],
 );
 export const Task = entity<TaskRow>(
   "Task",
@@ -269,6 +279,8 @@ export const Product = entity<any>(
     source: { type: String, enum: ["local", "globalcrm"], default: "local" },
     externalRef: Schema.Types.Mixed,
     provenance: Schema.Types.Mixed,
+    crmSourceStatus: String,
+    syncCandidate: Schema.Types.Mixed,
     status: {
       type: String,
       enum: ["draft", "active", "archived"],
@@ -635,6 +647,7 @@ export const SiteInquiry = entity<any>(
     processedAt: Date,
     aiResult: { type: Schema.Types.Mixed, select: false },
     notificationStatus: { type: String, default: "pending" },
+    crm: Schema.Types.Mixed,
     attachmentIds: [Schema.Types.ObjectId],
   },
   {},
@@ -703,7 +716,120 @@ export const InquiryRateBucket = entity<any>(
   ],
 );
 
+export const CrmConnection = entity<any>(
+  "CrmConnection",
+  {
+    baseUrl: String,
+    projectId: String,
+    projectName: String,
+    secret: { type: Schema.Types.Mixed, select: false },
+    credentialFingerprint: { type: String, select: false },
+    actorId: Schema.Types.ObjectId,
+    revision: { type: Number, default: 1 },
+    generation: { type: Number, default: 1 },
+    active: { type: Boolean, default: true },
+    status: { type: String, default: "checking" },
+    scopes: [String],
+    lastCheckedAt: Date,
+    lastErrorCode: String,
+    ioOwner: String,
+    ioUntil: Date,
+  },
+  {},
+  [
+    [{ organizationId: 1, baseUrl: 1, projectId: 1 }, { unique: true }],
+    [
+      { organizationId: 1, active: 1 },
+      { unique: true, partialFilterExpression: { active: true } },
+    ],
+  ],
+);
+export const CrmSyncState = entity<any>(
+  "CrmSyncState",
+  {
+    connectionId: ref,
+    resource: String,
+    status: { type: String, default: "idle" },
+    cursor: String,
+    updatedSince: String,
+    batchUntil: String,
+    lastSuccessAt: Date,
+    lastErrorCode: String,
+    nextDue: { type: Date, default: Date.now },
+    imported: { type: Number, default: 0 },
+    full: { type: Boolean, default: false },
+    seenIds: [String],
+    lastFullAt: Date,
+    dispatch: { type: Number, default: 0 },
+    failures: { type: Number, default: 0 },
+    actorId: Schema.Types.ObjectId,
+  },
+  {},
+  [[{ organizationId: 1, connectionId: 1, resource: 1 }, { unique: true }]],
+);
+export const OutboundDelivery = entity<any>(
+  "OutboundDelivery",
+  {
+    inquiryId: ref,
+    connectionId: ref,
+    kind: { type: String, default: "crm" },
+    idempotencyKey: String,
+    secret: { type: Schema.Types.Mixed, select: false },
+    payloadHash: String,
+    status: { type: String, default: "pending" },
+    attempts: { type: Number, default: 0 },
+    nextAttemptAt: { type: Date, default: Date.now },
+    lastErrorCode: String,
+    remoteId: String,
+    customerId: String,
+    customerUrl: String,
+    remoteOutcome: Schema.Types.Mixed,
+  },
+  {},
+  [
+    [{ organizationId: 1, connectionId: 1, inquiryId: 1 }, { unique: true }],
+    [{ organizationId: 1, kind: 1, idempotencyKey: 1 }, { unique: true }],
+  ],
+);
+export const CrmImportedResource = entity<any>(
+  "CrmImportedResource",
+  {
+    connectionId: ref,
+    kind: String,
+    remoteId: String,
+    payload: Schema.Types.Mixed,
+    factValues: [String],
+    sha256: String,
+    withdrawn: { type: Boolean, default: false },
+    capturedAt: { type: Date, default: Date.now },
+  },
+  {},
+  [
+    [
+      { organizationId: 1, connectionId: 1, kind: 1, remoteId: 1, sha256: 1 },
+      { unique: true },
+    ],
+  ],
+);
+export const CrmOutcome = entity<any>(
+  "CrmOutcome",
+  {
+    connectionId: ref,
+    eventId: String,
+    customerId: String,
+    toStatus: String,
+    occurredAt: Date,
+  },
+  {},
+  [[{ organizationId: 1, connectionId: 1, eventId: 1 }, { unique: true }]],
+);
+
 export const models = [
+  CrmConnection,
+  CrmSyncState,
+  OutboundDelivery,
+  CrmImportedResource,
+  CrmOutcome,
   InquiryGatewayRoute,
   InquirySettings,
   SiteInquiry,

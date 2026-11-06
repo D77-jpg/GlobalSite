@@ -43,6 +43,7 @@ export async function store(
   mime: string,
   fileName = "asset",
   kind?: string,
+  crmImportKey?: string,
 ) {
   ensure(
     body.length > 0 && body.length <= 10 * 1024 * 1024,
@@ -123,6 +124,7 @@ export async function store(
     asset = await Asset.create({
       key: original.key,
       bytes: original.body.length,
+      ...(crmImportKey ? { crmImportKey } : {}),
       totalBytes: total,
       mime,
       sha256: createHash("sha256").update(original.body).digest("hex"),
