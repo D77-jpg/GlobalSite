@@ -6,6 +6,7 @@ dotenv.config({
   quiet: true,
 } as dotenv.DotenvConfigOptions);
 export const config = {
+  inquiryTrustedProxy: process.env.INQUIRY_TRUSTED_PROXY ?? "",
   env: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 5001),
   mongo:

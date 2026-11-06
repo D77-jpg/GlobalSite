@@ -182,8 +182,12 @@ export const publishingMessages = {
     "预览需要登录并禁止索引；正式产物不会附带预览限制。",
     "Preview requires sign-in and is marked noindex. Production artifacts do not carry preview restrictions.",
   ],
+  INQUIRY_GATEWAY_UNSAFE: [
+    "请先将 GlobalSite 的公开地址设为可访问的 HTTPS 地址，再发布询盘表单。",
+    "Set the GlobalSite public address to a reachable HTTPS URL before publishing inquiry forms.",
+  ],
   formHint: [
-    "询盘在线提交将在后续任务开放，本版本只展示禁用的表单。",
-    "Online inquiry submission arrives in a later phase. This version displays a disabled form.",
+    "询盘需先在站点询盘设置中启用并审核隐私政策，再重新构建发布。",
+    "Enable inquiries and review the privacy policy in site inquiry settings, then rebuild and publish.",
   ],
 } as const;

@@ -2,7 +2,11 @@
 // No broad bypass; execute lazy Mongoose queries before leaving the scoped context.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Types } from "mongoose";
-type Context = { organizationId?: string; system?: "identity" | "scheduler" };
+type Context = {
+  organizationId?: string;
+  system?: "identity" | "scheduler" | "inquiry";
+  publicId?: string;
+};
 const storage = new AsyncLocalStorage<Context>();
 export const tenantContext = () => storage.getStore();
 function run<T>(ctx: Context, fn: () => T) {
@@ -31,4 +35,9 @@ export function runScheduler<T>(fn: () => PromiseLike<T>): Promise<T>;
 export function runScheduler<T>(fn: () => T): T;
 export function runScheduler<T>(fn: () => T) {
   return run({ system: "scheduler" }, fn);
+}
+
+export function runPublicLookup<T>(publicId: string, fn: () => T) {
+  if (!/^[a-f0-9]{32}$/.test(publicId)) throw new Error("PUBLIC_ID_INVALID");
+  return run({ system: "inquiry", publicId }, fn);
 }

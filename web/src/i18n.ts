@@ -1,5 +1,8 @@
 export const messages = {
   zh: {
+    inquiries: "询盘管理",
+    unlimited: "不限",
+    countOnly: "只统计，不因套餐用量拒绝询盘。",
     sites: "站点",
     products: "产品库",
     assets: "资料库",
@@ -150,6 +153,9 @@ export const messages = {
     bytes: "字节",
   },
   en: {
+    inquiries: "Inquiries",
+    unlimited: "Unlimited",
+    countOnly: "Counted only; plan usage does not block intake.",
     sites: "Sites",
     products: "Products",
     assets: "Assets",

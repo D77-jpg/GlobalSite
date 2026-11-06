@@ -17,6 +17,13 @@ export async function migrate() {
   for (const model of models) await model.init();
   await runIdentity(() =>
     Migration.updateOne(
+      { key: "s6-inquiries-v1" },
+      { $setOnInsert: { completedAt: new Date() } },
+      { upsert: true },
+    ),
+  );
+  await runIdentity(() =>
+    Migration.updateOne(
       { key: "s5-build-publish-v1" },
       { $setOnInsert: { completedAt: new Date() } },
       { upsert: true },

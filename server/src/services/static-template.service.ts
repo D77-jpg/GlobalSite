@@ -1,3 +1,8 @@
+import {
+  renderInquiry,
+  renderConsent,
+  privacyPath,
+} from "./inquiry-template.service";
 export const e = (v: unknown) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -13,6 +18,7 @@ export type Snapshot = {
   settings: any;
   assets: Record<string, { path: string; width: number; height: number }>;
   createdAt: string;
+  inquiry?: any;
 };
 export const templateVersion = "s5.1";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
@@ -195,7 +201,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     e(p.metaDescription) +
     '"><link rel="canonical" href="' +
     e(canonical) +
-    '"><link rel="stylesheet" href="/assets/site.css"><style>:root{--brand:' +
+    '"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
     e(s.site.brandColor) +
     '}</style><script type="application/ld+json">' +
     json(schema) +
@@ -220,7 +226,8 @@ export function renderStaticPage(s: Snapshot, p: any) {
       .filter((b: any) => b !== intro && b !== firstImage)
       .map((b: any) => section(s, b))
       .join("") +
-    '<section class="section" id="inquiry"><div class="inquiry"><h2>Tell us what you need</h2><p>Online inquiry submission is not available yet. Please use the company contact details below, when provided.</p><form><div class="fields"><label>Your name<input type="text" name="name" autocomplete="name" disabled></label><label>Work email<input name="email" type="email" autocomplete="email" disabled></label></div><label>Requirements<textarea name="message" disabled></textarea></label><p><button type="button" disabled>Online inquiries coming soon</button></p></form></div></section></main><footer><span>' +
+    renderInquiry(s, p) +
+    "</main><footer><span>" +
     e(s.site.name) +
     "</span><span>" +
     e(
@@ -228,6 +235,10 @@ export function renderStaticPage(s: Snapshot, p: any) {
         .filter(Boolean)
         .join(" · "),
     ) +
-    '</span><a href="#main">Back to top</a></footer></body></html>'
+    '</span><a href="' +
+    e(privacyPath(s)) +
+    '">Privacy Policy</a><button type="button" data-cookie-settings>Privacy choices</button><a href="#main">Back to top</a></footer>' +
+    renderConsent(s) +
+    "</body></html>"
   );
 }

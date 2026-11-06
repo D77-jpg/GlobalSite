@@ -5,17 +5,19 @@ import { ensure, AppError } from "../errors";
 import type { Files } from "./static-builder.service";
 import { fetchWebsite } from "./website/public-web";
 export const mime = (n: string) =>
-  n.endsWith(".html")
-    ? "text/html; charset=utf-8"
-    : n.endsWith(".css")
-      ? "text/css; charset=utf-8"
-      : n.endsWith(".webp")
-        ? "image/webp"
-        : n.endsWith(".json")
-          ? "application/json"
-          : n.endsWith(".xml")
-            ? "application/xml"
-            : "text/plain; charset=utf-8";
+  n.endsWith(".js")
+    ? "application/javascript; charset=utf-8"
+    : n.endsWith(".html")
+      ? "text/html; charset=utf-8"
+      : n.endsWith(".css")
+        ? "text/css; charset=utf-8"
+        : n.endsWith(".webp")
+          ? "image/webp"
+          : n.endsWith(".json")
+            ? "application/json"
+            : n.endsWith(".xml")
+              ? "application/xml"
+              : "text/plain; charset=utf-8";
 export async function cfRequest(
   token: string,
   route: string,

@@ -1,3 +1,8 @@
+import {
+  inquiryBuildConfig,
+  previewGrant,
+  validateInquiryGateway,
+} from "./inquiry-settings.service";
 import mongoose from "mongoose";
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -379,18 +384,25 @@ async function snapshot(
       { $inc: { referenceVersion: 1 } },
       { session },
     );
+  const inquiryData = await inquiryBuildConfig(r.site, session);
   return JSON.parse(
     JSON.stringify({
+      inquiry: inquiryData.inquiry,
       site: siteDto(r.site),
       pages: r.pages.map((p) => ({ ...p })),
-      facts: facts.map((f) => ({
-        id: String(f._id),
-        revision: f.revision,
-        type: f.type,
-        value: f.value,
-        subjectType: f.subjectType,
-        subjectId: f.subjectId ? String(f.subjectId) : null,
-      })),
+      facts: [
+        ...facts.map((f) => ({
+          id: String(f._id),
+          revision: f.revision,
+          type: f.type,
+          value: f.value,
+          subjectType: f.subjectType,
+          subjectId: f.subjectId ? String(f.subjectId) : null,
+        })),
+        ...inquiryData.facts.filter(
+          (f) => !facts.some((existing) => String(existing._id) === f.id),
+        ),
+      ],
       settings: {
         canonicalBaseUrl: r.cfg.canonicalBaseUrl,
         revision: r.cfg.revision,
@@ -591,6 +603,7 @@ export async function queueDeployment(
     "VERSION_NOT_READY",
   );
   await validVersion(v, kind === "publish");
+  await validateInquiryGateway(v);
   const cfg = await PublishingSettings.findOne({ siteId: id }).select(
     "+secret",
   );
@@ -770,6 +783,7 @@ export async function processPublishing(
     await actorAdmin(String(row.actorId));
     const v = await ownVersion(String(row.versionId));
     await validVersion(v, row.kind === "publish");
+    await validateInquiryGateway(v);
     const cfg = await PublishingSettings.findOne({ siteId: row.siteId }).select(
       "+secret",
     );
@@ -863,7 +877,20 @@ export async function processPublishing(
       await model.updateOne(
         { _id: row._id },
         {
-          $set: { status: "live", active: false, url: cfg.canonicalBaseUrl },
+          $set: {
+            status: "live",
+            active: false,
+            url: cfg.canonicalBaseUrl,
+            origins: [
+              ...new Set(
+                [
+                  cfg.canonicalBaseUrl,
+                  "https://" + cfg.projectName + ".pages.dev",
+                  row.providerUrl,
+                ].filter(Boolean),
+              ),
+            ],
+          },
           $unset: { errorCode: 1 },
         },
         { session },
@@ -962,7 +989,15 @@ export async function previewFile(id: string, raw: string) {
   ensure(data, 404, "NOT_FOUND");
   let body = Buffer.from(data);
   if (key.endsWith(".html")) {
-    let html = body.toString("utf8");
+    const version = await ownVersion(id);
+    let html = body
+      .toString("utf8")
+      .replace(
+        "<form data-gs-inquiry",
+        '<form data-gs-inquiry data-preview-token="' +
+          previewGrant(version) +
+          '"',
+      );
     html = html
       .replace(
         "<head>",

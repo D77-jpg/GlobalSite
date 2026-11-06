@@ -1,3 +1,5 @@
+import inquiryRoutes from "./routes/inquiry.routes";
+import { createInquiryGateway } from "./routes/inquiry-gateway.routes";
 import publishingRoutes from "./routes/publishing.routes";
 import sitesRoutes from "./routes/sites.routes";
 import catalogRoutes from "./routes/catalog.routes";
@@ -114,6 +116,7 @@ export function createApp() {
     }),
   );
   app.use(requestId);
+  app.use("/api/inquiry-gateway/v1", createInquiryGateway());
   app.get("/api/v1/health/live", (_req, res) => ok(res, { ok: true }));
   app.get(
     "/api/v1/health/ready",
@@ -267,6 +270,7 @@ export function createApp() {
   app.use("/api/v1", catalogRoutes);
   app.use("/api/v1", sitesRoutes);
   app.use("/api/v1", publishingRoutes);
+  app.use("/api/v1", inquiryRoutes);
   app.get(
     "/api/v1/auth/me",
     wrap(async (req, res) => {

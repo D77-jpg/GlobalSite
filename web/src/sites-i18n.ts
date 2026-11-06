@@ -1,5 +1,6 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  inquirySettings: ["询盘设置", "Inquiry settings"],
   PUBLICATION_IN_PROGRESS: [
     "正在发布，请等待发布结果核对完成后再编辑。",
     "Publication is in progress. Wait for reconciliation before editing.",

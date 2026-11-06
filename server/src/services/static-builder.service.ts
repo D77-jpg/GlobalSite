@@ -1,3 +1,4 @@
+import { renderPrivacy, privacyPath } from "./inquiry-template.service";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -123,6 +124,14 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
       slug: p.path === "/" ? undefined : p.path.replace(/^\/|\/$/g, ""),
       html: renderStaticPage(snapshot, p),
     }));
+    pages.push({
+      slug: privacyPath(snapshot).replace(/^\//, ""),
+      html: renderPrivacy(snapshot),
+    });
+    await fs.copyFile(
+      path.join(builder, "inquiry.js"),
+      path.join(root, "public/assets/inquiry.js"),
+    );
     await fs.writeFile(path.join(root, "data.json"), JSON.stringify(pages));
     await fs.writeFile(
       path.join(root, "src/pages/[...slug].astro"),
@@ -144,6 +153,10 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
           p.path.endsWith("/") ? p.path : p.path + "/",
           snapshot.settings.canonicalBaseUrl,
         ).href,
+    );
+    urls.push(
+      new URL(privacyPath(snapshot) + "/", snapshot.settings.canonicalBaseUrl)
+        .href,
     );
     await fs.writeFile(
       path.join(root, "public/sitemap.xml"),
