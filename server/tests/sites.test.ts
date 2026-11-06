@@ -1090,3 +1090,133 @@ test("product material and nonnumeric specification rows need matching confirmed
     0,
   );
 });
+
+test("real provider retries metered invalid output with fresh operations and commits planning once", async () => {
+  await tenant(() => m.AgentAiProvider.deleteMany({ name: "default" }));
+  const { encrypt } = await import("../src/services/credential-crypto");
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  await tenant(() =>
+    m.AgentAiProvider.create({
+      name: "default",
+      enabled: true,
+      baseUrl: "https://api.openai.com/v1",
+      modelName: "fixture-local-compatible",
+      secret: encrypt(
+        "fixture-" + randomBytes(20).toString("hex"),
+        "ai:" + a.me.organizationId,
+      ),
+    }),
+  );
+  mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
+  const plan = { nodes: [home], keywords: [], clusters: [] };
+  const outputs = [
+    "Please clarify the website planning task.",
+    JSON.stringify({ ...plan, nodes: [{ ...home, type: "unsupported" }] }),
+    JSON.stringify(plan),
+  ];
+  let calls = 0;
+  mock.method(globalThis, "fetch", async (_url: any, options: any) => {
+    const body = JSON.parse(options.body);
+    assert.match(body.messages[1].content, /^Execute the website task now/);
+    assert(body.messages[1].content.includes(body.messages[0].content));
+    assert.match(
+      body.messages[0].content,
+      /Allowed node.type values: home,category,product/,
+    );
+    assert.match(
+      body.messages[0].content,
+      /Allowed intent values: learn,compare,specify,source,buy/,
+    );
+    assert.equal(body.model, "fixture-local-compatible");
+    assert(body.messages[1].content.includes('"outputSchema"'));
+    if (calls > 0)
+      assert(body.messages[1].content.includes('"validationFeedback"'));
+    if (calls === 2)
+      assert(body.messages[1].content.includes('"nodes.0.type"'));
+    return new Response(
+      JSON.stringify({
+        usage: { total_tokens: 23 },
+        choices: [{ message: { content: outputs[calls++] } }],
+      }),
+    );
+  });
+  const site = await newSite();
+  const queued = await queue(site, "research");
+  const task = await taskFor(queued.body.data.id);
+  for (const expected of ["pending", "pending", "done"]) {
+    const result = await tenant(() => processSiteAgent(task));
+    assert.equal(result.status, expected);
+  }
+  const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
+  assert.equal(run!.status, "succeeded");
+  assert.equal(run!.steps[0].attempts, 3);
+  assert.equal(run!.tokens, 69);
+  const records = await tenant(() =>
+    m.UsageRecord.find({
+      operationId: { $regex: "^site:" + run!._id + ":" },
+    }),
+  );
+  assert.equal(records.length, 3);
+  assert(records.every((r) => r.state === "settled" && r.actual === 23));
+  const updated = await tenant(() => m.Site.findById(site.id));
+  assert.equal(updated!.planRevision, site.planRevision + 1);
+  assert.equal((await tenant(() => processSiteAgent(task))).status, "done");
+  assert.equal(calls, 3);
+});
+
+test("agent prompt sends output constraints and relevant evidence without administrative metadata", async () => {
+  const { unitPrompt } = await import("../src/services/site-agents.service");
+  const prompt = unitPrompt(
+    {
+      step: "content",
+      inputSnapshot: {
+        site: {
+          name: "Fixture",
+          templateId: "packaging-bags",
+          targetMarkets: ["US"],
+          language: "en",
+          brandColor: "#123456",
+          createdAt: "private-date",
+          plan: { private: true },
+        },
+        products: [
+          {
+            id: "a".repeat(24),
+            name: "Cat Bed",
+            assetIds: [],
+            provenance: "private-provenance",
+            createdAt: "private-date",
+          },
+        ],
+        facts: [
+          {
+            id: "b".repeat(24),
+            subjectType: "organization",
+            subjectId: null,
+            type: "company.name",
+            value: "Fixture",
+            status: "confirmed",
+            revision: 1,
+            reviewedBy: "private-reviewer",
+            source: { private: true },
+          },
+        ],
+        pendingTypes: [],
+      },
+    },
+    { node: home },
+  );
+  const input = prompt.input as any;
+  assert.equal(input.outputSchema.additionalProperties, false);
+  assert.equal(
+    input.outputSchema.properties.page.properties.title.maxLength,
+    100,
+  );
+  assert.equal(input.site.plan, undefined);
+  assert.equal(input.products[0].provenance, undefined);
+  assert.equal(input.facts[0].reviewedBy, undefined);
+  assert.equal(input.facts[0].id, "b".repeat(24));
+  assert(!JSON.stringify(input).includes("private-"));
+});

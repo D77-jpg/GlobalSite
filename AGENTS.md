@@ -16,7 +16,7 @@
 - 栈固定 Node >=22.23.4（S5 Astro 安全版本要求）、Express 4、TS、Mongoose 8、zod；React 18/Vite/Tailwind/router6/react-hook-form；node:test+tsx。不升级无关依赖。
 - 所有模型注册 tenant 插件。User/Organization/Migration/RateLimit 为受限 identity 模式；Membership/Session/AuthToken 只允许有约束的身份查找；其他组织业务必须有 organizationId。禁止业务中使用 Model.collection 或原始驱动绕过；迁移、测试清理例外需明确。
 - 查询在 AsyncLocalStorage 上下文内执行；不要将未执行的 Mongoose Query 带出上下文。任务只在专用 scheduler 上下文领取，执行恢复指定组织，所有完成/续租必须含 owner+fencingToken。
-- api 和 worker 使用同一主密钥与独立数据库；S5 builder/发布独立任务；CRM 调用在独立 crm.* Worker 任务执行。
+- api 和 worker 使用同一主密钥与独立数据库；S5 builder/发布独立任务；CRM 调用在独立 crm.\* Worker 任务执行。
 
 ## 安全与交付
 
@@ -80,3 +80,5 @@
 - J1 验收另运行 e2e/j1-connect.spec.ts，两应用独立进程/数据库，只通过 HTTP 连接；一次性凭证弹窗关闭后才截图，凭证禁止日志/浏览器存储。
 
 - 本地 AI 仅允许非生产 AI_LOCAL_BASE_URL 指定的精确 /v1，限定 loopback 或 host.docker.internal；固定解析IP连接且禁重定向。不放宽旧站/CRM SSRF，真实密钥仅通过组织设置加密保存。
+
+- 本地模型“测试连接成功”不等于 Agent 成功；研究和内容必须显式下达任务并通过真实 Worker 验证。已知格式失败须计费后用新 operationId 有限重试；未知结果不可清除 operationId 或释放预留。不得以手工生成站点替代 Agent 验收。
