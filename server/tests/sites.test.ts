@@ -1130,6 +1130,11 @@ test("real provider retries metered invalid output with fresh operations and com
       /Allowed intent values: learn,compare,specify,source,buy/,
     );
     assert.equal(body.model, "fixture-local-compatible");
+    assert(body.messages[1].content.includes('"outputSchema"'));
+    if (calls > 0)
+      assert(body.messages[1].content.includes('"validationFeedback"'));
+    if (calls === 2)
+      assert(body.messages[1].content.includes('"nodes.0.type"'));
     return new Response(
       JSON.stringify({
         usage: { total_tokens: 23 },
@@ -1159,4 +1164,59 @@ test("real provider retries metered invalid output with fresh operations and com
   assert.equal(updated!.planRevision, site.planRevision + 1);
   assert.equal((await tenant(() => processSiteAgent(task))).status, "done");
   assert.equal(calls, 3);
+});
+
+test("agent prompt sends output constraints and relevant evidence without administrative metadata", async () => {
+  const { unitPrompt } = await import("../src/services/site-agents.service");
+  const prompt = unitPrompt(
+    {
+      step: "content",
+      inputSnapshot: {
+        site: {
+          name: "Fixture",
+          templateId: "packaging-bags",
+          targetMarkets: ["US"],
+          language: "en",
+          brandColor: "#123456",
+          createdAt: "private-date",
+          plan: { private: true },
+        },
+        products: [
+          {
+            id: "a".repeat(24),
+            name: "Cat Bed",
+            assetIds: [],
+            provenance: "private-provenance",
+            createdAt: "private-date",
+          },
+        ],
+        facts: [
+          {
+            id: "b".repeat(24),
+            subjectType: "organization",
+            subjectId: null,
+            type: "company.name",
+            value: "Fixture",
+            status: "confirmed",
+            revision: 1,
+            reviewedBy: "private-reviewer",
+            source: { private: true },
+          },
+        ],
+        pendingTypes: [],
+      },
+    },
+    { node: home },
+  );
+  const input = prompt.input as any;
+  assert.equal(input.outputSchema.additionalProperties, false);
+  assert.equal(
+    input.outputSchema.properties.page.properties.title.maxLength,
+    100,
+  );
+  assert.equal(input.site.plan, undefined);
+  assert.equal(input.products[0].provenance, undefined);
+  assert.equal(input.facts[0].reviewedBy, undefined);
+  assert.equal(input.facts[0].id, "b".repeat(24));
+  assert(!JSON.stringify(input).includes("private-"));
 });
