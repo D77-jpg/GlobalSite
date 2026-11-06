@@ -8,6 +8,7 @@ import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { z } from "zod";
 import {
+  Product,
   Site,
   SitePage,
   FactSheet,
@@ -515,6 +516,16 @@ export async function validVersion(
   session?: mongoose.ClientSession,
 ) {
   const s = v.snapshot as Snapshot;
+  const available = await Product.countDocuments({
+    _id: { $in: s.site.productIds ?? [] },
+    status: { $ne: "archived" },
+    crmSourceStatus: { $nin: ["archived", "withdrawn"] },
+  }).session(session ?? null);
+  ensure(
+    available === (s.site.productIds ?? []).length,
+    409,
+    "CRM_SOURCE_WITHDRAWN",
+  );
   const facts = await FactSheet.find({
     _id: { $in: s.facts.map((f) => f.id) },
   }).session(session ?? null);

@@ -16,7 +16,7 @@ import { sha } from "./catalog.service";
 import { config } from "../config";
 import { ensure, AppError } from "../errors";
 import { publicUrl } from "./website/public-web";
-export const POLICY_VERSION = "s6-v1";
+export const POLICY_VERSION = "j1-s7-v1";
 const id = z.string().regex(/^[a-f0-9]{24}$/);
 export const inquirySettingsInput = z
   .object({
@@ -181,6 +181,7 @@ export async function inquiryBuildConfig(
   const enabled = !!settings?.enabled && !!settings?.privacyReviewed;
   return {
     inquiry: {
+      crmDisclosureVersion: "s7-v1",
       publicId: route.publicId,
       gatewayUrl: new URL("/api/inquiry-gateway/v1", config.origin).href,
       enabled,

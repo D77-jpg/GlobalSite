@@ -1,3 +1,4 @@
+import { processCrmTask } from "../services/crm-worker.service";
 import { processInquiryTask } from "../services/inquiry-worker.service";
 import { processPublishing } from "../services/publishing.service";
 import { processSiteAgent } from "../services/site-agents.service";
@@ -45,6 +46,7 @@ export async function finishTask(
   task: any,
   status: "done" | "pending" | "dead",
   error?: string,
+  delayMs?: number,
 ) {
   return Task.updateOne(
     {
@@ -59,7 +61,8 @@ export async function finishTask(
         status,
         lastErrorCode: error,
         nextAttemptAt: new Date(
-          Date.now() + Math.min(3600000, 30000 * 2 ** task.attempts),
+          Date.now() +
+            (delayMs ?? Math.min(3600000, 30000 * 2 ** task.attempts)),
         ),
       },
       $unset: { leaseUntil: 1 },
@@ -86,6 +89,11 @@ export async function tick() {
       void renewTask(task).catch(() => {});
     }, 20000);
     try {
+      if (task.kind.startsWith("crm.")) {
+        const result = await processCrmTask(task);
+        await finishTask(task, result.status, result.error, result.delayMs);
+        return;
+      }
       if (task.kind.startsWith("inquiry.")) {
         const outcome = await processInquiryTask(task);
         await finishTask(task, outcome.status, outcome.error);
@@ -152,7 +160,11 @@ export async function tick() {
       transport.close();
       await finishTask(task, "done");
     } catch (error) {
-      if (task.kind.startsWith("site.") || task.kind.startsWith("inquiry."))
+      if (
+        task.kind.startsWith("crm.") ||
+        task.kind.startsWith("site.") ||
+        task.kind.startsWith("inquiry.")
+      )
         throw error;
       if (task.kind.startsWith("catalog.")) {
         const code =

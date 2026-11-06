@@ -240,6 +240,10 @@ export const siteMessages = {
   PAGE_MISSING: ["页面尚未创建", "Page has not been created"],
   PAGE_NOT_APPROVED: ["页面尚未批准", "Page has not been approved"],
   AGENT_ACTIVE: ["仍有未完成的 Agent 任务", "An Agent job is still active"],
+  CRM_SOURCE_WITHDRAWN: [
+    "CRM 来源已归档或撤销，请审核产品资料后重新构建。",
+    "The CRM source was archived or withdrawn. Review product data and rebuild.",
+  ],
   SITE_NOT_READY: [
     "请先处理页面问题并完成审核",
     "Resolve page issues and complete review first",

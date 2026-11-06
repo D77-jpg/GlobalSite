@@ -8,6 +8,8 @@ x-app: &app
     MONGODB_URI: mongodb://mongo:27017/globalsite?replicaSet=rs0
     PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5080}
     STORAGE_ROOT: /app/storage
+    CRM_ALLOWED_ORIGINS: ${CRM_ALLOWED_ORIGINS:-}
+    CRM_ALLOW_LOCAL: ${CRM_ALLOW_LOCAL:-false}
     INQUIRY_TRUSTED_PROXY: ${INQUIRY_TRUSTED_PROXY:-}
     CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
     SMTP_HOST: ${SMTP_HOST:-}

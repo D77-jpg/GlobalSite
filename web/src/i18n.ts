@@ -1,6 +1,7 @@
 export const messages = {
   zh: {
     inquiries: "询盘管理",
+    crm: "连接 GlobalCRM",
     unlimited: "不限",
     countOnly: "只统计，不因套餐用量拒绝询盘。",
     sites: "站点",
@@ -154,6 +155,7 @@ export const messages = {
   },
   en: {
     inquiries: "Inquiries",
+    crm: "Connect GlobalCRM",
     unlimited: "Unlimited",
     countOnly: "Counted only; plan usage does not block intake.",
     sites: "Sites",

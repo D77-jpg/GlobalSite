@@ -3,6 +3,7 @@ const allowed = new Set([
   "/organization",
   "/sites",
   "/inquiries",
+  "/crm",
   "/products",
   "/products/new",
   "/products/imports",

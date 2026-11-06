@@ -210,6 +210,17 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
     page.getByRole("link", { name: "synthetic.pdf", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("fixture-s6", { exact: true })).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const id = new URL(page.url()).pathname.split("/").pop();
+        const r = await page.request.get("/api/v1/inquiries/" + id);
+        return (await r.json()).data.classification;
+      },
+      { timeout: 20000 },
+    )
+    .not.toBe("pending");
+  await page.reload();
   await page.getByLabel("状态", { exact: true }).selectOption("following");
   await expect(page.getByLabel("状态", { exact: true })).toHaveValue(
     "following",

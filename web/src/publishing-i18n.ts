@@ -95,6 +95,10 @@ export const publishingMessages = {
     "The action did not complete. Retry or review preflight results.",
   ],
   BUILD_BUSY: ["已有构建任务，请等待完成。", "A build is already in progress."],
+  CRM_SOURCE_WITHDRAWN: [
+    "CRM 来源已归档或撤销，请审核产品资料后重新构建。",
+    "The CRM source was archived or withdrawn. Review product data and rebuild.",
+  ],
   SITE_NOT_READY: [
     "页面需要先审核通过，并完成体检。",
     "Approve pages and resolve preflight issues first.",

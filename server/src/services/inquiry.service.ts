@@ -595,6 +595,7 @@ export async function inquiryDetail(id: string) {
   return {
     ...inquiryDto(row),
     source: data.source,
+    crm: row.crm ?? null,
     notes: row.notesSecret
       ? JSON.parse(
           decrypt(

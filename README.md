@@ -85,11 +85,15 @@ npm run test:quality
 - [S3 运行与验收](docs/operations/S3-运行与验收.md)
 - [S2 模块、数据与安全边界](docs/design/S2-基础模块.md)
 - [运行与验收记录](docs/operations/S2-运行与验收.md)
-- [GlobalSite 基础 API OpenAPI](docs/api/foundation.openapi.yaml)：107 个本站私有操作，不包含 CRM Integration API。
+- [GlobalSite 基础 API OpenAPI](docs/api/foundation.openapi.yaml)：117 个本站私有操作，不包含 CRM Integration API。
 - [公开询盘网关 OpenAPI](docs/api/inquiry-gateway.openapi.yaml)：独立 CORS/限流，2 个公开操作及 2 个预检操作。
 - [协作规则](AGENTS.md)
-- CRM 唯一对接依据：[OpenAPI](https://github.com/D77-jpg/GlobalCRM/blob/60cdbc48035301c152a58b924558b08a850fa36a/docs/integration/integration-v1.openapi.yaml) 与[双方对接设计](https://github.com/D77-jpg/GlobalCRM/blob/60cdbc48035301c152a58b924558b08a850fa36a/docs/integration/globalsite-%E5%AF%B9%E6%8E%A5%E8%AE%BE%E8%AE%A1.md)。本站不复制该契约、不 import 或 npm link CRM 代码。
+- CRM 唯一对接依据：[OpenAPI](https://github.com/D77-jpg/GlobalCRM/blob/4e4cca4cdc828396b62155ee46d5f4947b99992a/docs/integration/integration-v1.openapi.yaml) 与[双方对接设计](https://github.com/D77-jpg/GlobalCRM/blob/4e4cca4cdc828396b62155ee46d5f4947b99992a/docs/integration/globalsite-%E5%AF%B9%E6%8E%A5%E8%AE%BE%E8%AE%A1.md)。本站仅在测试目录固定逐字契约快照，不维护另一份接口定义、不 import 或 npm link CRM 代码。
 
 来源与精简记录见 S2 模块文档；保留逐文件来源注释。源 CRM 基线未附 LICENSE，本次按同一所有者的复制改造授权实施，不额外宣称对第三方授予开源许可。
 
 审计补充：全量锁定依赖当前有 11 项 moderate（含开发工具链），生产依赖中有 2 项 moderate；无 high/critical。已修补新增 YAML 解析器的高风险版本，未强制升级 Router 或降级 lint 工具以隐藏告警。
+
+## J1 / S7 可选 CRM 连接
+
+实现、数据/索引、部署、重试/断开、旧站隐私重建及隔离双系统联调见 [S7 连接说明](docs/design/S7-GlobalCRM连接.md)。新增 j1-s7-crm-v1 索引迁移；CRM_ALLOWED_ORIGINS 默认空，未配置时独立建站询盘仍可用。生产使用精确 CRM HTTPS 来源；本地 loopback 仅显式非生产例外。先部署 CRM C3（迁移009），再部署本站；旧站重新审核隐私模板并构建后，新询盘才可投递。

@@ -1,0 +1,69 @@
+.crm fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.crm .crm-table {
+  overflow: auto;
+  margin-top: 20px;
+}
+.crm table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+.crm td,
+.crm th {
+  padding: 12px;
+  border-bottom: 1px solid #dce5df;
+  vertical-align: top;
+}
+.crm .crm-candidate {
+  padding: 20px 0;
+  border-bottom: 1px solid #dce5df;
+  overflow-wrap: anywhere;
+}
+.crm .crm-candidate button {
+  margin: 8px;
+}
+.crm .crm-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.crm .crm-fields div {
+  min-width: 0;
+}
+.crm dt {
+  color: var(--muted, #597164);
+}
+.crm dd {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.crm summary {
+  cursor: pointer;
+  padding: 12px 0;
+  min-height: 44px;
+}
+.crm button {
+  min-height: 44px;
+}
+.crm input[readonly] {
+  background: #f1f5f2;
+  color: #466254;
+}
+@media (max-width: 640px) {
+  .crm .crm-fields {
+    grid-template-columns: 1fr;
+  }
+  .crm th,
+  .crm td {
+    padding: 10px;
+    font-size: 13px;
+  }
+  .crm .catalog-actions {
+    flex-wrap: wrap;
+  }
+}

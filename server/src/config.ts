@@ -6,6 +6,8 @@ dotenv.config({
   quiet: true,
 } as dotenv.DotenvConfigOptions);
 export const config = {
+  crmAllowedOrigins: process.env.CRM_ALLOWED_ORIGINS ?? "",
+  crmAllowLocal: process.env.CRM_ALLOW_LOCAL === "true",
   inquiryTrustedProxy: process.env.INQUIRY_TRUSTED_PROXY ?? "",
   env: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 5001),

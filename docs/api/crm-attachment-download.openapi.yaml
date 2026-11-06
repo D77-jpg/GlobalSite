@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: GlobalSite signed CRM attachment handoff
+  version: 1.0.0
+paths:
+  /api/crm-attachments/{grant}:
+    get:
+      description: >-
+        Short-lived HMAC grant binds organization, connection generation, inquiry and attachment;
+        disconnect/revocation rejects further downloads. No cookie or CRM token; no redirects, URLs/PII never
+        logged.
+      parameters:
+        - name: grant
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 3000
+      responses:
+        '200':
+          description: Private attachment download; no-store, attachment, nosniff
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Invalid/expired/revoked grant
+        '404':
+          description: Unavailable
+        '429':
+          description: Rate limited

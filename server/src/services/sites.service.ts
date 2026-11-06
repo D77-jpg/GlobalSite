@@ -69,6 +69,7 @@ export async function saveSite(
       (await Product.countDocuments({
         _id: { $in: data.productIds },
         status: { $ne: "archived" },
+        crmSourceStatus: { $nin: ["archived", "withdrawn"] },
       }).session(session)) === data.productIds.length,
       404,
       "NOT_FOUND",
@@ -250,6 +251,7 @@ export async function sourceRows(site: any, session?: mongoose.ClientSession) {
   const products = await Product.find({
     _id: { $in: site.productIds },
     status: { $ne: "archived" },
+    crmSourceStatus: { $nin: ["archived", "withdrawn"] },
   }).session(session ?? null);
   const facts = await FactSheet.find({
     status: "confirmed",
@@ -331,6 +333,18 @@ export async function pageView(
     issues.push({
       code: "PAGE_PLAN_CHANGED",
       field: "page",
+      blockKey: null,
+      token: "",
+    });
+  if (
+    await Product.exists({
+      _id: { $in: site.productIds },
+      crmSourceStatus: { $in: ["archived", "withdrawn"] },
+    })
+  )
+    issues.push({
+      code: "CRM_SOURCE_WITHDRAWN",
+      field: "site",
       blockKey: null,
       token: "",
     });
@@ -629,6 +643,18 @@ export async function readiness(id: string) {
   const site = await ownSite(id),
     issues: Issue[] = [],
     pages: any[] = [];
+  if (
+    await Product.exists({
+      _id: { $in: site.productIds },
+      crmSourceStatus: { $in: ["archived", "withdrawn"] },
+    })
+  )
+    issues.push({
+      code: "CRM_SOURCE_WITHDRAWN",
+      field: "site",
+      blockKey: null,
+      token: "",
+    });
   if (!siteDto(site).planConfirmed)
     issues.push({
       code: "PLAN_NOT_CONFIRMED",
