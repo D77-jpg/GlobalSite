@@ -2,7 +2,7 @@ import { z } from "zod";
 import { decrypt } from "./credential-crypto";
 import { AgentAiProvider } from "../models";
 import { tenantContext } from "../models/tenant-context";
-import { publicUrl } from "./website/public-web";
+import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
 const output = z
@@ -34,12 +34,7 @@ export async function extractEvidence(
 ) {
   const provider = await AgentAiProvider.findOne({ name: "default" });
   ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
-  const url = await publicUrl(provider.baseUrl);
-  ensure(
-    url.origin === "https://api.openai.com" && url.pathname === "/v1",
-    400,
-    "PROVIDER_URL_UNSUPPORTED",
-  );
+  const url = await aiBase(provider.baseUrl);
   const budget =
     Buffer.byteLength(text, "utf8") + 8192 + (imageData ? 8192 : 0);
   ensure(
@@ -49,7 +44,7 @@ export async function extractEvidence(
   );
   let known = false;
   try {
-    const response = await fetch(
+    const response = await aiFetch(
       url.href.replace(/\/$/, "") + "/chat/completions",
       {
         method: "POST",

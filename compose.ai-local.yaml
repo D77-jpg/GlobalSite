@@ -1,0 +1,7 @@
+services:
+  api:
+    environment:
+      AI_LOCAL_BASE_URL: http://host.docker.internal:7863/v1
+  worker:
+    environment:
+      AI_LOCAL_BASE_URL: http://host.docker.internal:7863/v1
