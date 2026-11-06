@@ -5,7 +5,7 @@ import { encrypt, decrypt } from "./credential-crypto";
 import { tenantContext } from "../models/tenant-context";
 import { ensure, AppError } from "../errors";
 import { reserve, settle } from "./usage.service";
-import { publicUrl } from "./website/public-web";
+import { aiBase, aiFetch, localAiBase } from "./ai-target";
 import { audit } from "./audit.service";
 export async function getProvider() {
   const p = await AgentAiProvider.findOne({ name: "default" });
@@ -20,7 +20,7 @@ export async function getProvider() {
         enabled: false,
         configured: false,
         modelName: "",
-        baseUrl: "https://api.openai.com/v1",
+        baseUrl: localAiBase() ?? "https://api.openai.com/v1",
       };
 }
 export async function saveProvider(
@@ -32,16 +32,9 @@ export async function saveProvider(
   },
   userId: string,
 ) {
-  await publicUrl(input.baseUrl);
+  await aiBase(input.baseUrl);
   const org = tenantContext()?.organizationId;
   ensure(org);
-  // S2 only allows OpenAI's official HTTPS endpoint; custom hosts need a pinned-IP transport.
-  ensure(
-    new URL(input.baseUrl).origin === "https://api.openai.com" &&
-      new URL(input.baseUrl).pathname === "/v1",
-    400,
-    "PROVIDER_URL_UNSUPPORTED",
-  );
   const existing = await AgentAiProvider.findOne({ name: "default" });
   ensure(
     !input.enabled || input.apiKey || existing?.secret,
@@ -66,15 +59,10 @@ export async function testProvider(operationId: string) {
   const provider = await AgentAiProvider.findOne({ name: "default" });
   ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
   const org = tenantContext()?.organizationId;
-  const url = await publicUrl(provider.baseUrl);
-  ensure(
-    url.origin === "https://api.openai.com" && url.pathname === "/v1",
-    400,
-    "PROVIDER_URL_UNSUPPORTED",
-  );
+  const url = await aiBase(provider.baseUrl);
   ensure(await reserve("ai_tokens", 4096, operationId), 409, "CONFLICT");
   try {
-    const response = await fetch(
+    const response = await aiFetch(
       url.href.replace(/\/$/, "") + "/chat/completions",
       {
         method: "POST",

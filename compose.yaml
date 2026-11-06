@@ -5,6 +5,7 @@ x-app: &app
   environment: &environment
     NODE_ENV: ${NODE_ENV:-development}
     PORT: 5001
+    AI_LOCAL_BASE_URL: ${AI_LOCAL_BASE_URL:-}
     MONGODB_URI: mongodb://mongo:27017/globalsite?replicaSet=rs0
     PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5080}
     STORAGE_ROOT: /app/storage

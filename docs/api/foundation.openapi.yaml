@@ -11308,8 +11308,9 @@ components:
           maxLength: 120
         baseUrl:
           type: string
-          enum:
-            - https://api.openai.com/v1
+          format: uri
+          maxLength: 500
+          description: Official OpenAI or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
         enabled:
           type: boolean
         configured:
@@ -11609,8 +11610,9 @@ components:
           maxLength: 120
         baseUrl:
           type: string
-          enum:
-            - https://api.openai.com/v1
+          format: uri
+          maxLength: 500
+          description: Official OpenAI or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
         enabled:
           type: boolean
         apiKey:

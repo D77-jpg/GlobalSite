@@ -1,7 +1,7 @@
 import { AgentAiProvider } from "../models";
 import { tenantContext } from "../models/tenant-context";
 import { decrypt } from "./credential-crypto";
-import { publicUrl } from "./website/public-web";
+import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
 export type AgentResult = { output: any; tokens: number; errorCode?: string };
@@ -15,12 +15,7 @@ export async function callSiteAgent(
   ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
   const text = JSON.stringify(input);
   ensure(Buffer.byteLength(text) <= 120000, 409, "AGENT_INPUT_TOO_LARGE");
-  const url = await publicUrl(provider.baseUrl);
-  ensure(
-    url.origin === "https://api.openai.com" && url.pathname === "/v1",
-    400,
-    "PROVIDER_URL_UNSUPPORTED",
-  );
+  const url = await aiBase(provider.baseUrl);
   const budget = Buffer.byteLength(system + text) + 32768;
   ensure(
     await reserve("ai_tokens", budget, operationId),
@@ -29,7 +24,7 @@ export async function callSiteAgent(
   );
   let known = false;
   try {
-    const response = await fetch(
+    const response = await aiFetch(
       url.href.replace(/\/$/, "") + "/chat/completions",
       {
         method: "POST",
