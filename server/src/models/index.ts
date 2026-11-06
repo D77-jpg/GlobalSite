@@ -22,6 +22,7 @@ export function entity<T>(
     identity?: boolean;
     authLookup?: boolean;
     scheduler?: boolean;
+    publicLookup?: boolean;
   } = {},
   indexes: Array<[Record<string, any>, Record<string, any>?]> = [],
 ): mongoose.Model<T> {
@@ -565,6 +566,7 @@ export const SiteDeployment = entity<any>(
     settingsRevision: Number,
     providerId: String,
     providerUrl: String,
+    origins: [String],
     url: String,
     errorCode: String,
     active: Boolean,
@@ -579,7 +581,136 @@ export const SiteDeployment = entity<any>(
     ],
   ],
 );
+
+export const InquiryGatewayRoute = entity<any>(
+  "InquiryGatewayRoute",
+  {
+    siteId: ref,
+    publicId: { type: String, required: true },
+    enabled: { type: Boolean, default: true },
+  },
+  { publicLookup: true },
+  [
+    [{ publicId: 1 }, { unique: true }],
+    [{ organizationId: 1, siteId: 1 }, { unique: true }],
+  ],
+);
+export const InquirySettings = entity<any>(
+  "InquirySettings",
+  {
+    siteId: ref,
+    revision: { type: Number, default: 1 },
+    enabled: { type: Boolean, default: false },
+    privacyReviewed: { type: Boolean, default: false },
+    aiSpamEnabled: { type: Boolean, default: false },
+    notificationUserIds: [Schema.Types.ObjectId],
+    turnstileSiteKey: String,
+    secret: { type: Schema.Types.Mixed, select: false },
+  },
+  {},
+  [[{ organizationId: 1, siteId: 1 }, { unique: true }]],
+);
+export const SiteInquiry = entity<any>(
+  "SiteInquiry",
+  {
+    siteId: ref,
+    versionId: ref,
+    submissionId: String,
+    receiptId: String,
+    requestHash: String,
+    secret: { type: Schema.Types.Mixed, select: false },
+    notesSecret: { type: Schema.Types.Mixed, select: false },
+    emailHash: String,
+    receivedAt: { type: Date, default: Date.now },
+    revision: { type: Number, default: 1 },
+    status: {
+      type: String,
+      enum: ["new", "following", "resolved", "spam"],
+      default: "new",
+    },
+    spamScore: { type: Number, default: 0 },
+    classification: { type: String, default: "pending" },
+    reasons: [String],
+    duplicateOf: Schema.Types.ObjectId,
+    processedAt: Date,
+    aiResult: { type: Schema.Types.Mixed, select: false },
+    notificationStatus: { type: String, default: "pending" },
+    attachmentIds: [Schema.Types.ObjectId],
+  },
+  {},
+  [
+    [{ organizationId: 1, siteId: 1, submissionId: 1 }, { unique: true }],
+    [{ organizationId: 1, receivedAt: -1, _id: -1 }],
+    [{ organizationId: 1, siteId: 1, status: 1, receivedAt: -1 }],
+    [{ organizationId: 1, duplicateOf: 1 }],
+  ],
+);
+export const InquiryAttachment = entity<any>(
+  "InquiryAttachment",
+  {
+    inquiryId: ref,
+    key: String,
+    mime: String,
+    bytes: Number,
+    storedBytes: Number,
+  },
+  {},
+  [[{ organizationId: 1, inquiryId: 1 }]],
+);
+export const InquiryDedupe = entity<any>(
+  "InquiryDedupe",
+  {
+    siteId: ref,
+    emailHash: String,
+    rootId: Schema.Types.ObjectId,
+    lastAt: Date,
+    lockVersion: { type: Number, default: 0 },
+    expiresAt: Date,
+  },
+  {},
+  [
+    [{ organizationId: 1, siteId: 1, emailHash: 1 }, { unique: true }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
+);
+export const InquiryDelivery = entity<any>(
+  "InquiryDelivery",
+  {
+    inquiryId: ref,
+    userId: ref,
+    status: { type: String, default: "pending" },
+    attempts: { type: Number, default: 0 },
+    attemptedAt: Date,
+    sentAt: Date,
+    errorCode: String,
+  },
+  {},
+  [[{ organizationId: 1, inquiryId: 1, userId: 1 }, { unique: true }]],
+);
+export const InquiryRateBucket = entity<any>(
+  "InquiryRateBucket",
+  {
+    siteId: ref,
+    key: String,
+    minute: Number,
+    count: { type: Number, default: 0 },
+    expiresAt: Date,
+  },
+  {},
+  [
+    [{ organizationId: 1, siteId: 1, key: 1, minute: 1 }, { unique: true }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
+);
+
 export const models = [
+  InquiryGatewayRoute,
+  InquirySettings,
+  SiteInquiry,
+  InquiryAttachment,
+  InquiryDedupe,
+  InquiryDelivery,
+  InquiryRateBucket,
   PublishingSettings,
   SiteVersion,
   SiteDeployment,

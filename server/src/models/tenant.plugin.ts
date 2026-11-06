@@ -8,6 +8,7 @@ export function tenantPlugin(
     identity?: boolean;
     authLookup?: boolean;
     scheduler?: boolean;
+    publicLookup?: boolean;
   } = {},
 ) {
   if (!options.identity)
@@ -50,6 +51,20 @@ export function tenantPlugin(
           };
       }
       query.and([{ organizationId: ctx.organizationId }]);
+      return;
+    }
+    if (
+      options.publicLookup &&
+      ctx?.system === "inquiry" &&
+      query.op === "findOne"
+    ) {
+      const q = query.getFilter();
+      if (
+        q.publicId !== ctx.publicId ||
+        q.enabled !== true ||
+        Object.keys(q).some((k) => !["publicId", "enabled"].includes(k))
+      )
+        throw new Error("RESTRICTED_PUBLIC_LOOKUP");
       return;
     }
     if (options.authLookup && ctx?.system === "identity") {

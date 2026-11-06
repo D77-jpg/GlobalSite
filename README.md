@@ -2,11 +2,15 @@
 
 独立的 AI 建站与运营产品，面向 B2B 外贸企业，可单独使用，也可选择连接 GlobalCRM。
 
-当前已完成 **S2 基础能力、S3 产品/事实库、S4 站点/Agent/审核与 S5 静态构建/发布**：独立账号与组织、邮箱验证、Cookie 会话、刷新轮换、CSRF、邮箱两步验证、忘记密码、账号锁定、成员邀请与三种角色、审计、套餐额度、文件存储、后台任务租约、AI 服务商配置，以及中英双语管理台。另有产品键值/表格规格、图片与 PDF/证书、Excel 映射与错误行、事实来源/人工审核/历史、AI 候选提取、遵守 robots.txt 与 SSRF 防护的旧站读取。现已支持访谈候选事实、关键词与可编辑地图、逐页内容/单段重写、事实门禁与人工审批；已支持三套模板、静态构建、登录预览、zip、可选 Cloudflare 发布与回滚；询盘在线接收与 CRM 连接由后续阶段提供。
+当前已完成 **S2 基础能力、S3 产品/事实库、S4 站点/Agent/审核、S5 静态构建/发布与 S6 询盘**：独立账号与组织、邮箱验证、Cookie 会话、刷新轮换、CSRF、邮箱两步验证、忘记密码、账号锁定、成员邀请与三种角色、审计、套餐额度、文件存储、后台任务租约、AI 服务商配置，以及中英双语管理台。另有产品键值/表格规格、图片与 PDF/证书、Excel 映射与错误行、事实来源/人工审核/历史、AI 候选提取、遵守 robots.txt 与 SSRF 防护的旧站读取。现已支持访谈候选事实、关键词与可编辑地图、逐页内容/单段重写、事实门禁与人工审批；已支持三套模板、静态构建、登录预览、zip、可选 Cloudflare 发布与回滚；现已支持独立询盘接收、后台跟进、附件、垃圾识别与通知；CRM 连接由后续阶段提供。
+
+## S6：独立询盘与通知
+
+站点工作区 → 询盘设置：审核隐私模板、启用表单、选择通知成员，可选 AI/Turnstile；重新构建后可在登录预览提交，再到“询盘管理”跟进、查看附件和导出 CSV。所有套餐询盘数仅统计。公网发布需配置实际 HTTPS PUBLIC_URL 与 SMTP；不依赖 CRM。见 [S6设计](docs/design/S6-询盘与通知.md) 和 [S6运行与验收](docs/operations/S6-运行与验收.md)。
 
 ## S5：静态模板、构建与发布
 
-Node >=22.23.4。站点工作区 → 构建与发布：审核、体检、Astro静态版本、登录预览、zip；可选Cloudflare Pages发布与原版本回滚。使用说明见 [S5运行与验收](docs/operations/S5-运行与验收.md)，实现与安全边界见 [S5设计](docs/design/S5-构建与发布.md)。无需配置Cloudflare即可构建/预览/导出。询盘在线接收在S6开放。
+Node >=22.23.4。站点工作区 → 构建与发布：审核、体检、Astro静态版本、登录预览、zip；可选Cloudflare Pages发布与原版本回滚。使用说明见 [S5运行与验收](docs/operations/S5-运行与验收.md)，实现与安全边界见 [S5设计](docs/design/S5-构建与发布.md)。无需配置Cloudflare即可构建/预览/导出。询盘需在站点询盘设置审核并启用后重新构建。
 
 
 ## 一键启动（本地开发）
@@ -61,7 +65,7 @@ npm run test:e2e
 npm run test:quality
 ```
 
-迁移 s2-foundation-v1、s3-products-facts-v1 、s4-agents-v1 与 s5-build-publish-v1 创建 globalsite 集合/索引并写入迁移账本，可重复执行；api/worker 启动时也会执行。它不会连接或修改 CRM 数据库。
+迁移 s2-foundation-v1、s3-products-facts-v1 、s4-agents-v1 、s5-build-publish-v1 与 s6-inquiries-v1 创建 globalsite 集合/索引并写入迁移账本，可重复执行；api/worker 启动时也会执行。它不会连接或修改 CRM 数据库。
 
 ## 邮件、AI 与安全
 
@@ -81,7 +85,8 @@ npm run test:quality
 - [S3 运行与验收](docs/operations/S3-运行与验收.md)
 - [S2 模块、数据与安全边界](docs/design/S2-基础模块.md)
 - [运行与验收记录](docs/operations/S2-运行与验收.md)
-- [GlobalSite 基础 API OpenAPI](docs/api/foundation.openapi.yaml)：98 个本站私有操作，不包含 CRM Integration API。
+- [GlobalSite 基础 API OpenAPI](docs/api/foundation.openapi.yaml)：107 个本站私有操作，不包含 CRM Integration API。
+- [公开询盘网关 OpenAPI](docs/api/inquiry-gateway.openapi.yaml)：独立 CORS/限流，2 个公开操作及 2 个预检操作。
 - [协作规则](AGENTS.md)
 - CRM 唯一对接依据：[OpenAPI](https://github.com/D77-jpg/GlobalCRM/blob/60cdbc48035301c152a58b924558b08a850fa36a/docs/integration/integration-v1.openapi.yaml) 与[双方对接设计](https://github.com/D77-jpg/GlobalCRM/blob/60cdbc48035301c152a58b924558b08a850fa36a/docs/integration/globalsite-%E5%AF%B9%E6%8E%A5%E8%AE%BE%E8%AE%A1.md)。本站不复制该契约、不 import 或 npm link CRM 代码。
 

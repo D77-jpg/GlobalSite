@@ -22,6 +22,7 @@ export async function reserve(
 ) {
   ensure(Number.isSafeInteger(amount) && amount > 0 && amount <= 1e12);
   const max = (await limits())[metric];
+  ensure(typeof max === "number", 400, "METRIC_NOT_RESERVABLE");
   const p = period(metric);
   let created = false;
   await mongoose.connection.transaction(async (session) => {

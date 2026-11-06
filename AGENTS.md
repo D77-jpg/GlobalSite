@@ -2,9 +2,9 @@
 
 ## 当前阶段与仓库边界
 
-- 本仓库 D:/Trade/genesis/GlobalSite，当前 S5 静态模板/构建/预览/发布；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
+- 本仓库 D:/Trade/genesis/GlobalSite，当前 S6 公开询盘/管理/通知；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
 - 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，只读参考；废弃旧目录禁止读取或修改。
-- 本次分支 feat/s5-build-publish。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
+- 本次分支 feat/s6-inquiries。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
 - GlobalSite 仅连接自己的 globalsite 数据库；CRM 只能通过 Integration API，不能 import/npm link 对方代码。复制须保留源路径、源 commit 和改造说明并补测试。
 
 ## 契约和架构
@@ -56,5 +56,16 @@
 - 版本不可变，引用事实必须仍confirmed且revision匹配；新发布还要求当前页批准hash，回滚只用曾live原始zip，不重建。HTML/图片/manifest散列与HTTPS核验不能省略。
 - 发布活动期间禁止编辑站点/地图/页面/审核/相关事实及来源；事务写Site与Fact锁防并发。所有任务状态提交必须有owner/fence/有效租约。
 - Cloudflare Token 组织+站点绑定AES-GCM；响应不含秘密，审计只记录动作。远端POST前持久记录attemptedAt，模糊结果只查唯一标记，禁止盲目重发或猜测解锁。允许同目标替换过期Token并管理员核对。
-- 未配置Cloudflare仍可zip/登录预览。预览全部noindex/private/no-store，正式文件不继承预览限制；S6前询盘表单明确禁用。
+- 未配置Cloudflare仍可zip/登录预览。预览全部noindex/private/no-store，正式文件不继承预览限制；S5 历史禁用表单由 S6 显式审核/启用后的版本取代。
 - 完成常规检查、完整test:e2e、test:quality；三个模板HTML校验与移动Lighthouse性能/SEO均须>=90，报告附环境/局限；无真实Token时如实标注云流程为模拟。
+
+## S6 维护约束
+
+- 实现见 docs/design/S6-询盘与通知.md；公开接口以 inquiry-gateway.openapi.yaml 为准，私有接口仍以 foundation.openapi.yaml 为准，CRM 无改动/调用。
+- 网关必须保留独立 Origin/CORS、IP/站点限流、大小/附件限制、Turnstile 验证；受限 publicId 查找只允许路由元数据，随后恢复组织上下文，不可绕过 tenant 插件。
+- 先事务存档+任务+计量再返回成功；submissionId 并发幂等，邮箱窗口仅归组不丢弃。询盘数只统计，不能用套餐拦截；附件仍受存储容量限制。
+- 访客内容/来源/备注/附件与 AI 结果加密；禁止日志记录原始 IP、邮箱、正文、附件名或签名预览授权。邮件只给登录详情链接。
+- AI 垃圾识别默认关、仅组织模型；脱敏留言也需隐私说明。结果先存再计费，未知调用不重复；规则和通知不能因 AI 配置/额度失效。
+- 通知出站先记录 attemptedAt；未知 SMTP 结果停重试，已知失败可退避/人工重试；任务正在运行不能重置。所有异步提交仍需租约 fence。
+- 隐私政策默认模板，必须运营审核后启用表单；只导出显式审核的 confirmed 公司事实并纳入版本门禁。Cookie 选择按站点隔离，拒绝可选存储不影响提交。
+- 开启询盘的版本发布前必须验证公网 HTTPS 网关；原 zip/预览降级可用。手工 zip 主机需后续域名验证机制，不能直接放宽 CORS。

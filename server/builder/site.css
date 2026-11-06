@@ -341,3 +341,124 @@ footer {
 .theme-packaging-bags .section-cases {
   border-radius: 20px;
 }
+
+.inquiry fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.inquiry .product-choices {
+  margin: 24px 0;
+  border: 1px solid #79958a;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow: auto;
+}
+.product-choices label,
+.consent-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.inquiry input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  margin-top: 4px;
+}
+.inquiry label {
+  margin: 10px 0;
+}
+.inquiry a {
+  text-decoration: underline;
+}
+.inquiry input[type="file"] {
+  padding: 10px;
+}
+.inquiry .form-hint {
+  font-size: 14px;
+}
+.gs-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.inquiry [data-form-error] {
+  background: #fff2ef;
+  color: #762b17;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.inquiry [data-form-status] {
+  padding: 12px 0;
+}
+.inquiry [aria-invalid="true"] {
+  border: 3px solid #bd4c26;
+}
+.gs-cookie {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  max-width: 650px;
+  margin-left: auto;
+  padding: 24px;
+  background: #fff;
+  color: #152a35;
+  border: 1px solid #9eb4a5;
+  border-radius: 12px;
+  box-shadow: 0 10px 50px #183f3033;
+  z-index: 20;
+}
+.gs-cookie[hidden] {
+  display: none;
+}
+.gs-cookie h2 {
+  font-size: 24px;
+  margin: 0;
+}
+.gs-cookie p {
+  font-size: 15px;
+  margin: 12px 0;
+}
+.gs-cookie > div {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.gs-cookie button,
+footer button {
+  min-height: 44px;
+  border: 1px solid #536a5f;
+  background: #fff;
+  color: #152a35;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+}
+footer button {
+  padding: 0 12px;
+}
+.inquiry [data-unavailable][hidden] {
+  display: none;
+}
+@media (max-width: 640px) {
+  .gs-cookie {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    padding: 18px;
+  }
+  .gs-cookie button {
+    flex: 1;
+  }
+  .consent-line {
+    font-size: 15px;
+  }
+}

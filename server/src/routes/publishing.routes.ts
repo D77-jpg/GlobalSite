@@ -110,7 +110,7 @@ r.get(
         "X-Robots-Tag": "noindex, nofollow",
         "X-Frame-Options": "SAMEORIGIN",
         "Content-Security-Policy":
-          "default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'",
+          "default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action 'none'; base-uri 'none'; frame-ancestors 'self'",
       })
       .type(file.mime)
       .send(file.body);

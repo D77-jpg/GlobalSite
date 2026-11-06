@@ -1,0 +1,723 @@
+openapi: 3.1.0
+info:
+  title: GlobalSite inquiry gateway
+  version: 1.0.0
+  description: >-
+    Independent public intake. Exact published/preview origins only; no cookies/CRM. Validate before
+    archiving, archive and durable Worker tasks before success. Honeypot submissions are archived
+    and flagged. Same submissionId+payload is idempotent; different payload 409. New IDs from same
+    email within10min are retained and grouped asynchronously. JSON <=24KiB; multipart payload field
+    <=24KiB, max3 JPEG/PNG/WebP/PDF attachments each2MiB. IP/site limits return429 with Retry-After.
+    CORS is not visitor authentication; optional Turnstile verified server-side.
+    Origin may be omitted only for a same-origin login preview carrying a valid X-Preview-Token;
+    it then resolves to the configured management origin. Published requests require Origin.
+servers:
+  - url: /api/inquiry-gateway/v1
+paths:
+  /sites/{publicId}/config:
+    get:
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{32}$
+        - name: Origin
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uri
+        - name: X-Preview-Token
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Only login preview uses this short-lived signed grant; never put it in URLs.
+      responses:
+        '200':
+          description: Runtime form configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      enabled:
+                        type: boolean
+                      turnstileSiteKey:
+                        type:
+                          - string
+                          - 'null'
+                      privacyVersion:
+                        type: string
+                      maxFiles:
+                        const: 3
+                      maxFileBytes:
+                        const: 2097152
+                    required:
+                      - enabled
+                      - turnstileSiteKey
+                      - privacyVersion
+                      - maxFiles
+                      - maxFileBytes
+                required:
+                  - success
+                  - data
+        '400':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '403':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '404':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '409':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '413':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '429':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '500':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '503':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+    options:
+      summary: Exact-origin CORS preflight
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{32}$
+        - name: Origin
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uri
+        - name: X-Preview-Token
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Only login preview uses this short-lived signed grant; never put it in URLs.
+      responses:
+        '204':
+          description: Only approved origin/method/headers allowed
+        '403':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '429':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+  /sites/{publicId}/inquiries:
+    post:
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{32}$
+        - name: Origin
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uri
+        - name: X-Preview-Token
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Only login preview uses this short-lived signed grant; never put it in URLs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryInput'
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - payload
+              additionalProperties: false
+              properties:
+                payload:
+                  type: string
+                  description: JSON-encoded InquiryInput
+                attachments:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '202':
+          description: >-
+            Encrypted inquiry and durable processing task committed; classification/email are
+            asynchronous.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      received:
+                        const: true
+                      receiptId:
+                        type: string
+                        format: uuid
+                    required:
+                      - received
+                      - receiptId
+                required:
+                  - success
+                  - data
+        '400':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '403':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '404':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '409':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '413':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '429':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '500':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '503':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+    options:
+      summary: Exact-origin CORS preflight
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{32}$
+        - name: Origin
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uri
+        - name: X-Preview-Token
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Only login preview uses this short-lived signed grant; never put it in URLs.
+      responses:
+        '204':
+          description: Only approved origin/method/headers allowed
+        '403':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+        '429':
+          description: Rejected before archive or server error; no visitor details returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      code:
+                        type: string
+                    required:
+                      - code
+                required:
+                  - success
+                  - error
+components:
+  schemas:
+    InquiryInput:
+      type: object
+      additionalProperties: false
+      properties:
+        submissionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        company:
+          type: string
+          maxLength: 160
+        email:
+          type: string
+          format: email
+          maxLength: 200
+        country:
+          type: string
+          maxLength: 80
+        phone:
+          type: string
+          maxLength: 80
+        productIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+          maxItems: 50
+        quantity:
+          type:
+            - number
+            - 'null'
+          minimum: 1
+          maximum: 1000000000
+        message:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        website:
+          type: string
+          maxLength: 200
+        privacyConsent:
+          const: true
+        privacyVersion:
+          type: string
+          maxLength: 80
+        pageUrl:
+          type: string
+          maxLength: 2000
+        referrer:
+          type:
+            - string
+            - 'null'
+        utm:
+          type: object
+          additionalProperties: false
+          properties:
+            source:
+              type:
+                - string
+                - 'null'
+            medium:
+              type:
+                - string
+                - 'null'
+            campaign:
+              type:
+                - string
+                - 'null'
+            term:
+              type:
+                - string
+                - 'null'
+            content:
+              type:
+                - string
+                - 'null'
+          required:
+            - source
+            - medium
+            - campaign
+            - term
+            - content
+        firstVisitAt:
+          type: string
+          format: date-time
+        turnstileToken:
+          type: string
+          maxLength: 2048
+      required:
+        - submissionId
+        - name
+        - company
+        - email
+        - country
+        - phone
+        - productIds
+        - quantity
+        - message
+        - website
+        - privacyConsent
+        - privacyVersion
+        - pageUrl
+        - referrer
+        - utm
+        - firstVisitAt
+        - turnstileToken

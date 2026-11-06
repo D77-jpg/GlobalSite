@@ -392,6 +392,12 @@ export function SiteWorkspace({ locale, role }: Props) {
           <Link className="button primary" to={"/sites/" + id + "/publishing"}>
             {t("buildPublish")}
           </Link>
+          <Link
+            className="button secondary"
+            to={"/sites/" + id + "/inquiry-settings"}
+          >
+            {t("inquirySettings")}
+          </Link>
         </>
       }
     >

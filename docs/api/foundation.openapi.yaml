@@ -7512,6 +7512,10 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+            application/javascript:
+              schema:
+                type: string
+                format: binary
         '400':
           description: 错误
           content:
@@ -8149,6 +8153,870 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /sites/{id}/inquiry-settings:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /sites/{id}/inquiry-settings
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquirySettings'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - S6 Inquiries
+      summary: PUT /sites/{id}/inquiry-settings
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquirySettings'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquirySettingsInput'
+  /inquiries:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /inquiries
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: status
+          in: query
+          schema:
+            enum:
+              - new
+              - following
+              - resolved
+              - spam
+        - name: minSpamScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: maxSpamScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: includeDuplicates
+          in: query
+          schema:
+            type: boolean
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquiryList'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /inquiries/export:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /inquiries/export
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: status
+          in: query
+          schema:
+            enum:
+              - new
+              - following
+              - resolved
+              - spam
+        - name: minSpamScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: maxSpamScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: includeDuplicates
+          in: query
+          schema:
+            type: boolean
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Success
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /inquiries/{id}:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /inquiries/{id}
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquiryDetail'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - S6 Inquiries
+      summary: PATCH /inquiries/{id}
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquiryDetail'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryUpdate'
+  /inquiries/{id}/notes:
+    post:
+      tags:
+        - S6 Inquiries
+      summary: POST /inquiries/{id}/notes
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquiryDetail'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryNoteInput'
+  /inquiries/{id}/notifications/retry:
+    post:
+      tags:
+        - S6 Inquiries
+      summary: POST /inquiries/{id}/notifications/retry
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '202':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquiryDetail'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmptyInquiryAction'
+  /inquiries/{id}/attachments/{attachmentId}:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /inquiries/{id}/attachments/{attachmentId}
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: Success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     cookieAuth:
@@ -8173,6 +9041,456 @@ components:
         format: uri
       description: Must match PUBLIC_URL origin exactly.
   schemas:
+    InquirySettings:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+        publicId:
+          type: string
+        enabled:
+          type: boolean
+        privacyReviewed:
+          type: boolean
+        aiSpamEnabled:
+          type: boolean
+        notificationUserIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        turnstileSiteKey:
+          type:
+            - string
+            - 'null'
+        turnstileConfigured:
+          type: boolean
+        gatewayUrl:
+          type: string
+      required:
+        - revision
+        - publicId
+        - enabled
+        - privacyReviewed
+        - aiSpamEnabled
+        - notificationUserIds
+        - turnstileSiteKey
+        - turnstileConfigured
+        - gatewayUrl
+    InquirySettingsInput:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - enabled
+        - privacyReviewed
+        - aiSpamEnabled
+        - notificationUserIds
+        - turnstileSiteKey
+      properties:
+        revision:
+          type: integer
+          minimum: 0
+        enabled:
+          type: boolean
+        privacyReviewed:
+          type: boolean
+        aiSpamEnabled:
+          type: boolean
+        notificationUserIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+          maxItems: 20
+        turnstileSiteKey:
+          type:
+            - string
+            - 'null'
+        turnstileSecret:
+          type:
+            - string
+            - 'null'
+    InquirySource:
+      type: object
+      additionalProperties: false
+      properties:
+        pageUrl:
+          type: string
+        referrer:
+          type:
+            - string
+            - 'null'
+        utm:
+          type: object
+          additionalProperties: false
+          properties:
+            source:
+              type:
+                - string
+                - 'null'
+            medium:
+              type:
+                - string
+                - 'null'
+            campaign:
+              type:
+                - string
+                - 'null'
+            term:
+              type:
+                - string
+                - 'null'
+            content:
+              type:
+                - string
+                - 'null'
+          required:
+            - source
+            - medium
+            - campaign
+            - term
+            - content
+        country:
+          type:
+            - string
+            - 'null'
+        device:
+          enum:
+            - mobile
+            - tablet
+            - desktop
+            - unknown
+        firstVisitAt:
+          type: string
+        receivedAt:
+          type: string
+        origin:
+          type: string
+        preview:
+          type: boolean
+      required:
+        - pageUrl
+        - referrer
+        - utm
+        - country
+        - device
+        - firstVisitAt
+        - receivedAt
+        - origin
+        - preview
+    InquiryContact:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        company:
+          type: string
+        email:
+          type: string
+        country:
+          type: string
+        phone:
+          type: string
+      required:
+        - name
+        - company
+        - email
+        - country
+        - phone
+    InquiryRow:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        siteId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        receiptId:
+          type: string
+        revision:
+          type: integer
+        contact:
+          $ref: '#/components/schemas/InquiryContact'
+        status:
+          enum:
+            - new
+            - following
+            - resolved
+            - spam
+        spamScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        classification:
+          type: string
+        duplicateOf:
+          type:
+            - string
+            - 'null'
+        message:
+          type: string
+        productIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        quantity:
+          type:
+            - number
+            - 'null'
+        receivedAt:
+          type: string
+        notificationStatus:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                pattern: ^[a-f0-9]{24}$
+              name:
+                type: string
+      required:
+        - id
+        - siteId
+        - receiptId
+        - revision
+        - contact
+        - status
+        - spamScore
+        - classification
+        - duplicateOf
+        - message
+        - productIds
+        - quantity
+        - receivedAt
+        - notificationStatus
+        - products
+    InquiryAttachment:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        fileName:
+          type: string
+        mime:
+          type: string
+        bytes:
+          type: integer
+        url:
+          type: string
+      required:
+        - id
+        - fileName
+        - mime
+        - bytes
+        - url
+    InquiryNote:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        actorId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        createdAt:
+          type: string
+      required:
+        - id
+        - text
+        - actorId
+        - createdAt
+    InquiryDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        siteId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        receiptId:
+          type: string
+        revision:
+          type: integer
+        contact:
+          $ref: '#/components/schemas/InquiryContact'
+        status:
+          enum:
+            - new
+            - following
+            - resolved
+            - spam
+        spamScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        classification:
+          type: string
+        duplicateOf:
+          type:
+            - string
+            - 'null'
+        message:
+          type: string
+        productIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        quantity:
+          type:
+            - number
+            - 'null'
+        receivedAt:
+          type: string
+        notificationStatus:
+          type: string
+        source:
+          $ref: '#/components/schemas/InquirySource'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InquiryAttachment'
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/InquiryNote'
+        duplicates:
+          type: array
+          items:
+            $ref: '#/components/schemas/InquiryRow'
+        deliveries:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                pattern: ^[a-f0-9]{24}$
+              userId:
+                type: string
+                pattern: ^[a-f0-9]{24}$
+              status:
+                type: string
+              errorCode:
+                type:
+                  - string
+                  - 'null'
+              attempts:
+                type: integer
+            required:
+              - id
+              - userId
+              - status
+              - errorCode
+              - attempts
+        products:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                pattern: ^[a-f0-9]{24}$
+              name:
+                type: string
+      required:
+        - id
+        - siteId
+        - receiptId
+        - revision
+        - contact
+        - status
+        - spamScore
+        - classification
+        - duplicateOf
+        - message
+        - productIds
+        - quantity
+        - receivedAt
+        - notificationStatus
+        - source
+        - attachments
+        - notes
+        - duplicates
+        - deliveries
+        - products
+    InquiryList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InquiryRow'
+        nextCursor:
+          type:
+            - string
+            - 'null'
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - nextCursor
+        - hasMore
+    InquiryUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        status:
+          enum:
+            - new
+            - following
+            - resolved
+            - spam
+      required:
+        - revision
+        - status
+    InquiryNoteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+      required:
+        - revision
+        - text
+    EmptyInquiryAction:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
     PublishSettings:
       type: object
       additionalProperties: false
@@ -8626,6 +9944,11 @@ components:
         publishes:
           type: integer
           minimum: 0
+        inquiries:
+          type:
+            - integer
+            - 'null'
+          description: 'Always null: inquiry counting never blocks intake'
       required:
         - members
         - sites
@@ -8633,6 +9956,7 @@ components:
         - builds
         - storage_bytes
         - publishes
+        - inquiries
     Usage:
       type: object
       properties:
@@ -8654,6 +9978,7 @@ components:
                   - builds
                   - storage_bytes
                   - publishes
+                  - inquiries
               consumed:
                 type: integer
                 minimum: 0

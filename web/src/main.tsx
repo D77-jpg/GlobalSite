@@ -1,3 +1,8 @@
+import {
+  InquiriesPage,
+  InquiryDetailPage,
+  InquirySettingsPage,
+} from "./inquiries";
 import { PublishPage } from "./publishing";
 import { SitesPage, SiteWorkspace, PageReview } from "./sites";
 import {
@@ -931,10 +936,12 @@ function SecurityPage() {
 function UsagePage() {
   const { t, locale } = useI18n();
   const { data, error } = useData("/usage");
-  const fmt = (n: number, key: string) =>
-    key === "storage_bytes"
-      ? (n / 1073741824).toFixed(2) + " GiB"
-      : new Intl.NumberFormat(locale).format(n);
+  const fmt = (n: number | null, key: string) =>
+    n === null
+      ? t("unlimited")
+      : key === "storage_bytes"
+        ? (n / 1073741824).toFixed(2) + " GiB"
+        : new Intl.NumberFormat(locale).format(n);
   return (
     <>
       <PageHeader
@@ -959,7 +966,13 @@ function UsagePage() {
           </div>
           <div className="usage-grid">
             {(
-              ["ai_tokens", "builds", "publishes", "storage_bytes"] as const
+              [
+                "ai_tokens",
+                "builds",
+                "publishes",
+                "inquiries",
+                "storage_bytes",
+              ] as const
             ).map((key, index) => {
               const row = data.items.find((x: any) => x.metric === key) ?? {
                 consumed: 0,
@@ -967,7 +980,9 @@ function UsagePage() {
               };
               const percent = Math.min(
                 100,
-                (100 * (row.consumed + row.reserved)) / data.limits[key],
+                data.limits[key] === null
+                  ? 0
+                  : (100 * (row.consumed + row.reserved)) / data.limits[key],
               );
               return (
                 <section className="panel usage-card" key={key}>
@@ -978,7 +993,11 @@ function UsagePage() {
                   <p>
                     {t("limit")} {fmt(data.limits[key], key)}
                   </p>
-                  <progress max={100} value={percent} aria-label={t(key)} />
+                  {data.limits[key] === null ? (
+                    <p>{t("countOnly")}</p>
+                  ) : (
+                    <progress max={100} value={percent} aria-label={t(key)} />
+                  )}
                   <div className="detail-row">
                     <span>{t("reserved")}</span>
                     <strong>{fmt(row.reserved, key)}</strong>
@@ -1148,6 +1167,7 @@ function Workspace() {
   const nav: Array<[string, Key, typeof Globe2]> = [
     ["/", "overview", LayoutDashboard],
     ["/sites", "sites", Globe2],
+    ["/inquiries", "inquiries", Mail],
     ["/products", "products", Building2],
     ["/assets", "assets", Building2],
     ["/facts", "facts", ShieldCheck],
@@ -1238,6 +1258,8 @@ function Workspace() {
                   (nav.find(
                     ([to]) =>
                       to === location.pathname ||
+                      (to === "/inquiries" &&
+                        location.pathname.startsWith("/inquiries/")) ||
                       (to === "/sites" &&
                         /^\/(sites|pages)\//.test(location.pathname)),
                   )?.[1] ?? "workspace") as Key,
@@ -1255,6 +1277,18 @@ function Workspace() {
           <main id="main" className="content">
             <Routes>
               <Route index element={<Overview />} />
+              <Route
+                path="inquiries"
+                element={<InquiriesPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="inquiries/:id"
+                element={<InquiryDetailPage locale={locale} role={me.role} />}
+              />
+              <Route
+                path="sites/:id/inquiry-settings"
+                element={<InquirySettingsPage locale={locale} role={me.role} />}
+              />
               <Route
                 path="sites"
                 element={<SitesPage locale={locale} role={me.role} />}

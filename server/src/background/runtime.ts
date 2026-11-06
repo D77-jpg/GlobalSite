@@ -1,3 +1,4 @@
+import { processInquiryTask } from "../services/inquiry-worker.service";
 import { processPublishing } from "../services/publishing.service";
 import { processSiteAgent } from "../services/site-agents.service";
 import mongoose from "mongoose";
@@ -85,6 +86,11 @@ export async function tick() {
       void renewTask(task).catch(() => {});
     }, 20000);
     try {
+      if (task.kind.startsWith("inquiry.")) {
+        const outcome = await processInquiryTask(task);
+        await finishTask(task, outcome.status, outcome.error);
+        return;
+      }
       if (["site.build", "site.deploy"].includes(task.kind)) {
         const outcome = await processPublishing(task);
         await finishTask(task, outcome.status, outcome.error);
@@ -146,7 +152,8 @@ export async function tick() {
       transport.close();
       await finishTask(task, "done");
     } catch (error) {
-      if (task.kind.startsWith("site.")) throw error;
+      if (task.kind.startsWith("site.") || task.kind.startsWith("inquiry."))
+        throw error;
       if (task.kind.startsWith("catalog.")) {
         const code =
           error instanceof AppError
