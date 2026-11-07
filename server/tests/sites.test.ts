@@ -1676,10 +1676,20 @@ test("image input is opt-in and reports actual provider transmission", async () 
       ),
     );
     assert.equal(result.visualInput, supportsVision);
+    assert.equal(received.max_tokens, 16384);
     assert.equal(Array.isArray(received.messages[1].content), supportsVision);
     if (!supportsVision)
       assert(!JSON.stringify(received).includes("data:image"));
   }
+  await tenant(() =>
+    callSiteAgent(
+      "Return JSON",
+      { task: "rewrite" },
+      randomUUID(),
+      async () => {},
+    ),
+  );
+  assert.equal(received.max_tokens, 8192);
   await tenant(() =>
     m.AgentAiProvider.updateOne(
       { name: "default" },
@@ -1721,4 +1731,72 @@ test("stable screenshot receipt resumes without rebuilding or reserving storage 
       1,
     );
   });
+});
+
+test("known metered format errors retry promptly but stop after the unit attempt budget", async () => {
+  // Only this file's two MongoMemoryReplSet fixture organizations exist here.
+  for (const fixture of [a, b])
+    await ctx.runWithTenant(fixture.me.organizationId, () =>
+      m.Task.updateMany(
+        { status: { $in: ["pending", "running"] } },
+        { $set: { status: "dead" } },
+      ),
+    );
+  const site = await planSite(await newSite()),
+    queued = await queue(site, "content");
+  const task = await tenant(() =>
+    m.Task.findOne({ "payload.runId": queued.body.data.id }),
+  );
+  mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
+  let calls = 0;
+  mock.method(globalThis, "fetch", async () => {
+    calls++;
+    return new Response(
+      JSON.stringify({
+        usage: { total_tokens: 100 },
+        choices: [{ finish_reason: "length", message: { content: "" } }],
+      }),
+    );
+  });
+  const runtime = await import("../src/background/runtime");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await tenant(() =>
+      m.Task.updateOne(
+        { _id: task!._id },
+        { $set: { nextAttemptAt: new Date(0) } },
+      ),
+    );
+    await runtime.tick();
+    const row = await tenant(() => m.Task.findById(task!._id));
+    assert.equal(row!.status, attempt === 2 ? "dead" : "pending");
+    if (attempt < 2)
+      assert(new Date(row!.nextAttemptAt).getTime() - Date.now() <= 5000);
+    if (attempt === 0) {
+      await tenant(() =>
+        m.Task.updateOne(
+          { _id: task!._id, status: "pending" },
+          { $set: { nextAttemptAt: new Date(Date.now() + 3600000) } },
+        ),
+      );
+      const recovered = await runtime.claimTask(new Date(Date.now() + 5000));
+      assert.equal(String(recovered!._id), String(task!._id));
+      assert.equal(
+        (await tenant(() => m.AgentRun.findById(queued.body.data.id)))!.steps[0]
+          .attempts,
+        1,
+      );
+      await tenant(() =>
+        runtime.finishTask(recovered, "pending", "AI_OUTPUT_INVALID", 0),
+      );
+    }
+  }
+  const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
+  assert.equal(calls, 3);
+  assert.equal(run!.status, "failed");
+  assert.equal(run!.steps[0].attempts, 3);
+  assert.equal(run!.tokens, 300);
+  assert.equal(
+    await tenant(() => m.SitePage.countDocuments({ siteId: site.id })),
+    0,
+  );
 });

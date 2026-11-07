@@ -60,8 +60,8 @@ export async function callSiteAgent(
   // Reasoning models share this cap with their complete structured page output.
   const maxTokens =
     task === "rewrite"
-      ? 2048
-      : ["content", "refine"].includes(task ?? "")
+      ? 8192
+      : ["content", "refine", "review"].includes(task ?? "")
         ? 16384
         : task === "research"
           ? (input as any)?.site?.buyerProfile

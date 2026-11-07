@@ -24,10 +24,23 @@ export async function claimTask(now = new Date()) {
   return runScheduler(() =>
     Task.findOneAndUpdate(
       {
-        nextAttemptAt: { $lte: now },
         $or: [
-          { status: "pending" },
-          { status: "running", leaseUntil: { $lt: now } },
+          { status: "pending", nextAttemptAt: { $lte: now } },
+          // Older known format failures may carry a task-wide long backoff.
+          // Preserve attempts and fences; only their paid, known outcome can
+          // use the bounded short correction delay. Network/unknown outcomes
+          // never enter this branch.
+          {
+            kind: "site.agent",
+            status: "pending",
+            lastErrorCode: "AI_OUTPUT_INVALID",
+            updatedAt: { $lte: new Date(now.getTime() - 3000) },
+          },
+          {
+            status: "running",
+            nextAttemptAt: { $lte: now },
+            leaseUntil: { $lt: now },
+          },
         ],
       },
       {
@@ -106,7 +119,14 @@ export async function tick() {
       }
       if (task.kind === "site.agent") {
         const outcome = await processSiteAgent(task);
-        await finishTask(task, outcome.status, outcome.error);
+        await finishTask(
+          task,
+          outcome.status,
+          outcome.error,
+          outcome.status === "pending" && outcome.error === "AI_OUTPUT_INVALID"
+            ? 3000
+            : undefined,
+        );
         return;
       }
       if (task.kind.startsWith("catalog.")) {
