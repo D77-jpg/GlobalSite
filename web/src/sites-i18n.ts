@@ -1,5 +1,27 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  coverStudio: ["生成页面主视觉", "Create a cover image"],
+  coverBrief: ["画面描述（可编辑）", "Art direction (editable)"],
+  coverConsent: [
+    "仅将上方描述发给 codex789.com 生成一张概念图，服务商按次计费。",
+    "Send the description above to codex789.com for one concept image. Provider charges apply.",
+  ],
+  coverGenerate: ["生成候选配图", "Generate candidate"],
+  coverGenerating: ["正在生成…", "Generating…"],
+  coverCandidate: ["候选概念图", "Candidate concept image"],
+  useCover: ["用于当前草稿", "Use in this draft"],
+  configureCover: [
+    "前往资料库设置生图服务",
+    "Configure the image provider in Assets",
+  ],
+  IMAGE_REQUEST_FAILED: [
+    "生图请求失败，请检查服务商额度与权限。",
+    "Image request failed. Check the provider balance and access.",
+  ],
+  IMAGE_RESPONSE_INVALID: [
+    "服务商未返回可用的图片。",
+    "The provider did not return a usable image.",
+  ],
   previewSite: ["预览网站", "Preview website"],
   previewNeedsBuild: [
     "还没有可预览的版本。请在构建与发布中生成首个版本。",

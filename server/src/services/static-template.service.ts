@@ -1,4 +1,9 @@
-import { renderB2BBlock, productCards, quoteBar } from "./b2b-template.service";
+import {
+  renderB2BBlock,
+  productCards,
+  productGuide,
+  quoteBar,
+} from "./b2b-template.service";
 import {
   renderInquiry,
   renderConsent,
@@ -30,7 +35,7 @@ export type Snapshot = {
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "b2b-site-v3";
+export const templateVersion = "b2b-site-v5";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
@@ -363,9 +368,16 @@ export function renderStaticPage(s: Snapshot, p: any) {
           : "Request details"),
     ) +
     "</a>" +
-    (p.type === "home" && about
-      ? '<a class="secondary-link" href="' + e(about.path) + '">Our story</a>'
-      : "") +
+    (s.site.buyerProfile &&
+    p.type === "home" &&
+    catalog &&
+    presentation.primaryActionTarget === "inquiry"
+      ? '<a class="secondary-link" href="' +
+        e(catalog.path) +
+        '">Explore the collection ↗</a>'
+      : p.type === "home" && about
+        ? '<a class="secondary-link" href="' + e(about.path) + '">Our story</a>'
+        : "") +
     "</div></div>" +
     (firstImage
       ? '<figure class="hero-visual">' +
@@ -432,6 +444,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
         "</span></nav>"
       : "") +
     hero +
+    (s.site.buyerProfile && p.type === "product" ? productGuide(s, p) : "") +
     grid +
     p.blocks
       .filter((b: any) => b !== firstImage && !pending(b))

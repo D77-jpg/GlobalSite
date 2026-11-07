@@ -14,9 +14,8 @@ export const pendingDetail = (v: string) =>
 function productImage(s: Snapshot, v: any) {
   const source = s.products?.find((x) => x.id === v.productId);
   const id =
-    source?.assetIds.filter((id) => s.assets[id]).at(-1) ??
     v.blocks.find((b: any) => b.type === "image" && s.assets[b.assetId])
-      ?.assetId;
+      ?.assetId ?? source?.assetIds.filter((id) => s.assets[id]).at(-1);
   const a = id ? s.assets[id] : null;
   return a
     ? '<img loading="lazy" src="' +
@@ -29,6 +28,30 @@ function productImage(s: Snapshot, v: any) {
         a.height +
         '">'
     : "";
+}
+export function productGuide(s: Snapshot, p: any) {
+  const links = p.blocks.filter(
+    (b: any) =>
+      (b.type === "specs" && b.table?.rows?.length) ||
+      (b.type === "faq" && b.faq?.length) ||
+      (b.type === "downloads" &&
+        b.items?.some((i: any) => s.assets[i.assetId]?.path.endsWith(".pdf"))),
+  );
+  if (!links.length) return "";
+  return (
+    '<nav class="product-guide" aria-label="Product information">' +
+    links
+      .map(
+        (b: any) =>
+          '<a href="#block-' +
+          e(b.key) +
+          '">' +
+          e(b.heading || (b.type === "faq" ? "Questions" : "Specifications")) +
+          "</a>",
+      )
+      .join("") +
+    '<a href="#inquiry">Inquire about this product</a></nav>'
+  );
 }
 export function productCards(
   s: Snapshot,
@@ -45,8 +68,12 @@ export function productCards(
         )
       : products;
   const rows = selected.length ? selected : products;
+  const lineSheet =
+    p.type === "home" && p.blocks.some((b: any) => b.type === "category-grid");
   return (
-    '<section class="b2b-section catalog-section" id="collection"><div class="section-heading"><div><p class="section-kicker">PRODUCT RANGE</p><h2>' +
+    '<section class="b2b-section catalog-section' +
+    (lineSheet ? " line-sheet" : "") +
+    '" id="collection"><div class="section-heading"><div><p class="section-kicker">PRODUCT RANGE</p><h2>' +
     e(heading) +
     "</h2>" +
     (body && !pendingDetail(body) ? "<p>" + e(body) + "</p>" : "") +

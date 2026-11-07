@@ -110,3 +110,5 @@ Agent 使用随 Worker 发布的审核技能规则生成独立首屏、短导航
 Docker 镜像包含锁定版本的 Chromium。直接用 Node 启动 Worker 时，先执行 `npx playwright install chromium`；可选 `PLAYWRIGHT_BROWSERS_PATH` 指定已安装浏览器目录。缺失浏览器只影响截图任务，不影响核心启动。详细行为与验收见 [S8–S11 设计](docs/design/S8-S11-B2B建站.md)。
 
 本轮命令、真实 Agent 流程、实际产物成绩与完整文件清单见 [S8–S11 验收记录](docs/verification/S8-S11-验收.md)。
+
+组织管理员在「资料库 → 品牌配图」连接生图服务。页面编辑器的「生成页面主视觉」使用 Agent 的设计说明作为可编辑画面简报，生成结果可先查看再用于草稿。生成的素材为概念图，不用于事实提取或证明。

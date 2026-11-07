@@ -321,3 +321,23 @@ test("single-category ranges expose approved product destinations in navigation 
   }
   assert.match(html, /class="quote-bar" hidden/);
 });
+
+test("home presents the repeated product range as a line sheet and product guides only link rendered buying sections", () => {
+  const s = fixture();
+  assert.match(renderStaticPage(s, s.pages[0]), /catalog-section line-sheet/);
+  const p = s.pages[2];
+  p.blocks = [
+    { ...b("specs"), table: { columns: ["Material"], rows: [] } },
+    {
+      ...b("faq"),
+      heading: "Buying questions",
+      faq: [
+        { question: "Which collection?", answer: "Compare the collection." },
+      ],
+    },
+  ];
+  const html = renderStaticPage(s, p);
+  assert.ok(html.includes('href="#block-faq"'));
+  assert.ok(!html.includes('href="#block-specs"'));
+  assert.ok(!html.includes("catalog-section line-sheet"));
+});

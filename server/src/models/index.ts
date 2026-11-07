@@ -186,6 +186,7 @@ export const Asset = entity<AssetRow>(
     bytes: Number,
     fileName: String,
     crmImportKey: String,
+    generatedConcept: Boolean,
     kind: { type: String, default: "image" },
     totalBytes: Number,
     variants: Schema.Types.Mixed,

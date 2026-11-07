@@ -1,5 +1,41 @@
 import type { Locale } from "./i18n";
 export const catalogMessages = {
+  CONCEPT_NOT_EVIDENCE: [
+    "概念配图仅用于视觉展示。请使用原始资料提取事实。",
+    "Concept imagery is for illustration. Use source documents for facts.",
+  ],
+  imageStudio: ["品牌配图", "Brand imagery"],
+  imageConnection: ["生图服务设置", "Image provider settings"],
+  imageKey: ["生图专用密钥", "Image provider key"],
+  disconnectImages: ["断开生图服务", "Disconnect image provider"],
+  imageSubject: ["画面主体与品牌氛围", "Subject and brand mood"],
+  imageComposition: ["图片用途", "Composition"],
+  "shot-campaign": ["首页主视觉", "Campaign hero"],
+  "shot-still-life": ["系列静物", "Collection still life"],
+  "shot-detail": ["材质特写", "Texture detail"],
+  imageConsent: [
+    "生成一张概念图，将描述发送至 codex789.com，按服务商费率计费。可在页面编辑器使用。",
+    "Generate one concept image. The description goes to codex789.com and provider charges apply. Select the result in the page editor.",
+  ],
+  imageWorking: ["正在生成配图…", "Generating image…"],
+  generateImage: ["生成一张配图", "Generate one image"],
+  imageResult: ["新生成的概念配图", "Generated concept image"],
+  IMAGE_PROVIDER_MISSING: [
+    "请组织管理员连接生图服务。",
+    "Ask an administrator to connect the image provider.",
+  ],
+  IMAGE_REQUEST_FAILED: [
+    "生图服务未成功返回，请检查额度、权限及模型状态。",
+    "Image request failed. Check the balance, permissions and model status.",
+  ],
+  IMAGE_RESPONSE_INVALID: [
+    "服务商返回了不支持的图片。",
+    "The provider returned an unsupported image.",
+  ],
+  IMAGE_ALREADY_SUBMITTED: [
+    "这次生成请求已提交。",
+    "This generation request was already submitted.",
+  ],
   PUBLICATION_IN_PROGRESS: [
     "资料正在用于发布，请等待发布结束后再修改。",
     "This data is being published. Wait for publication to finish before editing.",

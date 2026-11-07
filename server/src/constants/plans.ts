@@ -5,6 +5,7 @@ export const plans = {
     members: 2,
     sites: 1,
     ai_tokens: 200000,
+    images: 10,
     builds: 20,
     publishes: 10,
     storage_bytes: 1073741824,
@@ -14,6 +15,7 @@ export const plans = {
     members: 3,
     sites: 1,
     ai_tokens: 2000000,
+    images: 100,
     builds: 100,
     publishes: 50,
     storage_bytes: 10737418240,
@@ -23,6 +25,7 @@ export const plans = {
     members: 10,
     sites: 5,
     ai_tokens: 10000000,
+    images: 500,
     builds: 500,
     publishes: 250,
     storage_bytes: 53687091200,
@@ -30,6 +33,7 @@ export const plans = {
 } as const;
 export type Plan = keyof typeof plans;
 export type Metric =
+  | "images"
   | "ai_tokens"
   | "builds"
   | "publishes"

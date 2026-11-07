@@ -873,6 +873,123 @@ export function ImportPage({ locale, role }: Props) {
     </Frame>
   );
 }
+function ImageStudio({
+  locale,
+  role,
+  onGenerated,
+}: Props & { onGenerated: () => void }) {
+  const t = catalogText(locale),
+    status = useLoad("/assets/image-provider"),
+    action = useAction();
+  const [key, setKey] = useState(""),
+    [subject, setSubject] = useState(""),
+    [composition, setComposition] = useState("campaign"),
+    [asset, setAsset] = useState("");
+  return (
+    <section className="catalog-panel">
+      <h2>{t("imageStudio")}</h2>
+      {role === "admin" && (
+        <details open={status.data && !status.data.configured}>
+          <summary>{t("imageConnection")}</summary>
+          <p>codex789.com · gemini-3.1-flash-image</p>
+          <label>
+            {t("imageKey")}
+            <input
+              type="password"
+              autoComplete="off"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+            />
+          </label>
+          <button
+            disabled={!key.trim() || action.busy}
+            onClick={() =>
+              void action.run(async () => {
+                status.replace(
+                  await api("/assets/image-provider", "PUT", { apiKey: key }),
+                );
+                setKey("");
+              })
+            }
+          >
+            {t("save")}
+          </button>
+          {status.data?.configured && (
+            <button
+              className="secondary"
+              disabled={action.busy}
+              onClick={() =>
+                void action.run(async () => {
+                  status.replace(
+                    await api("/assets/image-provider", "PUT", { apiKey: "" }),
+                  );
+                  setKey("");
+                })
+              }
+            >
+              {t("disconnectImages")}
+            </button>
+          )}
+        </details>
+      )}
+      {status.data?.configured ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void action.run(async () => {
+              const result = await api(
+                "/assets/generate-image",
+                "POST",
+                { subject, composition },
+                { "Idempotency-Key": crypto.randomUUID() },
+              );
+              setAsset(result.id);
+              onGenerated();
+            });
+          }}
+        >
+          <label>
+            {t("imageSubject")}
+            <textarea
+              required
+              minLength={3}
+              maxLength={600}
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </label>
+          <label>
+            {t("imageComposition")}
+            <select
+              value={composition}
+              onChange={(e) => setComposition(e.target.value)}
+            >
+              {["campaign", "still-life", "detail"].map((k) => (
+                <option key={k} value={k}>
+                  {t("shot-" + k)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p>{t("imageConsent")}</p>
+          <button disabled={action.busy || subject.trim().length < 3}>
+            {t(action.busy ? "imageWorking" : "generateImage")}
+          </button>
+        </form>
+      ) : (
+        status.data && <p>{t("IMAGE_PROVIDER_MISSING")}</p>
+      )}
+      {asset && (
+        <img
+          src={"/api/v1/assets/" + asset + "?variant=thumb"}
+          alt={t("imageResult")}
+          width="240"
+        />
+      )}
+      <Notice error={action.error ?? status.error} t={t} saved={action.saved} />
+    </section>
+  );
+}
 export function AssetsPage({ locale, role }: Props) {
   const t = catalogText(locale),
     [kind, setKind] = useState(""),
@@ -890,6 +1007,17 @@ export function AssetsPage({ locale, role }: Props) {
   );
   return (
     <Frame title={t("assets")} sub={t("assetsSub")} t={t} error={load.error}>
+      {role !== "viewer" && (
+        <ImageStudio
+          locale={locale}
+          role={role}
+          onGenerated={() => {
+            setKind("");
+            setCursor("");
+            load.reload();
+          }}
+        />
+      )}
       {role !== "viewer" && (
         <form
           className="catalog-panel"

@@ -1389,6 +1389,19 @@ function PageEditor({
     }),
     [dirty, setDirty] = useState(false),
     [preview, setPreview] = useState(""),
+    [shotBrief, setShotBrief] = useState(
+      [
+        page.presentation?.headline ?? page.title,
+        page.presentation?.designNotes,
+      ]
+        .filter(Boolean)
+        .join(". ")
+        .slice(0, 600),
+    ),
+    [candidate, setCandidate] = useState(""),
+    imageConnection = useLoad(
+      role !== "viewer" ? "/assets/image-provider" : null,
+    ),
     [mobile, setMobile] = useState(false),
     [consent, setConsent] = useState(false),
     [instructions, setInstructions] = useState(""),
@@ -1434,6 +1447,100 @@ function PageEditor({
     >
       <Notice t={t} error={a.error} saved={a.saved} />
       <IssueList issues={page.issues} t={t} />
+      {canEdit && (
+        <details className="catalog-panel">
+          <summary>{t("coverStudio")}</summary>
+          {imageConnection.data?.configured ? (
+            <fieldset disabled={locked}>
+              <label>
+                {t("coverBrief")}
+                <textarea
+                  value={shotBrief}
+                  maxLength={600}
+                  onChange={(e) => setShotBrief(e.target.value)}
+                />
+              </label>
+              <p>{t("coverConsent")}</p>
+              <button
+                disabled={shotBrief.trim().length < 3}
+                onClick={() =>
+                  void a.run(async () => {
+                    const result = await api(
+                      "/assets/generate-image",
+                      "POST",
+                      {
+                        subject: shotBrief,
+                        composition:
+                          page.type === "product" ? "still-life" : "campaign",
+                      },
+                      { "Idempotency-Key": crypto.randomUUID() },
+                    );
+                    setCandidate(result.id);
+                    assets.reload();
+                  })
+                }
+              >
+                {t(a.busy ? "coverGenerating" : "coverGenerate")}
+              </button>
+              {candidate && (
+                <figure>
+                  <img
+                    width="320"
+                    src={"/api/v1/assets/" + candidate + "?variant=webp"}
+                    alt={t("coverCandidate")}
+                  />
+                  <figcaption>
+                    <button
+                      disabled={
+                        data.blocks.length >= 32 &&
+                        !data.blocks.some((b: Row) => b.type === "image")
+                      }
+                      onClick={() => {
+                        const imageIndex = data.blocks.findIndex(
+                          (b: Row) => b.type === "image",
+                        );
+                        const alt =
+                          "Concept illustration for " +
+                          String(
+                            data.presentation?.navigationLabel || data.title,
+                          ).slice(0, 140);
+                        const next =
+                          imageIndex < 0
+                            ? [
+                                {
+                                  key:
+                                    "visual-" + crypto.randomUUID().slice(0, 8),
+                                  type: "image",
+                                  heading: "",
+                                  body: "",
+                                  table: null,
+                                  faq: [],
+                                  assetId: candidate,
+                                  alt,
+                                  refs: [],
+                                },
+                                ...data.blocks,
+                              ]
+                            : data.blocks.map((b: Row, i: number) =>
+                                i === imageIndex
+                                  ? { ...b, assetId: candidate, alt, refs: [] }
+                                  : b,
+                              );
+                        update({ blocks: next });
+                        setCandidate("");
+                      }}
+                    >
+                      {t("useCover")}
+                    </button>
+                  </figcaption>
+                </figure>
+              )}
+            </fieldset>
+          ) : (
+            <Link to="/assets">{t("configureCover")}</Link>
+          )}
+        </details>
+      )}
       {dirty && <p className="notice">{t("saveBefore")}</p>}
       <fieldset disabled={!canEdit || locked} className="catalog-panel">
         <div className="catalog-grid">

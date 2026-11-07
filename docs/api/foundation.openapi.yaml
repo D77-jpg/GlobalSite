@@ -2252,6 +2252,109 @@ paths:
           schema:
             type: string
             format: uuid
+  /assets/image-provider:
+    get:
+      summary: Image generation status for the current organization (editor or admin)
+      responses:
+        "200":
+          description: "data contains configured (boolean) and model (string)."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ImageProviderResult"}
+        "400":
+          description: "Invalid input"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401":
+          description: "Session expired"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "403":
+          description: "Insufficient role or CSRF rejected"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+    put:
+      security: [{cookieAuth: [], csrfHeader: []}]
+      summary: Set or disconnect the organization's image provider (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [apiKey]
+              properties: {apiKey: {type: string, maxLength: 512, writeOnly: true, description: Empty disconnects.}}
+      responses:
+        "200":
+          description: "Configuration status. The key is never returned."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ImageProviderResult"}
+        "400":
+          description: "Invalid input"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401":
+          description: "Session expired"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "403":
+          description: "Insufficient role or CSRF rejected"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+  /assets/generate-image:
+    post:
+      security: [{cookieAuth: [], csrfHeader: []}]
+      summary: Generate a concept image for the organization's private asset library (editor or admin)
+      parameters:
+        - {in: header, name: Idempotency-Key, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, composition]
+              properties:
+                subject: {type: string, minLength: 3, maxLength: 600}
+                composition: {type: string, enum: [campaign, still-life, detail]}
+      responses:
+        "201":
+          description: "data.id identifies the new image Asset."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GeneratedImageResult"}
+        "409":
+          description: "Disconnected, quota exceeded or previously submitted request."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "502":
+          description: "Provider failure or unusable image."
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "400":
+          description: "Invalid input"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "401":
+          description: "Session expired"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "403":
+          description: "Insufficient role or CSRF rejected"
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
   /assets:
     post:
       operationId: foundation30
@@ -11461,6 +11564,7 @@ components:
         sites:
           type: integer
           minimum: 1
+        images: {type: integer}
         ai_tokens:
           type: integer
           minimum: 1
@@ -11503,6 +11607,7 @@ components:
               metric:
                 type: string
                 enum:
+                  - images
                   - ai_tokens
                   - builds
                   - storage_bytes
@@ -12137,6 +12242,27 @@ components:
                 - "null"
             hasMore:
               type: boolean
+    ImageProviderResult:
+      type: object
+      required: [success, data]
+      properties:
+        success: {type: boolean, enum: [true]}
+        data:
+          type: object
+          required: [configured, model]
+          additionalProperties: false
+          properties:
+            configured: {type: boolean}
+            model: {type: string}
+    GeneratedImageResult:
+      type: object
+      required: [success, data]
+      properties:
+        success: {type: boolean, enum: [true]}
+        data:
+          type: object
+          required: [id]
+          properties: {id: {type: string, pattern: "^[0-9a-f]{24}$"}}
     CatalogAsset:
       type: object
       required:

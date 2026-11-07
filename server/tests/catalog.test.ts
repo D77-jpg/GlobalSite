@@ -1140,3 +1140,64 @@ test("expired task heartbeats cannot resurrect an expired lease or renew another
   );
   assert.equal((await tenant(() => renewTask(task))).matchedCount, 0);
 });
+
+test("organization image provider generates once and stores an illustration in its own library", async () => {
+  const config = "/assets/image-provider",
+    path = "/assets/generate-image";
+  const credential = randomBytes(32).toString("hex");
+  const result = await a.client.request("PUT", config, { apiKey: credential });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.data.configured, true);
+  assert.equal(
+    (await b.client.request("GET", config)).body.data.configured,
+    false,
+  );
+  const png = await sharp({
+    create: { width: 24, height: 16, channels: 3, background: "#142d59" },
+  })
+    .png()
+    .toBuffer();
+  let calls = 0;
+  mock.method(globalThis, "fetch", async (url: any, init: any) => {
+    assert.equal(url, "https://www.codex789.com/v1/chat/completions");
+    assert.equal(init.headers.Authorization, "Bearer " + credential);
+    calls++;
+    return Response.json({
+      choices: [
+        {
+          message: {
+            content: "data:image/png;base64," + png.toString("base64"),
+          },
+        },
+      ],
+    });
+  });
+  const key = randomUUID(),
+    brief = { subject: "Cerulean studio still life", composition: "campaign" };
+  const send = () =>
+    a.client.make("POST", path).set("Idempotency-Key", key).send(brief);
+  await role("viewer");
+  assert.equal((await send()).status, 403);
+  await role("editor");
+  assert.equal(
+    (await a.client.make("PUT", config).send({ apiKey: "" })).status,
+    403,
+  );
+  const created = await send();
+  assert.equal(created.status, 201);
+  a.client.check(created, "POST", path);
+  assert.equal((await send()).status, 409);
+  assert.equal(calls, 1);
+  const id = created.body.data.id;
+  assert.equal((await b.client.make("GET", "/assets/" + id)).status, 404);
+  const extraction = await a.client
+    .make("POST", "/facts/extractions")
+    .send({ kind: "asset", id, consent: true });
+  assert.equal(extraction.body.error.code, "CONCEPT_NOT_EVIDENCE");
+  await role("admin");
+  assert.equal(
+    (await a.client.request("PUT", config, { apiKey: "" })).body.data
+      .configured,
+    false,
+  );
+});
