@@ -51,7 +51,13 @@ test("S8-S11 buyer brief, B2B catalogue, cross-page shortlist and real worker sc
   await page
     .getByLabel("采购商需要解决的问题（每行一项）")
     .fill("Compare the collection");
+  const savedProfile = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/v1/sites/" + site.id) &&
+      r.request().method() === "PATCH",
+  );
   await page.getByRole("button", { name: "保存采购定位", exact: true }).click();
+  expect((await savedProfile).status()).toBe(200);
   await expect(
     page.getByText("仍有必需采购资料待确认", { exact: true }),
   ).toBeVisible();
