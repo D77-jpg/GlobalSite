@@ -1,3 +1,5 @@
+import { ensure } from "../errors";
+import { reviewScreenshot } from "../services/site-review.service";
 import {
   Router,
   type Request,
@@ -9,6 +11,7 @@ import { requireRole } from "../middleware/auth.middleware";
 import { objectId, listQuery } from "../validators/catalog.validator";
 import * as v from "../validators/sites.validator";
 import * as sites from "../services/sites.service";
+import { buyerReadiness } from "../services/b2b-planning.service";
 import * as agents from "../services/site-agents.service";
 const r = Router(),
   edit = requireRole("admin", "editor"),
@@ -92,6 +95,10 @@ r.post(
   ),
 );
 r.get(
+  "/sites/:id/buyer-readiness",
+  wrap(async (req, res) => ok(res, await buyerReadiness(id(req)))),
+);
+r.get(
   "/sites/:id/sources",
   wrap(async (req, res) => ok(res, await sites.sources(id(req)))),
 );
@@ -122,10 +129,41 @@ r.post(
   ),
 );
 r.get(
+  "/agent-runs/:id/screenshots/:key/:width",
+  wrap(async (req, res) => {
+    const run = await agents.ownRun(id(req));
+    const key = String(req.params.key),
+      width = Number(req.params.width);
+    const unit = run.steps.find((s: any) => s.key === key);
+    ensure(
+      run.step === "review" &&
+        unit?.capture?.artifactKey &&
+        [375, 768, 1440].includes(width),
+      404,
+      "NOT_FOUND",
+    );
+    res
+      .set({
+        "Cache-Control": "private, no-store",
+        "X-Robots-Tag": "noindex,nofollow",
+        "Content-Type": "image/jpeg",
+      })
+      .send(await reviewScreenshot(unit.capture.artifactKey, width));
+  }),
+);
+r.get(
   "/agent-runs/:id",
   wrap(async (req, res) =>
     ok(res, agents.agentDto(await agents.ownRun(id(req)))),
   ),
+);
+r.post(
+  "/agent-runs/:id/accept-review",
+  admin,
+  wrap(async (req, res) => {
+    v.review.pick({}).strict().parse(req.body);
+    ok(res, await agents.acceptQualityReview(id(req), actor(req)));
+  }),
 );
 r.post(
   "/agent-runs/:id/retry",

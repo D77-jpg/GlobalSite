@@ -147,7 +147,7 @@ after(async () => {
   }
 });
 
-async function newSite() {
+async function newSite(productIds: string[] = []) {
   const r = await a.client.request("POST", "/sites", {
     name: "Fixture Export",
     templateId: "machinery",
@@ -155,7 +155,7 @@ async function newSite() {
     language: "en",
     brandColor: "#126a54",
     logoId: null,
-    productIds: [],
+    productIds,
   });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   return r.body.data;
@@ -208,8 +208,31 @@ beforeEach(async () => {
 });
 const text =
   "Our team helps buyers explore product options and prepare a clear purchasing brief. Share your application, preferred materials, packaging requirements and intended market with our team. We will discuss the details with you before preparing a proposal. Browse the information below to learn about our approach and find the right contact for your project. Product details are reviewed by our team before publication.";
-async function prepared() {
-  const s = await planSite(await newSite());
+async function prepared(buyer = false, productIds: string[] = []) {
+  let initial = await newSite(productIds);
+  if (buyer)
+    initial = (
+      await a.client.request("PATCH", "/sites/" + initial.id, {
+        revision: initial.revision,
+        data: {
+          name: initial.name,
+          templateId: initial.templateId,
+          targetMarkets: initial.targetMarkets,
+          language: "en",
+          brandColor: initial.brandColor,
+          logoId: null,
+          productIds,
+          buyerProfile: {
+            businessModel: "wholesale",
+            audiences: ["Retail buyers"],
+            buyerNeeds: [],
+            primaryAction: "quote",
+            referenceUrls: [],
+          },
+        },
+      })
+    ).body.data;
+  const s = await planSite(initial);
   const page = await a.client.request("POST", "/sites/" + s.id + "/pages", {
     nodeKey: "home",
   });
@@ -917,5 +940,141 @@ test("Cloudflare verification checks production pointer, TLS content hashes and 
         files,
       ),
     /DEPLOYMENT_MISMATCH/,
+  );
+});
+
+test("B2B missing procurement data allows private builds and rich editor preview but blocks commercial publish", async () => {
+  const s = await prepared(true);
+  const queued = await build(s);
+  assert.equal(queued.status, 202);
+  assert.deepEqual(await processRun(queued.body.data), { status: "done" });
+  const v = await tenant(() => m.SiteVersion.findById(queued.body.data.id));
+  await tenant(async () => {
+    const { validVersion } = await import("../src/services/publishing.service");
+    await validVersion(v, true);
+    await assert.rejects(
+      () => validVersion(v, true, undefined, true),
+      (e: any) => e.code === "PROCUREMENT_INCOMPLETE",
+    );
+  });
+  const page = await tenant(() => m.SitePage.findOne({ siteId: s.id }));
+  const preview = await a.client.request(
+    "GET",
+    "/pages/" + page._id + "/preview",
+  );
+  assert.equal(preview.status, 200);
+  assert(preview.body.data.html.includes("b2b-site"));
+  assert(preview.body.data.html.includes("noindex,nofollow"));
+  assert(!preview.body.data.html.includes("<script"));
+});
+
+test("complete B2B procurement data still requires current administrator-accepted quality review", async () => {
+  const sharp = (await import("sharp")).default;
+  const image = await sharp({
+    create: { width: 32, height: 32, channels: 3, background: "#aec9b8" },
+  })
+    .png()
+    .toBuffer();
+  const uploaded = await a.client.upload(
+    "/assets",
+    image,
+    "fixture.png",
+    "image/png",
+  );
+  const product = (
+    await a.client.request("POST", "/products", {
+      name: "Fixture product",
+      status: "active",
+      assetIds: [uploaded.body.data.id],
+    })
+  ).body.data;
+  await tenant(async () => {
+    for (const [type, value] of [
+      ["company.name", "Fixture Export"],
+      ["company.email", "contact@example.invalid"],
+    ])
+      await m.FactSheet.create({
+        subjectType: "organization",
+        type,
+        value,
+        status: "confirmed",
+        source: { kind: "manual", label: "Fictional fixture" },
+      });
+    for (const [type, value] of [
+      ["product.material", "Fixture material"],
+      ["product.moq", "By agreement"],
+      ["product.leadTime", "By agreement"],
+      ["product.specifications", "Fixture option"],
+    ])
+      await m.FactSheet.create({
+        subjectType: "product",
+        subjectId: product.id,
+        type,
+        value,
+        status: "confirmed",
+        source: { kind: "manual", label: "Fictional fixture" },
+      });
+  });
+  const site = await prepared(true, [product.id]);
+  const queued = await build(site);
+  assert.deepEqual(await processRun(queued.body.data), { status: "done" });
+  const version = await tenant(() =>
+    m.SiteVersion.findById(queued.body.data.id),
+  );
+  const { validVersion } = await import("../src/services/publishing.service");
+  await tenant(() =>
+    assert.rejects(
+      () => validVersion(version, true, undefined, true),
+      (e: any) => e.code === "QUALITY_REVIEW_REQUIRED",
+    ),
+  );
+  const run = await a.client
+    .make("POST", "/sites/" + site.id + "/agent-runs")
+    .set("Idempotency-Key", randomUUID())
+    .send({ step: "review", consent: true });
+  assert.equal(run.status, 202);
+  const task = await liveTask(run.body.data.id, "site.agent");
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  await tenant(() =>
+    processSiteAgent(
+      task,
+      async (_s, _i, _o, save) => {
+        const result = {
+          output: { summary: "Fictional review fixture", findings: [] },
+          tokens: 10,
+        };
+        await save(result);
+        return result;
+      },
+      async () => ({
+        artifactKey: randomUUID(),
+        metrics: [375, 768, 1440].map((width) => ({
+          width,
+          overflow: false,
+          height: 1000,
+          words: 80,
+          headings: ["Fixture"],
+          brokenImages: 0,
+          blankSections: 0,
+        })),
+      }),
+    ),
+  );
+  const accepted = await a.client.request(
+    "POST",
+    "/agent-runs/" + run.body.data.id + "/accept-review",
+    {},
+  );
+  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+  await tenant(() => validVersion(version, true, undefined, true));
+  const page = await tenant(() => m.SitePage.findOne({ siteId: site.id }));
+  await a.client.request("PATCH", "/pages/" + page._id, {
+    revision: page.revision,
+    data: draft(text + " Contact our team about your market."),
+  });
+  await tenant(() =>
+    assert.rejects(() => validVersion(version, true, undefined, true)),
   );
 });

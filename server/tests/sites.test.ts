@@ -1304,11 +1304,499 @@ test("queued agents freeze reviewed design skills and new content uses brand pre
   const site = await planSite(await newSite());
   const queued = await queue(site);
   const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
-  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v1");
+  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v2");
   const { unitPrompt } = await import("../src/services/site-agents.service");
   const prompt = unitPrompt(run, run!.steps[0]);
   assert(prompt.system.includes(run!.inputSnapshot.skillProfile.guidance));
   assert(prompt.system.includes("Do not put pipe-separated SEO titles"));
   assert("presentation" in (prompt.input as any).schema.page);
   assert.equal((prompt.input as any).task, "content");
+});
+
+test("B2B buyer profile and procurement gaps use confirmed tenant evidence only", async () => {
+  const site = await newSite();
+  const profile = {
+    businessModel: "wholesale",
+    audiences: ["Pet brands"],
+    buyerNeeds: ["Compare materials"],
+    primaryAction: "quote",
+    referenceUrls: [],
+  };
+  const data = Object.fromEntries(
+    [
+      "name",
+      "templateId",
+      "targetMarkets",
+      "language",
+      "brandColor",
+      "logoId",
+      "productIds",
+      "status",
+    ].map((k) => [k, site[k]]),
+  );
+  const saved = await a.client.request("PATCH", "/sites/" + site.id, {
+    revision: site.revision,
+    data: { ...data, buyerProfile: profile },
+  });
+  assert.equal(saved.status, 200);
+  assert.deepEqual(saved.body.data.buyerProfile, profile);
+  const gaps = await a.client.request(
+    "GET",
+    "/sites/" + site.id + "/buyer-readiness",
+  );
+  assert.equal(gaps.status, 200);
+  assert.equal(gaps.body.data.configured, true);
+  assert.equal(gaps.body.data.canPublish, false);
+  assert(gaps.body.data.gaps.some((g: any) => g.type === "company.name"));
+  assert.equal(
+    (await b.client.request("GET", "/sites/" + site.id + "/buyer-readiness"))
+      .status,
+    404,
+  );
+  await role("viewer");
+  assert.equal(
+    (
+      await a.client.request("PATCH", "/sites/" + site.id, {
+        revision: saved.body.data.revision,
+        data: { ...data, buyerProfile: profile },
+      })
+    ).status,
+    403,
+  );
+});
+
+test("structured item claims and links cannot bypass facts or tenant asset ownership", async () => {
+  const site = await planSite(await newSite());
+  let page = (
+    await a.client.request("POST", "/sites/" + site.id + "/pages", {
+      nodeKey: "home",
+    })
+  ).body.data;
+  const item = {
+    title: "Quality information",
+    body: "Serving 500 buyers",
+    assetId: null,
+    alt: "",
+    href: null,
+    refs: [],
+  };
+  let data = {
+    ...draft(),
+    blocks: [{ ...block(), type: "evidence", items: [item] }],
+  };
+  let r = await a.client.request("PATCH", "/pages/" + page.id, {
+    revision: page.revision,
+    data,
+  });
+  assert.equal(r.status, 200);
+  page = r.body.data;
+  assert(page.issues.some((i: any) => i.code === "UNSOURCED_NUMBER"));
+  assert(page.issues.some((i: any) => i.code === "UNSOURCED_DETAIL"));
+  r = await a.client.request("POST", "/pages/" + page.id + "/approve", {
+    revision: page.revision,
+  });
+  assert.equal(r.status, 409);
+  data = {
+    ...draft(),
+    blocks: [
+      {
+        ...block(),
+        type: "features",
+        items: [
+          {
+            ...item,
+            body: "Explore the collection",
+            href: "javascript:alert(1)",
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(
+    (
+      await a.client.request("PATCH", "/pages/" + page.id, {
+        revision: page.revision,
+        data,
+      })
+    ).status,
+    400,
+  );
+  const image = await (
+    await import("sharp")
+  )
+    .default({
+      create: { width: 24, height: 24, channels: 3, background: "#dde6d9" },
+    })
+    .png()
+    .toBuffer();
+  const upload = await b.client.upload(
+    "/assets",
+    image,
+    "fixture.png",
+    "image/png",
+  );
+  assert.equal(upload.status, 201);
+  data = {
+    ...draft(),
+    blocks: [
+      {
+        ...block(),
+        type: "features",
+        items: [
+          {
+            ...item,
+            body: "Explore the collection",
+            assetId: upload.body.data.id,
+            alt: "Collection illustration",
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(
+    (
+      await a.client.request("PATCH", "/pages/" + page.id, {
+        revision: page.revision,
+        data,
+      })
+    ).status,
+    404,
+  );
+});
+
+test("review captures are private, metered once, and refine creates a new unapproved revision", async () => {
+  const site = await planSite(await newSite());
+  const page = (
+    await a.client.request("POST", "/sites/" + site.id + "/pages", {
+      nodeKey: "home",
+    })
+  ).body.data;
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  const { storeArtifact } = await import("../src/services/storage.service");
+  const { zipSync } = await import("fflate");
+  const jpeg = await (
+    await import("sharp")
+  )
+    .default({
+      create: { width: 24, height: 24, channels: 3, background: "#dde6d9" },
+    })
+    .jpeg()
+    .toBuffer();
+  const metrics = [375, 768, 1440].map((width) => ({
+    width,
+    overflow: false,
+    height: 900,
+    words: 80,
+    headings: ["Fixture"],
+    brokenImages: 0,
+    blankSections: 0,
+  }));
+  let captures = 0;
+  const r = await queue(site, "review");
+  assert.equal(r.status, 202);
+  const task = await taskFor(r.body.data.id);
+  const report = {
+    summary: "Review buying clarity.",
+    findings: [
+      {
+        blockKey: "overview",
+        code: "content_thin",
+        severity: "warning",
+        recommendation: "Give this section a more specific purchasing purpose.",
+      },
+    ],
+  };
+  const result = await tenant(() =>
+    processSiteAgent(
+      task,
+      async (_system, input, _op, save) => {
+        assert.equal((input as any).task, "review");
+        assert.equal((input as any).browser.length, 3);
+        const result = { output: report, tokens: 20 };
+        await save(result);
+        return result;
+      },
+      async () => {
+        captures++;
+        const artifactKey = await storeArtifact(
+          Buffer.from(
+            zipSync(
+              Object.fromEntries(
+                [375, 768, 1440].map((w) => [w + ".jpg", jpeg]),
+              ),
+            ),
+          ),
+          randomUUID(),
+        );
+        return { artifactKey, metrics };
+      },
+    ),
+  );
+  assert.equal(result.status, "done");
+  assert.equal(captures, 1);
+  assert.equal((await tenant(() => processSiteAgent(task))).status, "done");
+  assert.equal(captures, 1);
+  const run = (await a.client.request("GET", "/agent-runs/" + r.body.data.id))
+    .body.data;
+  assert.equal(run.steps[0].output.requiresHumanVisualReview, true);
+  const shot = "/agent-runs/" + run.id + "/screenshots/home/375";
+  const shotResponse = await a.client.request("GET", shot);
+  assert.equal(shotResponse.status, 200);
+  assert(shotResponse.headers["cache-control"].includes("no-store"));
+  assert.equal((await b.client.request("GET", shot)).status, 404);
+  assert.equal(
+    (
+      await a.client.request(
+        "POST",
+        "/agent-runs/" + run.id + "/accept-review",
+        {},
+      )
+    ).status,
+    200,
+  );
+  await role("editor");
+  assert.equal(
+    (
+      await a.client.request(
+        "POST",
+        "/agent-runs/" + run.id + "/accept-review",
+        {},
+      )
+    ).status,
+    403,
+  );
+  await role("admin");
+  const refined = await queue(site, "refine");
+  assert.equal(refined.status, 202);
+  const refinedTask = await taskFor(refined.body.data.id);
+  assert.equal(
+    (
+      await tenant(() =>
+        processSiteAgent(refinedTask, async (_s, input, _o, save) => {
+          assert((input as any).review.findings.length);
+          const result = {
+            output: {
+              page: draft(
+                "Explore the range and send a purchasing brief describing your product interest and destination market.",
+              ),
+            },
+            tokens: 25,
+          };
+          await save(result);
+          return result;
+        }),
+      )
+    ).status,
+    "done",
+  );
+  const updated = (await a.client.request("GET", "/pages/" + page.id)).body
+    .data;
+  assert.equal(updated.revision, page.revision + 1);
+  assert.notEqual(updated.status, "approved");
+  assert.equal(
+    (
+      await a.client.request(
+        "POST",
+        "/agent-runs/" + run.id + "/accept-review",
+        {},
+      )
+    ).status,
+    409,
+  );
+  const stale = await queue(site, "refine");
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.error.code, "REVIEW_REQUIRED");
+});
+
+test("reference research respects robots and refuses private destinations", async () => {
+  const { referenceResearch } = await import(
+    "../src/services/site-reference.service"
+  );
+  let htmlCalls = 0;
+  const results = await referenceResearch(
+    ["https://public-reference.com/products"],
+    async (url, kind) => {
+      if (kind !== "robots") htmlCalls++;
+      return {
+        url,
+        text:
+          kind === "robots"
+            ? "User-agent: *\nDisallow: /products"
+            : "<h1>Products</h1>",
+        status: 200,
+      };
+    },
+  );
+  assert.equal(results[0].status, "robots_disallowed");
+  assert.equal(htmlCalls, 0);
+  const privateResult = await referenceResearch(["https://127.0.0.1/private"]);
+  assert.equal(privateResult[0].status, "unavailable");
+});
+
+test("image input is opt-in and reports actual provider transmission", async () => {
+  const { callSiteAgent } = await import(
+    "../src/services/site-agent-provider.service"
+  );
+  mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
+  let received: any;
+  mock.method(globalThis, "fetch", async (_url: any, options: any) => {
+    received = JSON.parse(options.body);
+    return new Response(
+      JSON.stringify({
+        usage: { total_tokens: 20 },
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ summary: "Fixture", findings: [] }),
+            },
+          },
+        ],
+      }),
+    );
+  });
+  const images = [
+    { label: "Fixture image", data: "data:image/jpeg;base64,YWJj" },
+  ];
+  for (const supportsVision of [false, true]) {
+    await tenant(() =>
+      m.AgentAiProvider.updateOne(
+        { name: "default" },
+        { $set: { supportsVision, enabled: true } },
+      ),
+    );
+    const result = await tenant(() =>
+      callSiteAgent(
+        "Return JSON",
+        { task: "review" },
+        randomUUID(),
+        async () => {},
+        images,
+      ),
+    );
+    assert.equal(result.visualInput, supportsVision);
+    assert.equal(received.max_tokens, 16384);
+    assert.equal(Array.isArray(received.messages[1].content), supportsVision);
+    if (!supportsVision)
+      assert(!JSON.stringify(received).includes("data:image"));
+  }
+  await tenant(() =>
+    callSiteAgent(
+      "Return JSON",
+      { task: "rewrite" },
+      randomUUID(),
+      async () => {},
+    ),
+  );
+  assert.equal(received.max_tokens, 8192);
+  await tenant(() =>
+    m.AgentAiProvider.updateOne(
+      { name: "default" },
+      { $set: { supportsVision: false } },
+    ),
+  );
+});
+
+test("stable screenshot receipt resumes without rebuilding or reserving storage twice", async () => {
+  const { captureSitePage } = await import(
+    "../src/services/site-review.service"
+  );
+  const { storeArtifact } = await import("../src/services/storage.service");
+  const { zipSync } = await import("fflate");
+  const key = randomUUID(),
+    metrics = [{ width: 375, overflow: false, brokenImages: 0 }];
+  await tenant(async () => {
+    await storeArtifact(
+      Buffer.from(
+        zipSync({ "report.json": Buffer.from(JSON.stringify(metrics)) }),
+      ),
+      key,
+    );
+    const before = await m.UsageBucket.findOne({ metric: "storage_bytes" });
+    const snapshot = {} as any;
+    assert.deepEqual(
+      (await captureSitePage(snapshot, "/", key)).metrics,
+      metrics,
+    );
+    assert.deepEqual(
+      (await captureSitePage(snapshot, "/", key)).metrics,
+      metrics,
+    );
+    const after = await m.UsageBucket.findOne({ metric: "storage_bytes" });
+    assert.equal(before!.consumed, after!.consumed);
+    assert.equal(before!.reserved, after!.reserved);
+    assert.equal(
+      await m.UsageRecord.countDocuments({ operationId: "artifact:" + key }),
+      1,
+    );
+  });
+});
+
+test("known metered format errors retry promptly but stop after the unit attempt budget", async () => {
+  // Only this file's two MongoMemoryReplSet fixture organizations exist here.
+  for (const fixture of [a, b])
+    await ctx.runWithTenant(fixture.me.organizationId, () =>
+      m.Task.updateMany(
+        { status: { $in: ["pending", "running"] } },
+        { $set: { status: "dead" } },
+      ),
+    );
+  const site = await planSite(await newSite()),
+    queued = await queue(site, "content");
+  const task = await tenant(() =>
+    m.Task.findOne({ "payload.runId": queued.body.data.id }),
+  );
+  mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
+  let calls = 0;
+  mock.method(globalThis, "fetch", async () => {
+    calls++;
+    return new Response(
+      JSON.stringify({
+        usage: { total_tokens: 100 },
+        choices: [{ finish_reason: "length", message: { content: "" } }],
+      }),
+    );
+  });
+  const runtime = await import("../src/background/runtime");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await tenant(() =>
+      m.Task.updateOne(
+        { _id: task!._id },
+        { $set: { nextAttemptAt: new Date(0) } },
+      ),
+    );
+    await runtime.tick();
+    const row = await tenant(() => m.Task.findById(task!._id));
+    assert.equal(row!.status, attempt === 2 ? "dead" : "pending");
+    if (attempt < 2)
+      assert(new Date(row!.nextAttemptAt).getTime() - Date.now() <= 5000);
+    if (attempt === 0) {
+      await tenant(() =>
+        m.Task.updateOne(
+          { _id: task!._id, status: "pending" },
+          { $set: { nextAttemptAt: new Date(Date.now() + 3600000) } },
+        ),
+      );
+      const recovered = await runtime.claimTask(new Date(Date.now() + 5000));
+      assert.equal(String(recovered!._id), String(task!._id));
+      assert.equal(
+        (await tenant(() => m.AgentRun.findById(queued.body.data.id)))!.steps[0]
+          .attempts,
+        1,
+      );
+      await tenant(() =>
+        runtime.finishTask(recovered, "pending", "AI_OUTPUT_INVALID", 0),
+      );
+    }
+  }
+  const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
+  assert.equal(calls, 3);
+  assert.equal(run!.status, "failed");
+  assert.equal(run!.steps[0].attempts, 3);
+  assert.equal(run!.tokens, 300);
+  assert.equal(
+    await tenant(() => m.SitePage.countDocuments({ siteId: site.id })),
+    0,
+  );
 });

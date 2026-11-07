@@ -64,6 +64,134 @@
     }),
   );
   const form = document.querySelector("[data-gs-inquiry]");
+  // A visitor-initiated shortlist is necessary session data, isolated by site.
+  const allowed = new Map(
+    [...document.querySelectorAll('input[name="productIds"]')].map((n) => [
+      n.value,
+      n.closest("label").textContent.trim(),
+    ]),
+  );
+  const quoteKey = "gs-inquiry-list:" + namespace;
+  let quote = [];
+  try {
+    const value = JSON.parse(sessionStorage.getItem(quoteKey) || "[]");
+    if (Array.isArray(value))
+      quote = value.filter((id) => allowed.has(id)).slice(0, 50);
+  } catch {
+    /* optional session storage */
+  }
+  function drawQuote() {
+    quote = [...new Set(quote)].filter((id) => allowed.has(id));
+    try {
+      sessionStorage.setItem(quoteKey, JSON.stringify(quote));
+    } catch {
+      /* usable in memory */
+    }
+    document
+      .querySelectorAll("[data-quote-count]")
+      .forEach((n) => (n.textContent = String(quote.length)));
+    document.querySelectorAll("[data-quote-add]").forEach((n) => {
+      n.textContent = quote.includes(n.dataset.quoteAdd)
+        ? "Added to inquiry"
+        : "Add to inquiry";
+      n.setAttribute(
+        "aria-pressed",
+        String(quote.includes(n.dataset.quoteAdd)),
+      );
+    });
+    document.querySelectorAll('input[name="productIds"]').forEach((n) => {
+      if (quote.includes(n.value)) n.checked = true;
+    });
+    const list = document.querySelector("[data-quote-list]");
+    if (list) {
+      list.replaceChildren();
+      if (quote.length) {
+        const title = document.createElement("h3");
+        title.textContent = "Your selected products";
+        list.append(title);
+      }
+      quote.forEach((id) => {
+        const line = document.createElement("div"),
+          label = document.createElement("span"),
+          remove = document.createElement("button");
+        label.textContent = allowed.get(id);
+        remove.type = "button";
+        remove.textContent = "Remove";
+        remove.setAttribute("aria-label", "Remove " + allowed.get(id));
+        remove.onclick = () => {
+          quote = quote.filter((v) => v !== id);
+          const box = [
+            ...document.querySelectorAll('input[name="productIds"]'),
+          ].find((n) => n.value === id);
+          if (box) box.checked = false;
+          drawQuote();
+        };
+        line.append(label, remove);
+        list.append(line);
+      });
+    }
+  }
+  document.querySelectorAll("[data-quote-add]").forEach((n) =>
+    n.addEventListener("click", () => {
+      if (!allowed.has(n.dataset.quoteAdd)) return;
+      quote = quote.includes(n.dataset.quoteAdd)
+        ? quote.filter((v) => v !== n.dataset.quoteAdd)
+        : [...quote, n.dataset.quoteAdd];
+      drawQuote();
+      document
+        .querySelectorAll("[data-quote-status]")
+        .forEach((s) => (s.textContent = quote.length + " products selected"));
+    }),
+  );
+  document.querySelectorAll("[data-quote-clear]").forEach((n) =>
+    n.addEventListener("click", () => {
+      quote = [];
+      document
+        .querySelectorAll('input[name="productIds"]')
+        .forEach((n) => (n.checked = false));
+      drawQuote();
+    }),
+  );
+  document.querySelectorAll("[data-quote-review]").forEach((n) =>
+    n.addEventListener("click", () => {
+      const details = document.querySelector(".inquiry-preview");
+      if (details) details.open = true;
+      document
+        .querySelector("#inquiry")
+        ?.scrollIntoView({
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+        });
+      form?.querySelector('input[name="name"]')?.focus({ preventScroll: true });
+    }),
+  );
+  drawQuote();
+  const search = document.querySelector("[data-product-search]"),
+    category = document.querySelector("[data-category-filter]");
+  document
+    .querySelectorAll("[data-catalog-tools]")
+    .forEach((n) => (n.hidden = false));
+  function filterProducts() {
+    const value = (search?.value || "").toLowerCase(),
+      cat = category?.value || "";
+    let visible = 0;
+    document.querySelectorAll("[data-product-card]").forEach((n) => {
+      const show =
+        (!value || n.dataset.productName.toLowerCase().includes(value)) &&
+        (!cat || n.dataset.category === cat);
+      n.hidden = !show;
+      if (show) visible++;
+    });
+    document
+      .querySelectorAll("[data-filter-status]")
+      .forEach((n) => (n.textContent = visible + " products"));
+    document
+      .querySelectorAll("[data-no-products]")
+      .forEach((n) => (n.hidden = visible > 0));
+  }
+  search?.addEventListener("input", filterProducts);
+  category?.addEventListener("change", filterProducts);
   if (!form || !form.dataset.endpoint) return;
   const fieldset = form.querySelector("[data-inquiry-fields]"),
     notice = form.querySelector("[data-unavailable]"),

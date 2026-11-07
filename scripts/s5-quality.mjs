@@ -37,6 +37,10 @@ const validator = new HtmlValidate({
     "no-inline-style": "off",
     "heading-level": "off",
     "wcag/h32": "off",
+    "form-dup-name": [
+      "error",
+      { shared: ["radio", "checkbox", "submit", "button", "reset"] },
+    ],
   },
 });
 const results = [];
@@ -55,19 +59,21 @@ const server = http.createServer((req, res) => {
   const ext = pathname.split(".").at(-1);
   res.setHeader(
     "Content-Type",
-    ext === "ttf"
-      ? "font/ttf"
-      : ext === "css"
-        ? "text/css"
-        : ext === "webp"
-          ? "image/webp"
-          : ext === "json"
-            ? "application/json"
-            : ext === "txt"
-              ? "text/plain"
-              : ext === "xml"
-                ? "application/xml"
-                : "text/html",
+    ext === "js"
+      ? "text/javascript"
+      : ext === "ttf"
+        ? "font/ttf"
+        : ext === "css"
+          ? "text/css"
+          : ext === "webp"
+            ? "image/webp"
+            : ext === "json"
+              ? "application/json"
+              : ext === "txt"
+                ? "text/plain"
+                : ext === "xml"
+                  ? "application/xml"
+                  : "text/html",
   );
   res.end(entry);
 });
@@ -79,11 +85,14 @@ const chrome = await launch({
 });
 const browser = await chromium.launch({ headless: true });
 try {
-  for (const templateId of [
+  for (const testCase of [
     "machinery",
     "building-hardware",
     "packaging-bags",
+    "b2b-wholesale",
   ]) {
+    const templateId =
+      testCase === "b2b-wholesale" ? "packaging-bags" : testCase;
     const block = (key, type, heading, extra = {}) => ({
       key,
       type,
@@ -173,6 +182,124 @@ try {
       assets: {},
       createdAt: "2026-11-05",
     };
+    if (testCase === "b2b-wholesale") {
+      snapshot.site.buyerProfile = {
+        businessModel: "wholesale",
+        audiences: ["Retail buyers"],
+        buyerNeeds: ["Compare product options"],
+        primaryAction: "quote",
+        referenceUrls: [],
+      };
+      snapshot.site.productIds = ["fixture-product"];
+      snapshot.products = [
+        {
+          id: "fixture-product",
+          name: "Fixture product",
+          category: "Collection",
+          assetIds: ["fixture-image"],
+        },
+      ];
+      const item = (title, body) => ({
+        title,
+        body,
+        assetId: null,
+        alt: "",
+        href: null,
+        refs: [],
+      });
+      page.presentation.primaryActionTarget = "inquiry";
+      page.blocks = [
+        block("hero-image", "image", "Collection image", {
+          body: "",
+          assetId: "fixture-image",
+          alt: "Synthetic geometric product illustration",
+        }),
+        block("categories", "category-grid", "Explore by collection", {
+          body: "Find the range that fits your purchasing brief.",
+        }),
+        block("range", "product-grid", "Compare the range", {
+          body: "Browse product information before preparing your inquiry.",
+        }),
+        block("buying-context", "features", "Prepare your buying brief", {
+          body: "",
+          items: [
+            item(
+              "Your market",
+              "Share the destination market and intended retail channel.",
+            ),
+            item(
+              "Your assortment",
+              "Select products to discuss as a coordinated purchasing request.",
+            ),
+          ],
+        }),
+        block("closer-look", "split", "See the product details", {
+          assetId: "fixture-image",
+          alt: "Synthetic geometric product illustration",
+          body: "Review the available product information, then ask our team to confirm the details relevant to your brief.",
+          layout: "reverse",
+        }),
+        block(
+          "working-together",
+          "process",
+          "Start a focused product discussion",
+          {
+            body: "",
+            items: [
+              item(
+                "Choose products",
+                "Add relevant products to your inquiry list.",
+              ),
+              item(
+                "Share requirements",
+                "Describe your intended market and the information you need.",
+              ),
+              item(
+                "Confirm details",
+                "Review written product details before placing an order.",
+              ),
+            ],
+          },
+        ),
+        block("resources", "downloads", "Buying resources", {
+          body: "Save a copy of the product catalogue for your brief.",
+          items: [],
+        }),
+        block("next-step", "cta", "Discuss your collection", {
+          body: "Share your selected products with our team.",
+          items: [{ ...item("Request a quote", ""), href: "#inquiry" }],
+        }),
+      ];
+      snapshot.pages[1].productId = "fixture-product";
+      snapshot.pages[1].blocks.unshift(
+        block("product-image", "image", "Product illustration", {
+          body: "",
+          assetId: "fixture-image",
+          alt: "Synthetic product illustration",
+        }),
+      );
+      snapshot.pages.push({
+        ...page,
+        id: "category",
+        type: "category",
+        path: "/products",
+        title: "Product collection",
+        presentation: {
+          ...page.presentation,
+          navigationLabel: "Products",
+          headline: "Compare the collection",
+        },
+        blocks: [
+          block("category-range", "product-grid", "Product range", {
+            body: "Explore models for your purchasing brief.",
+          }),
+          block("category-cta", "cta", "Plan your inquiry", {
+            body: "Share the product details you need confirmed.",
+            items: [],
+          }),
+        ],
+      });
+    }
     const start = Date.now(),
       built = await buildStatic(snapshot, async () => ({
         body: img,
@@ -213,18 +340,21 @@ try {
       seo: Math.round(lhr.categories.seo.score * 100),
     };
     await fs.writeFile(
-      path.join(reportDir, "s5-" + templateId + "-lighthouse.json"),
+      path.join(reportDir, "s5-" + testCase + "-lighthouse.json"),
       report[0],
     );
     await fs.writeFile(
-      path.join(reportDir, "s5-" + templateId + "-lighthouse.html"),
+      path.join(reportDir, "s5-" + testCase + "-lighthouse.html"),
       report[1],
     );
     const p = await browser.newPage({
       viewport: { width: 1440, height: 1000 },
     });
     await p.goto(url);
-    if ((await p.locator(".desktop-nav a").count()) > 4)
+    if (
+      (await p.locator(".desktop-nav a").count()) >
+      (snapshot.site.buyerProfile ? 5 : 4)
+    )
       throw Error("Overloaded primary navigation");
     if ((await p.locator("h1").textContent()) !== page.presentation.headline)
       throw Error("SEO title leaked into hero");
@@ -238,7 +368,7 @@ try {
         throw Error("Responsive overflow at " + width);
     }
     await p.screenshot({
-      path: path.join(reportDir, "s5-" + templateId + "-desktop.png"),
+      path: path.join(reportDir, "s5-" + testCase + "-desktop.png"),
       fullPage: true,
     });
     await p.setViewportSize({ width: 390, height: 844 });
@@ -250,12 +380,12 @@ try {
     )
       throw Error("Mobile overflow");
     await p.screenshot({
-      path: path.join(reportDir, "s5-" + templateId + "-mobile.png"),
+      path: path.join(reportDir, "s5-" + testCase + "-mobile.png"),
       fullPage: true,
     });
     await p.close();
     results.push({
-      templateId,
+      templateId: testCase,
       ...scores,
       ...timings,
       lighthouseVersion: lhr.lighthouseVersion,

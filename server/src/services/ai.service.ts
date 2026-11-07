@@ -12,6 +12,7 @@ export async function getProvider() {
   return p
     ? {
         modelName: p.modelName,
+        supportsVision: !!p.supportsVision,
         baseUrl: p.baseUrl,
         enabled: p.enabled,
         configured: !!p.secret,
@@ -28,6 +29,7 @@ export async function saveProvider(
     modelName: string;
     baseUrl: string;
     enabled: boolean;
+    supportsVision?: boolean;
     apiKey?: string;
   },
   userId: string,
@@ -43,6 +45,7 @@ export async function saveProvider(
   );
   const value = {
     modelName: input.modelName,
+    supportsVision: !!input.supportsVision,
     baseUrl: input.baseUrl,
     enabled: input.enabled,
     ...(input.apiKey ? { secret: encrypt(input.apiKey, "ai:" + org) } : {}),

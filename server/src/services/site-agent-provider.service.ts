@@ -9,19 +9,22 @@ export type AgentResult = {
   tokens: number;
   errorCode?: string;
   invalidReason?: "truncated" | "non_json";
+  visualInput?: boolean;
+  reviewMode?: "structural" | "text" | "visual";
 };
 export async function callSiteAgent(
   system: string,
   input: unknown,
   operationId: string,
   save: (r: AgentResult) => Promise<void>,
+  images: { label: string; data: string }[] = [],
 ): Promise<AgentResult> {
   const provider = await AgentAiProvider.findOne({ name: "default" });
   ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
   const text = JSON.stringify(input);
   ensure(Buffer.byteLength(text) <= 120000, 409, "AGENT_INPUT_TOO_LARGE");
   const url = await aiBase(provider.baseUrl);
-  const messages = [
+  const messages: any[] = [
     { role: "system", content: system },
     {
       role: "user",
@@ -33,19 +36,46 @@ export async function callSiteAgent(
         text,
     },
   ];
+  if (provider.supportsVision && images.length) {
+    ensure(
+      images.length <= 4 &&
+        images.every(
+          (i) =>
+            /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(i.data) &&
+            i.data.length <= 1500000,
+        ),
+      413,
+      "BODY_TOO_LARGE",
+    );
+    const original = messages[1].content;
+    messages[1].content = [
+      { type: "text", text: original },
+      ...images.flatMap((i) => [
+        { type: "text", text: i.label },
+        { type: "image_url", image_url: { url: i.data, detail: "low" } },
+      ]),
+    ];
+  }
   const task = (input as { task?: string })?.task;
   // Reasoning models share this cap with their complete structured page output.
   const maxTokens =
     task === "rewrite"
-      ? 2048
-      : task === "content"
+      ? 8192
+      : ["content", "refine", "review"].includes(task ?? "")
         ? 16384
         : task === "research"
-          ? 6144
+          ? (input as any)?.site?.buyerProfile
+            ? 16384
+            : 6144
           : 8192;
   // UTF-8 bytes bound message tokens; max_tokens already counts output tokens,
   // including reasoning. Add envelope headroom instead of multiplying tokens by bytes.
-  const budget = Buffer.byteLength(JSON.stringify(messages)) + maxTokens + 1024;
+  const budget =
+    Buffer.byteLength(system) * 2 +
+    Buffer.byteLength(text) +
+    maxTokens +
+    2048 +
+    (provider.supportsVision ? images.length * 4096 : 0);
   ensure(
     await reserve("ai_tokens", budget, operationId),
     409,
@@ -129,6 +159,7 @@ export async function callSiteAgent(
     const result = {
       output,
       tokens,
+      visualInput: !!(provider.supportsVision && images.length),
       ...(errorCode ? { errorCode, invalidReason } : {}),
     };
     await save(result);

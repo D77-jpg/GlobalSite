@@ -74,6 +74,7 @@ export function validatePage(
     productIds: string[];
     type: string;
     brandName?: string;
+    paths?: string[];
   },
 ): Issue[] {
   const issues: Issue[] = [],
@@ -110,10 +111,27 @@ export function validatePage(
       }
       candidates.push(f);
     }
+    for (const email of value.match(
+      /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi,
+    ) ?? [])
+      if (
+        !candidates.some(
+          (f) =>
+            /^company\.(email|privacyEmail)$/.test(f.type) &&
+            String(f.value).toLowerCase().includes(email.toLowerCase()),
+        )
+      )
+        add("UNSOURCED_CONTACT", field, key, email);
     if (/\p{Script=Han}/u.test(value)) add("CONTENT_NOT_ENGLISH", field, key);
     const sanitized = value
       .normalize("NFKC")
-      .replace(/\bB2[BC]\b/gi, "business");
+      .replace(/\bB2[BC]\b/gi, "business")
+      .replace(/\bin one place\b/gi, "in a shared place")
+      .replace(
+        /\bone\s+(?:(?:multi-product|combined)\s+)?(?:quote\s+)?(?:request|inquiry|brief|shortlist|response|reply)\b/gi,
+        "a combined brief",
+      )
+      .replace(/\b(?:each|any) one\b/gi, "each item");
     for (const match of sanitized.matchAll(
       new RegExp(
         "\\d+(?:[.,]\\d+)*|\\b(?:" + Object.keys(words).join("|") + ")\\b",
@@ -259,6 +277,58 @@ export function validatePage(
       alt: b.alt,
     }))
       text(value, b.refs, "blocks." + b.key + "." + field, b.key);
+    for (const [i, item] of (b.items ?? []).entries()) {
+      if (item.href && context.paths) {
+        const [path, fragment] = item.href.split("#");
+        const target = path.replace(/\/$/, "") || "/";
+        const paths = [
+          ...context.paths,
+          "/catalogue.html",
+          "/privacy-policy",
+        ].map((p) => p.replace(/\/$/, "") || "/");
+        const anchors = [
+          "inquiry",
+          "main",
+          "collection",
+          ...(!path ? data.blocks.map((b) => "block-" + b.key) : []),
+        ];
+        if (
+          (path && !paths.includes(target)) ||
+          (fragment && !anchors.includes(fragment))
+        )
+          add("PAGE_LINK_INVALID", "blocks." + b.key + ".items." + i, b.key);
+      }
+      const refs = [...b.refs, ...item.refs];
+      text(
+        item.title + " " + item.body + " " + item.alt,
+        refs,
+        "blocks." + b.key + ".items." + i,
+        b.key,
+      );
+      if (item.assetId && b.type !== "downloads" && !item.alt.trim())
+        add("IMAGE_ALT_REQUIRED", "blocks." + b.key + ".items." + i, b.key);
+      if (
+        ["evidence", "case-study", "customization"].includes(b.type) &&
+        !refs.length
+      )
+        add("UNSOURCED_DETAIL", "blocks." + b.key + ".items." + i, b.key);
+      if (
+        ["evidence", "case-study", "customization"].includes(b.type) &&
+        refs.length &&
+        !refs.some((r) => {
+          const f = factMap.get(r.factId);
+          return (
+            f &&
+            normalize(item.body + " " + item.title).includes(
+              normalize(String(f.value)),
+            )
+          );
+        })
+      )
+        add("UNSOURCED_DETAIL", "blocks." + b.key + ".items." + i, b.key);
+    }
+    if (b.type === "comparison" && !b.table)
+      add("SPEC_TABLE_REQUIRED", "blocks." + b.key, b.key);
     if (b.table)
       for (const [row, i] of [...[b.table.columns], ...b.table.rows].map(
         (r, i) => [r, i] as const,

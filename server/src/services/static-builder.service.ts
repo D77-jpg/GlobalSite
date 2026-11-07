@@ -1,3 +1,4 @@
+import { catalogueHtml } from "./b2b-template.service";
 import { renderPrivacy, privacyPath } from "./inquiry-template.service";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -73,7 +74,11 @@ export function unpack(body: Buffer): Files {
     },
   });
 }
-export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
+export async function buildStatic(
+  snapshot: Snapshot,
+  readImage = readAsset,
+  mode: "release" | "review" = "release",
+) {
   const parent = path.resolve(config.storage, ".builds"),
     root = path.join(parent, randomUUID());
   await fs.mkdir(path.join(root, "src/pages"), { recursive: true });
@@ -89,16 +94,32 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
       [
         snapshot.site.logoId,
         ...(snapshot.products ?? []).flatMap((p) => p.assetIds.slice(0, 2)),
-        ...snapshot.pages.flatMap((p) =>
-          p.blocks
-            .filter((b: any) => b.type === "image")
+        ...snapshot.pages.flatMap((p) => [
+          ...p.blocks
+            .filter((b: any) => !!b.assetId)
             .map((b: any) => b.assetId),
-        ),
+          ...p.blocks.flatMap((b: any) =>
+            (b.items ?? []).map((i: any) => i.assetId),
+          ),
+        ]),
       ].filter(Boolean),
     );
     const assets: Snapshot["assets"] = {};
     for (const id of images) {
-      const a = await readImage(id, "webp");
+      let a;
+      try {
+        a = await readImage(id, "webp");
+      } catch {
+        a = await readImage(id);
+        ensure(a.mime === "application/pdf", 409, "ASSET_NOT_READY");
+        const key =
+          "assets/" +
+          createHash("sha256").update(a.body).digest("hex").slice(0, 24) +
+          ".pdf";
+        await fs.writeFile(path.join(root, "public", key), a.body);
+        assets[id] = { path: "/" + key, width: 0, height: 0 };
+        continue;
+      }
       ensure(a.mime === "image/webp", 409, "ASSET_NOT_READY");
       const data = await sharp(a.body)
         .resize({
@@ -204,6 +225,10 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
           )
           .join("\n"),
     );
+    await fs.writeFile(
+      path.join(root, "public/catalogue.html"),
+      catalogueHtml(snapshot),
+    );
     await new Promise<void>((resolve, reject) => {
       const child = spawn(
         process.execPath,
@@ -280,14 +305,20 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
     }
     await walk(path.join(root, "dist"));
     const problems = outputChecks(files);
-    ensure(!problems.length, 409, "BUILD_HTML_INVALID");
+    // Private screenshot review must be able to diagnose broken draft links.
+    // Release builds always retain the full output gate.
+    ensure(
+      !problems.some((p) => mode !== "review" || !p.startsWith("BROKEN_LINK:")),
+      409,
+      "BUILD_HTML_INVALID",
+    );
     const manifest = Object.fromEntries(
       Object.entries(files)
         .sort()
         .map(([n, b]) => [n, createHash("sha256").update(b).digest("hex")]),
     );
     files["globalsite-manifest.json"] = bytes(
-      JSON.stringify({ templateVersion: "s5.1", files: manifest }),
+      JSON.stringify({ templateVersion: "b2b-site-v2", files: manifest }),
     );
     return {
       body: Buffer.from(
@@ -298,7 +329,7 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
         pages: pages.length,
         files: Object.keys(files).length,
         totalBytes: total,
-        issues: [],
+        issues: problems,
       },
     };
   } finally {

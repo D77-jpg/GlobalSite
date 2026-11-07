@@ -1,3 +1,4 @@
+import { procurementCoverage } from "./b2b-planning.service";
 import {
   inquiryBuildConfig,
   previewGrant,
@@ -289,6 +290,7 @@ async function inspect(id: string, session?: mongoose.ClientSession) {
       .map((b: any) =>
         [
           b.body,
+          ...(b.items ?? []).map((i: any) => i.title + " " + i.body),
           ...(b.faq ?? []).map((q: any) => q.answer),
           ...(b.table?.rows ?? []).flat(),
         ].join(" "),
@@ -369,9 +371,13 @@ async function snapshot(
   const ids = [
     ...new Set(
       r.pages.flatMap((p) =>
-        [...p.refs, ...p.blocks.flatMap((b: any) => b.refs)].map(
-          (v: any) => v.factId,
-        ),
+        [
+          ...p.refs,
+          ...p.blocks.flatMap((b: any) => [
+            ...b.refs,
+            ...(b.items ?? []).flatMap((i: any) => i.refs),
+          ]),
+        ].map((v: any) => v.factId),
       ),
     ),
   ];
@@ -525,6 +531,7 @@ export async function validVersion(
   v: any,
   current = false,
   session?: mongoose.ClientSession,
+  commercial = false,
 ) {
   const s = v.snapshot as Snapshot;
   const available = await Product.countDocuments({
@@ -559,12 +566,54 @@ export async function validVersion(
         productIds: s.site.productIds,
         type: p.type,
         brandName: s.site.name,
+        paths: s.pages.map((p) => p.path),
       }).length,
       409,
       "VERSION_FACTS_CHANGED",
     );
   const site = await ownSite(String(v.siteId), session);
   ensure(site.status !== "archived", 409, "SITE_ARCHIVED");
+  if (commercial && current && site.buyerProfile) {
+    const products = await Product.find({
+      _id: { $in: site.productIds },
+    }).session(session ?? null);
+    const allFacts = await FactSheet.find({
+      status: "confirmed",
+      $or: [
+        { subjectType: "organization" },
+        { subjectId: { $in: site.productIds } },
+      ],
+    }).session(session ?? null);
+    ensure(
+      procurementCoverage(site, products, allFacts).canPublish,
+      409,
+      "PROCUREMENT_INCOMPLETE",
+    );
+    const review = await AgentRun.findOne({
+      siteId: v.siteId,
+      step: "review",
+      status: "succeeded",
+      qualityAcceptedAt: { $type: "date" },
+    })
+      .sort({ _id: -1 })
+      .session(session ?? null);
+    ensure(
+      review &&
+        review.inputSnapshot.site.revision === site.revision &&
+        review.inputSnapshot.site.planRevision === site.planRevision,
+      409,
+      "QUALITY_REVIEW_REQUIRED",
+    );
+    for (const page of s.pages)
+      ensure(
+        review.steps.some(
+          (u: any) =>
+            u.key === page.nodeKey && u.expectedRevision === page.revision,
+        ),
+        409,
+        "QUALITY_REVIEW_REQUIRED",
+      );
+  }
   if (current) {
     ensure(
       !(await AgentRun.exists({ siteId: v.siteId, active: true }).session(
@@ -624,7 +673,7 @@ export async function queueDeployment(
     409,
     "VERSION_NOT_READY",
   );
-  await validVersion(v, kind === "publish");
+  await validVersion(v, kind === "publish", undefined, kind === "publish");
   await validateInquiryGateway(v);
   const cfg = await PublishingSettings.findOne({ siteId: id }).select(
     "+secret",
@@ -684,7 +733,7 @@ export async function queueDeployment(
         { session },
       );
       await actorAdmin(actor, session);
-      await validVersion(v, kind === "publish", session);
+      await validVersion(v, kind === "publish", session, kind === "publish");
       ensure(
         !(await SiteDeployment.exists({ siteId: id, active: true }).session(
           session,
@@ -804,7 +853,12 @@ export async function processPublishing(
     }
     await actorAdmin(String(row.actorId));
     const v = await ownVersion(String(row.versionId));
-    await validVersion(v, row.kind === "publish");
+    await validVersion(
+      v,
+      row.kind === "publish",
+      undefined,
+      row.kind === "publish",
+    );
     await validateInquiryGateway(v);
     const cfg = await PublishingSettings.findOne({ siteId: row.siteId }).select(
       "+secret",
@@ -845,7 +899,12 @@ export async function processPublishing(
         const manifest = await cf.pagesClient.uploadFiles(cfg, token, files);
         await checkTask(task);
         await actorAdmin(String(row.actorId));
-        await validVersion(v, row.kind === "publish");
+        await validVersion(
+          v,
+          row.kind === "publish",
+          undefined,
+          row.kind === "publish",
+        );
         await mongoose.connection.transaction(async (session) => {
           await fenceTask(task, session);
           await model.updateOne(
@@ -885,11 +944,21 @@ export async function processPublishing(
       files,
     );
     if (!verified) return { status: "pending" };
-    await validVersion(v, row.kind === "publish");
+    await validVersion(
+      v,
+      row.kind === "publish",
+      undefined,
+      row.kind === "publish",
+    );
     await actorAdmin(String(row.actorId));
     await mongoose.connection.transaction(async (session) => {
       await fenceTask(task, session);
-      await validVersion(v, row.kind === "publish", session);
+      await validVersion(
+        v,
+        row.kind === "publish",
+        session,
+        row.kind === "publish",
+      );
       await actorAdmin(String(row.actorId), session);
       await Site.updateOne(
         { _id: row.siteId },

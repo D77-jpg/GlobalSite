@@ -14,7 +14,7 @@ export function siteSkillProfile() {
     if (!guidance.trim() || Buffer.byteLength(guidance) > 12000)
       throw new Error("INVALID_PROFILE");
     return {
-      version: "brand-site-v1",
+      version: "brand-site-v2",
       hash: createHash("sha256").update(guidance).digest("hex"),
       guidance,
     };

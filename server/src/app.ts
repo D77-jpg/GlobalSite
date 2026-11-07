@@ -670,6 +670,7 @@ export function createApp() {
             req,
             z
               .object({
+                supportsVision: z.boolean().optional(),
                 modelName: z.string().min(1).max(120),
                 baseUrl: z.string().url().max(500),
                 enabled: z.boolean(),

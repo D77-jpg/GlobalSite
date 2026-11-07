@@ -9947,6 +9947,229 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /sites/{id}/buyer-readiness:
+    get:
+      operationId: getBuyerReadiness
+      summary: S8 B2B buyer information coverage and page briefs; current tenant
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/BuyerReadiness'
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        '400':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /agent-runs/{id}/screenshots/{key}/{width}:
+    get:
+      operationId: getSiteReviewScreenshot
+      summary: S10 private screenshot from an immutable Agent review; same tenant, no-store
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-z][a-z0-9-]{0,59}$
+        - name: width
+          in: path
+          required: true
+          schema:
+            type: integer
+            enum:
+              - 375
+              - 768
+              - 1440
+      responses:
+        '200':
+          description: Private JPEG
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Unavailable or unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unavailable or unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Unavailable or unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Unavailable or unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Unavailable or unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /agent-runs/{id}/accept-review:
+    post:
+      operationId: acceptSiteQualityReview
+      summary: S11 administrator confirms current screenshots and buying content; rejects stale reviews and blocking findings
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/SiteAgent'
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        '400':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
 components:
   securitySchemes:
     cookieAuth:
@@ -11315,6 +11538,11 @@ components:
           type: boolean
         configured:
           type: boolean
+        supportsVision:
+          type: boolean
+          description: >-
+            Explicit opt-in: the configured model accepts image inputs. Disabled by default; text-only reviews require human
+            screenshot approval.
       required:
         - modelName
         - baseUrl
@@ -11619,6 +11847,11 @@ components:
           type: string
           minLength: 1
           maxLength: 512
+        supportsVision:
+          type: boolean
+          description: >-
+            Explicit opt-in: the configured model accepts image inputs. Disabled by default; text-only reviews require human
+            screenshot approval.
       required:
         - modelName
         - baseUrl
@@ -12748,6 +12981,9 @@ components:
             - certifications
             - faq
             - contact
+            - customization
+            - resources
+            - solution
         parentKey:
           type:
             - string
@@ -12771,6 +13007,8 @@ components:
             - specify
             - source
             - buy
+        brief:
+          $ref: "#/components/schemas/SitePageBrief"
       required:
         - key
         - path
@@ -12903,6 +13141,8 @@ components:
           enum:
             - draft
             - archived
+        buyerProfile:
+          $ref: "#/components/schemas/SiteBuyerProfile"
       required:
         - name
         - templateId
@@ -12981,6 +13221,17 @@ components:
             - specs
             - faq
             - image
+            - category-grid
+            - product-grid
+            - split
+            - features
+            - process
+            - customization
+            - evidence
+            - case-study
+            - downloads
+            - cta
+            - comparison
         heading:
           type: string
           maxLength: 160
@@ -13009,6 +13260,23 @@ components:
           items:
             $ref: "#/components/schemas/SiteFactRef"
           maxItems: 50
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteBlockItem"
+          maxItems: 12
+        layout:
+          enum:
+            - cards
+            - split
+            - reverse
+            - band
+            - compact
+        tone:
+          enum:
+            - light
+            - sage
+            - dark
       required:
         - key
         - type
@@ -13022,7 +13290,9 @@ components:
       additionalProperties: false
     SitePresentation:
       type: object
-      description: Optional Agent-authored brand presentation, independent of SEO. All public text is checked against page fact references; designNotes is private and never rendered.
+      description: >-
+        Optional Agent-authored brand presentation, independent of SEO. All public text is checked against page fact
+        references; designNotes is private and never rendered.
       additionalProperties: false
       properties:
         navigationLabel:
@@ -13042,22 +13312,34 @@ components:
           minLength: 1
           maxLength: 32
         visualStyle:
-          enum: [organic, industrial, minimal]
+          enum:
+            - organic
+            - industrial
+            - minimal
         heroLayout:
-          enum: [split, stacked]
+          enum:
+            - split
+            - stacked
         designNotes:
           type: string
           maxLength: 500
+        density:
+          enum:
+            - comfortable
+            - compact
+        primaryActionTarget:
+          enum:
+            - collection
+            - inquiry
+            - catalogue
       required:
-        [
-          navigationLabel,
-          headline,
-          summary,
-          primaryActionLabel,
-          visualStyle,
-          heroLayout,
-          designNotes,
-        ]
+        - navigationLabel
+        - headline
+        - summary
+        - primaryActionLabel
+        - visualStyle
+        - heroLayout
+        - designNotes
     SitePageInput:
       type: object
       properties:
@@ -13079,7 +13361,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SiteBlockInput"
-          maxItems: 20
+          maxItems: 32
           minItems: 1
       required:
         - title
@@ -13120,6 +13402,8 @@ components:
             - research
             - content
             - rewrite
+            - review
+            - refine
         consent:
           const: true
         pageKey:
@@ -13272,6 +13556,8 @@ components:
           type: string
         updatedAt:
           type: string
+        buyerProfile:
+          $ref: "#/components/schemas/SiteBuyerProfile"
       required:
         - id
         - revision
@@ -13333,7 +13619,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SiteBlockInput"
-          maxItems: 20
+          maxItems: 32
         issues:
           type: array
           items:
@@ -13504,7 +13790,7 @@ components:
         steps:
           type: array
           items:
-            $ref: "#/components/schemas/SiteAgentStep"
+            $ref: '#/components/schemas/SiteAgentStep'
           maxItems: 50
         tokens:
           type: integer
@@ -13513,11 +13799,21 @@ components:
         errorCode:
           type:
             - string
-            - "null"
+            - 'null'
         createdAt:
           type: string
         updatedAt:
           type: string
+        qualityAcceptedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        qualityAcceptedBy:
+          type:
+            - string
+            - 'null'
+          pattern: ^[a-f0-9]{24}$
       required:
         - id
         - siteId
@@ -13533,6 +13829,23 @@ components:
         - createdAt
         - updatedAt
       additionalProperties: false
+      allOf:
+        - if:
+            properties:
+              step:
+                const: review
+            required:
+              - step
+          then:
+            properties:
+              steps:
+                type: array
+                items:
+                  properties:
+                    output:
+                      anyOf:
+                        - type: 'null'
+                        - $ref: '#/components/schemas/SiteReviewReport'
     SiteReadiness:
       type: object
       properties:
@@ -13569,6 +13882,300 @@ components:
         - issues
         - pages
       additionalProperties: false
+    SiteBuyerProfile:
+      type: object
+      properties:
+        businessModel:
+          enum:
+            - wholesale
+            - private_label
+            - manufacturer
+            - distributor
+        audiences:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+          minItems: 1
+          maxItems: 5
+        buyerNeeds:
+          type: array
+          items:
+            type: string
+            maxLength: 160
+          maxItems: 8
+        primaryAction:
+          enum:
+            - quote
+            - catalogue
+            - sample
+        referenceUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+            maxLength: 500
+          maxItems: 3
+      required:
+        - businessModel
+        - audiences
+        - buyerNeeds
+        - primaryAction
+        - referenceUrls
+      additionalProperties: false
+
+    SitePageBrief:
+      type: object
+      properties:
+        purpose:
+          type: string
+          maxLength: 240
+        buyerQuestions:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          maxItems: 8
+        requiredFactTypes:
+          type: array
+          items:
+            type: string
+            maxLength: 80
+          maxItems: 12
+        sections:
+          type: array
+          items:
+            type: string
+            maxLength: 60
+          maxItems: 16
+      required:
+        - purpose
+        - buyerQuestions
+        - requiredFactTypes
+        - sections
+      additionalProperties: false
+
+    SiteBlockItem:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 160
+        body:
+          type: string
+          maxLength: 1200
+        assetId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+        alt:
+          type: string
+          maxLength: 200
+        href:
+          type:
+            - string
+            - "null"
+          pattern: ^(?:/(?!/)(?!.*\.\.)[a-zA-Z0-9/_#.-]*|#[a-zA-Z0-9_-]+)$
+          maxLength: 200
+        refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SiteFactRef"
+          maxItems: 50
+      required:
+        - title
+        - body
+        - assetId
+        - alt
+        - href
+        - refs
+      additionalProperties: false
+
+    BuyerReadiness:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        canPublish:
+          type: boolean
+        coverage:
+          type: integer
+          minimum: 0
+          maximum: 100
+        gaps:
+          type: array
+          items:
+            type: object
+            properties:
+              subjectId:
+                type:
+                  - string
+                  - "null"
+              type:
+                type: string
+                maxLength: 80
+              severity:
+                enum:
+                  - required
+                  - recommended
+            required:
+              - subjectId
+              - type
+              - severity
+            additionalProperties: false
+          maxItems: 500
+        pageBriefs:
+          type: array
+          items:
+            type: object
+            properties:
+              nodeKey:
+                type: string
+                maxLength: 60
+              type:
+                type: string
+                maxLength: 40
+              questions:
+                type: array
+                items:
+                  type: string
+                  maxLength: 200
+                maxItems: 8
+              sections:
+                type: array
+                items:
+                  type: string
+                  maxLength: 60
+                maxItems: 16
+            required:
+              - nodeKey
+              - type
+              - questions
+              - sections
+            additionalProperties: false
+          maxItems: 50
+      required:
+        - configured
+        - canPublish
+        - coverage
+        - gaps
+        - pageBriefs
+      additionalProperties: false
+
+    SiteReviewReport:
+      type: object
+      properties:
+        summary:
+          type: string
+          maxLength: 600
+        findings:
+          type: array
+          maxItems: 12
+          items:
+            type: object
+            properties:
+              blockKey:
+                type:
+                  - string
+                  - 'null'
+                maxLength: 60
+              code:
+                enum:
+                  - content_thin
+                  - repetition
+                  - layout
+                  - imagery
+                  - procurement
+                  - navigation
+                  - cta
+              severity:
+                enum:
+                  - warning
+                  - error
+              recommendation:
+                type: string
+                maxLength: 500
+            required:
+              - blockKey
+              - code
+              - severity
+              - recommendation
+            additionalProperties: false
+        metrics:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            type: object
+            properties:
+              width:
+                enum:
+                  - 375
+                  - 768
+                  - 1440
+              overflow:
+                type: boolean
+              height:
+                type: integer
+                minimum: 0
+              words:
+                type: integer
+                minimum: 0
+              headings:
+                type: array
+                items:
+                  type: string
+              brokenImages:
+                type: integer
+                minimum: 0
+              blankSections:
+                type: integer
+                minimum: 0
+            required:
+              - width
+              - overflow
+              - height
+              - words
+              - headings
+              - brokenImages
+              - blankSections
+            additionalProperties: false
+        requiresHumanVisualReview:
+          type: boolean
+        reviewMode:
+          enum:
+            - structural
+            - text
+            - visual
+        screenshots:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            type: object
+            properties:
+              width:
+                enum:
+                  - 375
+                  - 768
+                  - 1440
+              url:
+                type: string
+                pattern: ^/api/v1/agent-runs/[a-f0-9]{24}/screenshots/[a-z][a-z0-9-]*/(375|768|1440)$
+            required:
+              - width
+              - url
+            additionalProperties: false
+      required:
+        - summary
+        - findings
+        - metrics
+        - requiresHumanVisualReview
+        - reviewMode
+        - screenshots
+      additionalProperties: false
+
 x-s3-catalog:
   status: implemented
   crmContract: >-
@@ -13599,3 +14206,15 @@ x-s4-agents:
     - >-
       All hard claims require valid same-tenant confirmed fact references. Editing, new plans or withdrawn
       facts invalidate approval.
+
+x-s8-s11-b2b:
+  status: implemented
+  notes:
+    - Interview asks at most ten missing company/business-contact or selected product procurement facts per round; all answers remain candidates.
+    - Buyer profiles and page briefs are private instructions, never evidence for public business claims.
+    - Reference sites are bounded robots-aware SSRF-protected reads; their content is not company evidence.
+    - Optional structured blocks preserve old pages. All public item text, assets and links are validated against the confirmed sitemap.
+    - Public email addresses must match explicitly referenced confirmed company contact facts.
+    - Hard numerical claims require evidence; narrowly bounded workflow wording such as in one place is not a business quantity.
+    - Reviews freeze page revisions and private screenshot artifacts. Refine requires an unchanged review and writes new drafts, never approvals.
+    - B2B commercial publication requires confirmed procurement data; draft review remains available with gaps.

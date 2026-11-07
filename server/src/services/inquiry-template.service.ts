@@ -25,6 +25,7 @@ export function renderInquiry(s: Snapshot, p: any) {
     '" data-policy-version="' +
     e(c.privacyVersion ?? "") +
     '" enctype="multipart/form-data"><div data-form-status role="status" aria-live="polite"></div><div data-form-error role="alert" tabindex="-1" hidden></div><fieldset data-inquiry-fields disabled><legend>Your inquiry</legend><div class="fields"><label>Your name <span aria-hidden="true">*</span><input type="text" name="name" autocomplete="name" maxlength="100" required></label><label>Company<input type="text" name="company" autocomplete="organization" maxlength="160"></label><label>Work email <span aria-hidden="true">*</span><input type="email" name="email" autocomplete="email" maxlength="200" required></label><label>Country<input type="text" name="country" autocomplete="country-name" maxlength="80"></label><label>Phone / WhatsApp<input type="tel" name="phone" autocomplete="tel" maxlength="80"></label><label>Quantity<input type="number" name="quantity" min="1" max="1000000000" step="1"></label></div>' +
+    '<div data-quote-list aria-live="polite"></div>' +
     (products.length
       ? '<fieldset class="product-choices"><legend>Products of interest (select all that apply)</legend>' +
         products
@@ -35,7 +36,7 @@ export function renderInquiry(s: Snapshot, p: any) {
               '" ' +
               (p.productId === v.productId ? "checked" : "") +
               ">" +
-              e(v.title) +
+              e(v.title.split("|")[0].trim()) +
               "</label>",
           )
           .join("") +

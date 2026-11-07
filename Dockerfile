@@ -14,6 +14,8 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/server/package.json ./server/package.json
 COPY --from=build /app/server/node_modules ./server/node_modules
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN node -e "const p=require('path');require('child_process').execFileSync(process.execPath,[p.join(p.dirname(require.resolve('playwright/package.json',{paths:['/app/server']})),'cli.js'),'install','--with-deps','chromium'],{stdio:'inherit'})" && chmod -R a+rX /ms-playwright
 COPY --from=build /app/server/dist ./server/dist
 COPY server/builder ./server/builder
 COPY server/agent-skills ./server/agent-skills

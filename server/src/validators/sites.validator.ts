@@ -9,8 +9,59 @@ export const templates = [
   },
   { id: "packaging-bags", name: "Packaging & bags", industry: "packaging" },
 ];
+export const buyerProfile = z
+  .object({
+    businessModel: z.enum([
+      "wholesale",
+      "private_label",
+      "manufacturer",
+      "distributor",
+    ]),
+    audiences: z.array(z.string().trim().min(1).max(100)).min(1).max(5),
+    buyerNeeds: z.array(z.string().trim().min(1).max(160)).max(8),
+    primaryAction: z.enum(["quote", "catalogue", "sample"]),
+    referenceUrls: z
+      .array(
+        z
+          .string()
+          .url()
+          .max(500)
+          .refine((value) => {
+            try {
+              const u = new URL(value);
+              return (
+                u.protocol === "https:" &&
+                !u.username &&
+                !u.password &&
+                !u.search &&
+                !u.hash
+              );
+            } catch {
+              return false;
+            }
+          }),
+      )
+      .max(3),
+  })
+  .strict();
+export const pageBrief = z
+  .object({
+    purpose: z.string().max(240),
+    buyerQuestions: z.array(z.string().max(200)).max(8),
+    requiredFactTypes: z
+      .array(
+        z
+          .string()
+          .regex(/^(company|product)\.[a-zA-Z][a-zA-Z0-9.]*$/)
+          .max(80),
+      )
+      .max(12),
+    sections: z.array(z.string().max(60)).max(16),
+  })
+  .strict();
 export const siteInput = z
   .object({
+    buyerProfile: buyerProfile.optional(),
     name: z.string().trim().min(1).max(120),
     templateId: z.enum(["machinery", "building-hardware", "packaging-bags"]),
     targetMarkets: z.array(z.string().trim().min(1).max(80)).min(1).max(10),
@@ -42,9 +93,13 @@ export const node = z
       "certifications",
       "faq",
       "contact",
+      "customization",
+      "resources",
+      "solution",
     ]),
     parentKey: key.nullable(),
     productId: objectId.nullable(),
+    brief: pageBrief.optional(),
     keywords: z.array(z.string().trim().min(1).max(120)).max(10),
     intent,
   })
@@ -94,10 +149,43 @@ export const faq = z
     detail: z.string().max(2500),
   })
   .strict();
+export const blockItem = z
+  .object({
+    title: z.string().max(160),
+    body: z.string().max(1200),
+    assetId: objectId.nullable(),
+    alt: z.string().max(200),
+    href: z
+      .string()
+      .max(200)
+      .regex(/^(?:\/(?!\/)(?!.*\.\.)[a-zA-Z0-9/_#.-]*|#[a-zA-Z0-9_-]+)$/)
+      .nullable(),
+    refs: z.array(factRef).max(50),
+  })
+  .strict();
 export const block = z
   .object({
     key,
-    type: z.enum(["text", "specs", "faq", "image"]),
+    type: z.enum([
+      "text",
+      "specs",
+      "faq",
+      "image",
+      "category-grid",
+      "product-grid",
+      "split",
+      "features",
+      "process",
+      "customization",
+      "evidence",
+      "case-study",
+      "downloads",
+      "cta",
+      "comparison",
+    ]),
+    items: z.array(blockItem).max(12).optional(),
+    layout: z.enum(["cards", "split", "reverse", "band", "compact"]).optional(),
+    tone: z.enum(["light", "sage", "dark"]).optional(),
     heading: z.string().max(160),
     body: z.string().max(6000),
     table: table.nullable(),
@@ -116,6 +204,10 @@ export const presentation = z
     visualStyle: z.enum(["organic", "industrial", "minimal"]),
     heroLayout: z.enum(["split", "stacked"]),
     designNotes: z.string().max(500),
+    density: z.enum(["comfortable", "compact"]).optional(),
+    primaryActionTarget: z
+      .enum(["collection", "inquiry", "catalogue"])
+      .optional(),
   })
   .strict();
 export const pageInput = z
@@ -124,7 +216,7 @@ export const pageInput = z
     metaDescription: z.string().max(200),
     presentation: presentation.optional(),
     refs: z.array(factRef).max(50),
-    blocks: z.array(block).min(1).max(20),
+    blocks: z.array(block).min(1).max(32),
   })
   .strict()
   .refine((x) => new Set(x.blocks.map((b) => b.key)).size === x.blocks.length);
@@ -134,7 +226,14 @@ export const review = z
   .strict();
 export const agentInput = z
   .object({
-    step: z.enum(["interview", "research", "content", "rewrite"]),
+    step: z.enum([
+      "interview",
+      "research",
+      "content",
+      "rewrite",
+      "review",
+      "refine",
+    ]),
     consent: z.literal(true),
     pageKey: key.optional(),
     pageId: objectId.optional(),
