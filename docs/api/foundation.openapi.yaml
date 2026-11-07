@@ -13020,6 +13020,44 @@ components:
         - alt
         - refs
       additionalProperties: false
+    SitePresentation:
+      type: object
+      description: Optional Agent-authored brand presentation, independent of SEO. All public text is checked against page fact references; designNotes is private and never rendered.
+      additionalProperties: false
+      properties:
+        navigationLabel:
+          type: string
+          minLength: 1
+          maxLength: 24
+        headline:
+          type: string
+          minLength: 1
+          maxLength: 100
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 240
+        primaryActionLabel:
+          type: string
+          minLength: 1
+          maxLength: 32
+        visualStyle:
+          enum: [organic, industrial, minimal]
+        heroLayout:
+          enum: [split, stacked]
+        designNotes:
+          type: string
+          maxLength: 500
+      required:
+        [
+          navigationLabel,
+          headline,
+          summary,
+          primaryActionLabel,
+          visualStyle,
+          heroLayout,
+          designNotes,
+        ]
     SitePageInput:
       type: object
       properties:
@@ -13030,6 +13068,8 @@ components:
         metaDescription:
           type: string
           maxLength: 200
+        presentation:
+          $ref: "#/components/schemas/SitePresentation"
         refs:
           type: array
           items:
@@ -13282,6 +13322,8 @@ components:
           type: string
         metaDescription:
           type: string
+        presentation:
+          $ref: "#/components/schemas/SitePresentation"
         refs:
           type: array
           items:

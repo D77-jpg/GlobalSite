@@ -296,6 +296,7 @@ export async function pageData(
   return {
     title: page.title,
     metaDescription: page.metaDescription ?? "",
+    ...(page.presentation ? { presentation: page.presentation } : {}),
     refs: page.refs ?? [],
     blocks: blocks.map(blockDto),
   };
@@ -482,6 +483,7 @@ export async function writePage(
         $set: {
           title: data.title,
           metaDescription: data.metaDescription,
+          presentation: data.presentation ?? null,
           refs: data.refs,
           path: node.path,
           type: node.type,
@@ -512,6 +514,7 @@ export async function writePage(
           productId: node.productId,
           title: data.title,
           metaDescription: data.metaDescription,
+          presentation: data.presentation ?? null,
           refs: data.refs,
           originRunId: runId,
         },

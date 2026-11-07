@@ -1,5 +1,28 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  generatePage: ["用 Agent 重新生成", "Regenerate with Agent"],
+  brandPresentation: ["品牌展示", "Brand presentation"],
+  presentationHint: [
+    "首屏标题和导航名称独立于 SEO 标题；修改后需要重新审核。",
+    "Hero and navigation copy are independent of SEO. Changes require a new review.",
+  ],
+  addPresentation: ["添加品牌展示", "Add brand presentation"],
+  navigationLabel: ["导航名称", "Navigation label"],
+  headline: ["首屏标题", "Hero headline"],
+  summary: ["首屏简介", "Hero introduction"],
+  primaryActionLabel: ["主要按钮文字", "Primary action label"],
+  visualStyle: ["视觉风格", "Visual style"],
+  heroLayout: ["首屏布局", "Hero layout"],
+  designNotes: ["设计说明（仅后台）", "Design notes (private)"],
+  organic: ["自然亲和", "Organic & friendly"],
+  industrial: ["工业专业", "Industrial"],
+  minimal: ["简约克制", "Minimal"],
+  split: ["图文分栏", "Split image & text"],
+  stacked: ["上下布局", "Stacked"],
+  AGENT_SKILLS_UNAVAILABLE: [
+    "设计规则暂时无法加载，请联系管理员后重试。",
+    "Design guidance could not be loaded. Contact your administrator before retrying.",
+  ],
   inquirySettings: ["询盘设置", "Inquiry settings"],
   PUBLICATION_IN_PROGRESS: [
     "正在发布，请等待发布结果核对完成后再编辑。",
@@ -131,8 +154,8 @@ export const siteMessages = {
   notReady: ["尚未满足发布条件", "Not ready for publishing"],
   readiness: ["发布前检查", "Check readiness"],
   publishingHint: [
-    "本阶段完成内容审核；构建与上线将在发布阶段提供。",
-    "This stage reviews content. Building and deployment come in the publishing stage.",
+    "逐页审核后，可前往构建与发布生成预览或上线。",
+    "After reviewing the pages, open Build & publish to create a preview or publish.",
   ],
   seoTitle: ["SEO 标题", "SEO title"],
   metaDescription: ["Meta description", "Meta description"],

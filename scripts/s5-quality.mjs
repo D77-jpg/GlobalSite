@@ -55,17 +55,19 @@ const server = http.createServer((req, res) => {
   const ext = pathname.split(".").at(-1);
   res.setHeader(
     "Content-Type",
-    ext === "css"
-      ? "text/css"
-      : ext === "webp"
-        ? "image/webp"
-        : ext === "json"
-          ? "application/json"
-          : ext === "txt"
-            ? "text/plain"
-            : ext === "xml"
-              ? "application/xml"
-              : "text/html",
+    ext === "ttf"
+      ? "font/ttf"
+      : ext === "css"
+        ? "text/css"
+        : ext === "webp"
+          ? "image/webp"
+          : ext === "json"
+            ? "application/json"
+            : ext === "txt"
+              ? "text/plain"
+              : ext === "xml"
+                ? "application/xml"
+                : "text/html",
   );
   res.end(entry);
 });
@@ -99,6 +101,21 @@ try {
       path: "/",
       type: "home",
       title: "Atlas Works — Industrial Product Sourcing",
+      presentation: {
+        navigationLabel: "Home",
+        headline: "Make room for your next idea",
+        summary:
+          "Explore product information and share your project with our team.",
+        primaryActionLabel: "Explore collection",
+        visualStyle:
+          templateId === "packaging-bags"
+            ? "organic"
+            : templateId === "machinery"
+              ? "industrial"
+              : "minimal",
+        heroLayout: "split",
+        designNotes: "Synthetic quality fixture.",
+      },
       metaDescription:
         "Explore product information, specifications and purchasing support from the Atlas Works team. Discuss your application and project requirements.",
       refs: [],
@@ -207,6 +224,19 @@ try {
       viewport: { width: 1440, height: 1000 },
     });
     await p.goto(url);
+    if ((await p.locator(".desktop-nav a").count()) > 4)
+      throw Error("Overloaded primary navigation");
+    if ((await p.locator("h1").textContent()) !== page.presentation.headline)
+      throw Error("SEO title leaked into hero");
+    for (const width of [375, 768, 1440]) {
+      await p.setViewportSize({ width, height: 1000 });
+      if (
+        !(await p.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ))
+      )
+        throw Error("Responsive overflow at " + width);
+    }
     await p.screenshot({
       path: path.join(reportDir, "s5-" + templateId + "-desktop.png"),
       fullPage: true,

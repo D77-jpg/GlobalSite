@@ -479,6 +479,7 @@ export const SitePage = entity<any>(
     productId: Schema.Types.ObjectId,
     title: String,
     metaDescription: String,
+    presentation: Schema.Types.Mixed,
     refs: Schema.Types.Mixed,
     revision: { type: Number, default: 1 },
     reviewStatus: { type: String, default: "draft" },

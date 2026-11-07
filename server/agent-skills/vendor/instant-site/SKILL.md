@@ -1,0 +1,279 @@
+---
+name: instant-site
+description: "Build, deploy, update, and SEO-optimize static foreign trade independent sites using HTML/CSS/JS, DESIGN.md templates, Cloudflare Pages (Wrangler), and scheduled agent operations. Use for from-zero site generation, static deployment, scheduled content operations, SEO audits, and multi-site independent site operations."
+triggers:
+  - deploy static site
+  - free hosting
+  - cloudflare pages deploy
+  - wrangler deploy
+  - pages deploy
+  - surge deploy
+  - static site SEO
+  - build foreign trade site
+  - independent site operations
+  - scheduled website content
+  - multi-site operations
+  - 上线静态站
+  - 免费部署
+  - Cloudflare Pages 部署
+  - 自动部署静态站
+  - 外贸独立站
+  - 从零建站
+  - 独立站运营
+  - 自动更新网站内容
+  - SEO 审计
+  - 多站点运营
+---
+
+# Instant Site — Agent-Operated Foreign Trade Independent Sites
+
+Instant Site helps an agent build, deploy, update, and SEO-optimize static foreign trade independent sites. The default stack is HTML/CSS/JS, DESIGN.md, Cloudflare Pages (Wrangler), JSON state files, and scheduled agent operations.
+
+## Operating Principles
+
+1. **Static first** — Generate crawlable HTML/CSS/JS. Do not use pure CSR/SPAs for SEO-critical pages.
+2. **Cloudflare Pages first** — Use Cloudflare Pages as the default deployment provider via Wrangler with a user-provided Cloudflare API Token; use Surge.sh as fallback when Cloudflare account/token setup is unavailable or the user explicitly requests the simpler fallback host.
+3. **DESIGN.md required** — Generate or reuse a DESIGN.md before building pages.
+4. **SEO by default** — Every page needs title, description, canonical, Open Graph, Twitter Card, and relevant JSON-LD.
+5. **State in files** — Use `site.config.json`, `.instant-site/state.json`, and related JSON files instead of relying on chat history.
+6. **Review risky publishing** — Default to `review_required` for new commercial content, product claims, pricing, certifications, legal text, and domain changes.
+7. **Multi-site isolation** — When operating multiple sites, read each site's config and state separately; never reuse canonical URLs, sitemap URLs, or domains across sites.
+8. **Design quality matters** — Prevent generic AI-looking sites. Infer design direction before template selection. Avoid default slop patterns. Follow layout discipline. Use real visuals.
+9. **Token authorization must be safe and explicit** — For Cloudflare Pages deployment, guide non-technical users to create a minimal-scope Cloudflare API Token, verify with `CLOUDFLARE_API_TOKEN=<token> npx wrangler whoami`, never store or log the token, and continue only after token auth succeeds. For novice users, explain Cloudflare account and API Token setup in the user's preferred language when possible; default to simple English and avoid country-specific assumptions.
+
+## Read Documents by Task
+
+Before execution, read the appropriate workflow document:
+
+| Task | Read First |
+|------|------------|
+| **From-zero site generation** | `docs/workflows/site-generation.md` → `templates/pages/site-generation-checklist.md` |
+| **Responsive design** | `docs/workflows/responsive-design.md` → CSS framework template |
+| **Image acquisition** | `docs/workflows/image-acquisition.md` → `docs/tool-registry.md` (Image Acquisition section) |
+| **Deployment** | `docs/workflows/deployment.md` → `templates/deployment-checklist.md` |
+| **SEO audit** | `docs/workflows/seo-audit.md` → `docs/seo-operations.md` |
+| **Multi-language / RTL** | `docs/workflows/multilingual-rtl.md` |
+| **Content operations** | `docs/content-lifecycle.md` → `templates/content-plan.example.json` |
+| **Multi-site management** | `docs/multi-site-operations.md` → `templates/sites.registry.example.json` |
+| **Publishing review** | `docs/review-gates.md` |
+| **Buyer context** | `docs/buyer-context.md` → `templates/buyer-context.example.json` |
+| **Tool reference** | `docs/tool-registry.md` |
+| **State files** | `docs/site-state.md` |
+
+## Design Quality Rules
+
+### Design Read Before Template Selection
+
+Before selecting or generating a DESIGN.md, state one line:
+```text
+Reading this as: <page kind> for <audience>, with a <vibe> language, leaning toward <template>.
+```
+
+### Anti-Slop Defaults
+
+Avoid these LLM-signature patterns unless the brief explicitly calls for them:
+- Inter plus slate plus purple gradient as default palette
+- Centered hero sections as default layout
+- Three equal feature cards in a row
+- Fake dashboard or product screenshots built from styled divs
+- Decorative status dots, section-number eyebrows, scroll cues, version labels
+- Plain text wordmarks for invented social-proof logo walls
+- Em-dashes in visible copy
+- Fake-precise metrics without a source
+- Text-only "minimalism" without real visuals
+
+### Layout Discipline
+
+- Hero must fit the initial viewport without scroll
+- Hero subtext max 20 words, max 4 lines
+- Hero stack max 4 text elements
+- Desktop navigation height at or below 80px
+- Every multi-column section must collapse below 768px
+- CTA labels must not wrap on desktop
+
+### Responsive Design Rules
+
+**Required viewport meta** (every page):
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1">
+```
+
+**Breakpoint targets**:
+| Size | Width | Devices |
+|------|-------|---------|
+| Mobile | ≤ 480px | Phones |
+| Tablet | 768px-1024px | Tablets, iPad |
+| Desktop | ≥ 1024px | Laptops, monitors |
+
+**Touch target minimum**: All buttons, links, inputs ≥ 44px height (WCAG 2.5.5)
+
+**Input font size**: 16px minimum to prevent iOS auto-zoom
+
+**Mobile-first strategy**: Start with mobile styles, expand for larger screens
+
+**Key responsive patterns**:
+- Hero: Stack vertically on mobile, two columns on tablet/desktop
+- Grids: 1 column mobile → 2 columns tablet → 3-4 columns desktop
+- Navigation: Horizontal on desktop, hamburger menu on mobile
+- Tables: Stack as cards or horizontal scroll on mobile
+
+**Testing devices**: iPhone SE (375px), iPhone 14 (390px), iPad (768px), Desktop (1280px)
+
+See `docs/workflows/responsive-design.md` for complete CSS framework and patterns.
+
+### Visual Asset Strategy
+
+Every major landing page needs a visual asset plan:
+- Hero visual
+- 1-3 supporting visuals
+- OG image for social sharing
+
+**Priority order**:
+```
+User-provided assets → Generated images → Free stock images → Placeholder (draft only)
+```
+
+**Free stock sources (all commercial-use, no attribution required)**:
+- **Unsplash** — Hero backgrounds, general business photos
+- **Pexels** — Products, industrial settings, machinery
+- **Pixabay** — Fallback, vectors/illustrations
+- **Burst by Shopify** — E-commerce, consumer goods
+
+**Search workflow**:
+1. Use brave-search/web-fetch/scrapling skills to search stock sites
+2. Keywords: `{industry} professional`, `{product} equipment`, `manufacturing plant`
+3. Download to `assets/images/`, integrate with proper alt text
+
+**Rules**:
+- Never ship production pages with placeholder images
+- Never use images from non-commercial sources (Google Images, Pinterest)
+- All images must have descriptive alt text
+- See `docs/workflows/image-acquisition.md` for complete workflow
+
+## Review Gates and Claim Safety
+
+### Human Approval Required
+
+Default to approval before:
+- First launch
+- New product pages and blog articles
+- Brand positioning changes
+- Pricing, lead time, certification, compliance, or legal claims
+- Contact method and custom domain changes
+- Page deletion
+
+### Low-Risk Automation
+
+When `review-policy.json` allows:
+- sitemap updates
+- robots sitemap URL correction
+- lastmod updates
+- minor metadata completion
+- internal links to already approved pages
+- approved draft publishing
+- deployment verification
+- health checks
+- SEO audit report generation
+
+### Claim Safety
+
+Do not invent or exaggerate:
+- factory size or production capacity
+- certifications, patents, or compliance guarantees
+- customer names, case studies, or test results
+- prices, delivery times, or warranty terms
+
+If a claim is useful but unverified, mark it as needing confirmation in `needsConfirmation` array.
+
+## Project Structure
+
+Recommended user site structure:
+```text
+customer-site/
+  site.config.json
+  buyer-context.json
+  content-plan.json
+  seo-profile.json
+  review-policy.json
+  DESIGN.md
+  index.html
+  products/
+    index.html
+    {slug}.html
+  blog/
+    index.html
+    {slug}.html
+  assets/
+    css/styles.css
+    js/main.js
+    images/
+  robots.txt
+  sitemap.xml
+  .instant-site/
+    state.json
+    deployments.json
+    content-calendar.json
+    buyer-context.json
+```
+
+For multi-site workspace:
+```text
+workspace/
+  sites.registry.json
+  sites/
+    site-a/
+    site-b/
+```
+
+## Quick Start
+
+Ask an agent:
+```text
+Build an English B2B foreign trade site for the following brand and products.
+Use the b2b-industrial DESIGN.md template.
+Generate site.config.json, DESIGN.md, index.html, product pages, about.html,
+contact.html, robots.txt, and sitemap.xml.
+Prepare a publish review before deployment.
+```
+
+Minimum inputs:
+- Brand name and tagline
+- Target markets and languages
+- Product list, features, applications, and target keywords
+- Certifications or proof points (verified)
+- Contact email and primary CTA
+- Cloudflare Pages project name or preferred Pages subdomain
+- Optional custom domain
+- Optional Surge fallback domain
+- Design template selection
+- Publishing policy: `review_required`, `hybrid`, or `auto_publish`
+
+## Best For
+
+- B2B foreign trade websites (machinery, tools, hardware, OEM/ODM)
+- B2C consumer goods and lifestyle brands targeting overseas markets
+- Product catalog and single-product landing pages
+- Small brand independent sites
+- Static marketing sites with repeatable content and SEO operations
+
+## Limitations
+
+- **Cloudflare Pages supports `_headers` and `_redirects`** — Use for CSP, HSTS, custom caching, and redirect rules
+- **Surge.sh fallback cannot add custom headers** — Use Cloudflare Pages when security headers required
+- **Custom domains may require dashboard/DNS confirmation** — Wrangler deploys to `.pages.dev` automatically; custom domain activation may need Cloudflare dashboard
+- **External SEO data requires authorization** — Do not claim rankings without Search Console access
+- **curl cannot detect JS-injected schema** — Use browser tools for JSON-LD verification
+- **FormSubmit first submission needs confirmation** — Remind user to check email
+- **Static sites use FormSubmit for forms** — No server-side processing
+
+## Current SEO Guidance
+
+- Use INP, not deprecated FID
+- Do not use deprecated HowTo schema
+- FAQPage helpful for clarity but doesn't guarantee rich results
+- Keep SEO-critical content in static HTML
+- Core Web Vitals: LCP < 2.5s, INP < 200ms, CLS < 0.1
+
+## License
+
+MIT

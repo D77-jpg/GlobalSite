@@ -188,6 +188,15 @@ export function validatePage(
       add("UNSOURCED_CAPACITY", field, key, "capacity");
   }
   if (context.brandName) text(context.brandName, data.refs, "site.name", null);
+  if (data.presentation) {
+    for (const field of [
+      "navigationLabel",
+      "headline",
+      "summary",
+      "primaryActionLabel",
+    ] as const)
+      text(data.presentation[field], data.refs, "presentation." + field, null);
+  }
   text(data.title, data.refs, "title", null);
   text(data.metaDescription, data.refs, "metaDescription", null);
   for (const b of data.blocks) {
@@ -321,7 +330,7 @@ export function renderPage(data: PageInput, site: any) {
     "<strong>" +
     esc(site.name) +
     "</strong></header><main><h1>" +
-    esc(data.title) +
+    esc(data.presentation?.headline ?? data.title) +
     "</h1>" +
     data.blocks
       .map(

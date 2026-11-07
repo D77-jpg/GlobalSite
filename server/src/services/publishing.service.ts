@@ -391,6 +391,17 @@ async function snapshot(
       inquiry: inquiryData.inquiry,
       site: siteDto(r.site),
       pages: r.pages.map((p) => ({ ...p })),
+      products: (
+        await Product.find({
+          _id: { $in: r.site.productIds },
+          status: { $ne: "archived" },
+        }).session(session)
+      ).map((p) => ({
+        id: String(p._id),
+        name: p.name,
+        category: p.category ?? null,
+        assetIds: (p.assetIds ?? []).map(String),
+      })),
       facts: [
         ...facts.map((f) => ({
           id: String(f._id),

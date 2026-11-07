@@ -758,7 +758,10 @@ test("provider uses configured model and meters output; no provider is a paused/
   mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
   let model = "";
   mock.method(globalThis, "fetch", async (_url: any, options: any) => {
-    model = JSON.parse(options.body).model;
+    const request = JSON.parse(options.body);
+    model = request.model;
+    // Content needs room for both reasoning and the complete page JSON.
+    assert.equal(request.max_tokens, 16384);
     return new Response(
       JSON.stringify({
         usage: { total_tokens: 45 },
@@ -767,7 +770,12 @@ test("provider uses configured model and meters output; no provider is a paused/
     );
   });
   const result = await tenant(() =>
-    callSiteAgent("Return JSON", {}, randomUUID(), async () => {}),
+    callSiteAgent(
+      "Return JSON",
+      { task: "content" },
+      randomUUID(),
+      async () => {},
+    ),
   );
   assert.equal(result.tokens, 45);
   assert.equal(model, "configured-fixture-model");
@@ -1138,7 +1146,12 @@ test("real provider retries metered invalid output with fresh operations and com
     return new Response(
       JSON.stringify({
         usage: { total_tokens: 23 },
-        choices: [{ message: { content: outputs[calls++] } }],
+        choices: [
+          {
+            finish_reason: calls === 0 ? "length" : "stop",
+            message: { content: outputs[calls++] },
+          },
+        ],
       }),
     );
   });
@@ -1219,4 +1232,83 @@ test("agent prompt sends output constraints and relevant evidence without admini
   assert.equal(input.facts[0].reviewedBy, undefined);
   assert.equal(input.facts[0].id, "b".repeat(24));
   assert(!JSON.stringify(input).includes("private-"));
+});
+
+test("brand presentation round-trips through HTTP, blocks unsupported claims and invalidates approval", async () => {
+  const site = await planSite(await newSite());
+  const created = (
+    await a.client.request("POST", "/sites/" + site.id + "/pages", {
+      nodeKey: "home",
+    })
+  ).body.data;
+  const presentation = {
+    navigationLabel: "Home",
+    headline: "Everyday cat essentials",
+    summary: "Explore the collection for a home shared with cats.",
+    primaryActionLabel: "Explore collection",
+    visualStyle: "organic",
+    heroLayout: "split",
+    designNotes: "A welcoming visual direction.",
+  };
+  let p = (
+    await a.client.request("PATCH", "/pages/" + created.id, {
+      revision: created.revision,
+      data: { ...draft(), presentation },
+    })
+  ).body.data;
+  assert.deepEqual(p.presentation, presentation);
+  assert.equal((await b.client.request("GET", "/pages/" + p.id)).status, 404);
+  assert.equal(
+    (
+      await a.client.request("POST", "/pages/" + p.id + "/approve", {
+        revision: p.revision,
+      })
+    ).status,
+    200,
+  );
+  p = (await a.client.request("GET", "/pages/" + p.id)).body.data;
+  p = (
+    await a.client.request("PATCH", "/pages/" + p.id, {
+      revision: p.revision,
+      data: {
+        ...draft(),
+        presentation: { ...presentation, headline: "Made for 500 customers" },
+      },
+    })
+  ).body.data;
+  assert.equal(p.status, "blocked");
+  assert(
+    p.issues.some(
+      (i: any) =>
+        i.code === "UNSOURCED_NUMBER" && i.field === "presentation.headline",
+    ),
+  );
+  assert.equal(
+    (
+      await a.client.request("POST", "/pages/" + p.id + "/approve", {
+        revision: p.revision,
+      })
+    ).status,
+    409,
+  );
+  const bad = await a.client.request("PATCH", "/pages/" + p.id, {
+    revision: p.revision,
+    data: {
+      ...draft(),
+      presentation: { ...presentation, visualStyle: "url(javascript:fixture)" },
+    },
+  });
+  assert.equal(bad.status, 400);
+});
+test("queued agents freeze reviewed design skills and new content uses brand presentation guidance", async () => {
+  const site = await planSite(await newSite());
+  const queued = await queue(site);
+  const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
+  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v1");
+  const { unitPrompt } = await import("../src/services/site-agents.service");
+  const prompt = unitPrompt(run, run!.steps[0]);
+  assert(prompt.system.includes(run!.inputSnapshot.skillProfile.guidance));
+  assert(prompt.system.includes("Do not put pipe-separated SEO titles"));
+  assert("presentation" in (prompt.input as any).schema.page);
+  assert.equal((prompt.input as any).task, "content");
 });

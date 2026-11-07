@@ -4,7 +4,12 @@ import { decrypt } from "./credential-crypto";
 import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
-export type AgentResult = { output: any; tokens: number; errorCode?: string };
+export type AgentResult = {
+  output: any;
+  tokens: number;
+  errorCode?: string;
+  invalidReason?: "truncated" | "non_json";
+};
 export async function callSiteAgent(
   system: string,
   input: unknown,
@@ -28,7 +33,19 @@ export async function callSiteAgent(
         text,
     },
   ];
-  const budget = Buffer.byteLength(JSON.stringify(messages)) + 32768;
+  const task = (input as { task?: string })?.task;
+  // Reasoning models share this cap with their complete structured page output.
+  const maxTokens =
+    task === "rewrite"
+      ? 2048
+      : task === "content"
+        ? 16384
+        : task === "research"
+          ? 6144
+          : 8192;
+  // UTF-8 bytes bound message tokens; max_tokens already counts output tokens,
+  // including reasoning. Add envelope headroom instead of multiplying tokens by bytes.
+  const budget = Buffer.byteLength(JSON.stringify(messages)) + maxTokens + 1024;
   ensure(
     await reserve("ai_tokens", budget, operationId),
     409,
@@ -50,7 +67,7 @@ export async function callSiteAgent(
         },
         body: JSON.stringify({
           model: provider.modelName,
-          max_tokens: 8192,
+          max_tokens: maxTokens,
           response_format: { type: "json_object" },
           messages,
         }),
@@ -94,13 +111,26 @@ export async function callSiteAgent(
       "AI_USAGE_UNKNOWN",
     );
     let output: any, errorCode: string | undefined;
+    let invalidReason: AgentResult["invalidReason"];
     try {
-      output = JSON.parse(body.choices?.[0]?.message?.content ?? "");
+      const choice = body.choices?.[0];
+      if (choice?.finish_reason === "length") throw new Error("TRUNCATED");
+      const content = String(choice?.message?.content ?? "").trim();
+      const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(content);
+      output = JSON.parse(fenced ? fenced[1] : content);
     } catch {
       output = null;
       errorCode = "AI_OUTPUT_INVALID";
+      invalidReason =
+        body.choices?.[0]?.finish_reason === "length"
+          ? "truncated"
+          : "non_json";
     }
-    const result = { output, tokens, ...(errorCode ? { errorCode } : {}) };
+    const result = {
+      output,
+      tokens,
+      ...(errorCode ? { errorCode, invalidReason } : {}),
+    };
     await save(result);
     await settle("ai_tokens", operationId, tokens);
     known = true;

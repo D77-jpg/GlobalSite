@@ -16,6 +16,7 @@ COPY --from=build /app/server/package.json ./server/package.json
 COPY --from=build /app/server/node_modules ./server/node_modules
 COPY --from=build /app/server/dist ./server/dist
 COPY server/builder ./server/builder
+COPY server/agent-skills ./server/agent-skills
 COPY --from=build /app/web/dist ./web/dist
 RUN mkdir -p /app/storage && chown node:node /app/storage
 USER node

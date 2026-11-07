@@ -14,13 +14,19 @@ export const e = (v: unknown) =>
 export type Snapshot = {
   site: any;
   pages: any[];
+  products?: Array<{
+    id: string;
+    name: string;
+    category: string | null;
+    assetIds: string[];
+  }>;
   facts: any[];
   settings: any;
   assets: Record<string, { path: string; width: number; height: number }>;
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "s5.1";
+export const templateVersion = "brand-site-v1";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
@@ -166,34 +172,174 @@ export function renderStaticPage(s: Snapshot, p: any) {
             new URL(s.assets[b.assetId].path, s.settings.canonicalBaseUrl).href,
         ),
     });
-  const firstImage = p.blocks.find((b: any) => b.type === "image"),
-    intro = p.blocks.find((b: any) => b.type === "text");
-  const nav = s.pages
-    .slice(0, 9)
-    .map((v) => '<a href="' + e(v.path) + '">' + e(v.title) + "</a>")
+  const firstImage = p.blocks.find(
+      (b: any) => b.type === "image" && s.assets[b.assetId],
+    ),
+    home = s.pages.find((v) => v.path === "/"),
+    presentation = p.presentation ?? {},
+    style =
+      presentation.visualStyle ??
+      home?.presentation?.visualStyle ??
+      (s.site.templateId === "packaging-bags"
+        ? "organic"
+        : s.site.templateId === "machinery"
+          ? "industrial"
+          : "minimal"),
+    layout = presentation.heroLayout ?? (firstImage ? "split" : "stacked");
+  const cleanTitle = (v: any) => String(v.title).split(/[|—–]/)[0].trim();
+  const label = (v: any) =>
+    v.presentation?.navigationLabel ??
+    (
+      {
+        category: "Collection",
+        about: "Our story",
+        faq: "FAQs",
+        contact: "Contact",
+        factory: "Our process",
+        certifications: "Documents",
+      } as Record<string, string>
+    )[v.type] ??
+    cleanTitle(v);
+  const navPages = ["category", "about", "faq", "contact"]
+    .map((type) => s.pages.find((v) => v.type === type))
+    .filter(Boolean);
+  const nav = navPages
+    .map(
+      (v) =>
+        '<a href="' +
+        e(v.path) +
+        '"' +
+        (v.path === p.path ? ' aria-current="page"' : "") +
+        ">" +
+        e(label(v)) +
+        "</a>",
+    )
     .join("");
   const products = s.pages.filter((v) => v.type === "product");
+  const catalog = s.pages.find((v) => v.type === "category");
+  const collectionHref =
+    p.path === "/" && products.length ? "#collection" : (catalog?.path ?? "/");
+  const about = s.pages.find((v) => v.type === "about");
   const grid =
-    p.path === "/" && products.length
-      ? '<section class="section"><h2>Explore products</h2><div class="grid">' +
+    ["/", catalog?.path].includes(p.path) && products.length
+      ? '<section class="collection section" id="collection"><div class="section-heading"><div><p class="section-kicker">The collection</p><h2>Explore the everyday essentials</h2></div>' +
+        (catalog && p.path !== catalog.path
+          ? '<a class="text-link" href="' +
+            e(catalog.path) +
+            '">View collection</a>'
+          : "") +
+        '</div><div class="product-grid">' +
         products
           .map((v) => {
-            const b = v.blocks.find((b: any) => b.type === "image");
+            const product = s.products?.find(
+              (product) => product.id === v.productId,
+            );
+            const assetId = product?.assetIds
+              .filter((id) => s.assets[id])
+              .at(-1);
+            const b = v.blocks.find(
+              (b: any) => b.type === "image" && s.assets[b.assetId],
+            );
+            const visual = assetId
+              ? image(s, assetId, cleanTitle(v) + " collection image")
+              : b
+                ? image(s, b.assetId, b.alt)
+                : "";
             return (
-              '<article class="card">' +
-              (b ? image(s, b.assetId, b.alt) : "") +
-              '<h3><a href="' +
+              '<article class="product-card">' +
+              (visual
+                ? '<a class="product-visual" href="' +
+                  e(v.path) +
+                  '" tabindex="-1" aria-hidden="true">' +
+                  visual +
+                  "</a>"
+                : "") +
+              '<div class="product-copy"><h3><a href="' +
               e(v.path) +
               '">' +
-              e(v.title) +
-              "</a></h3><p>" +
-              e(v.metaDescription) +
-              "</p></article>"
+              e(v.presentation?.navigationLabel ?? cleanTitle(v)) +
+              "</a></h3>" +
+              (v.presentation?.summary
+                ? "<p>" + e(v.presentation.summary) + "</p>"
+                : "") +
+              '<a class="text-link" href="' +
+              e(v.path) +
+              '">Explore product<span aria-hidden="true"> ↗</span></a></div></article>'
             );
           })
           .join("") +
         "</div></section>"
       : "";
+  const pending = (b: any) =>
+    /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
+      b.body?.trim() ?? "",
+    ) &&
+    !b.faq?.length &&
+    (!b.table || !b.table.rows?.length);
+  const pendingBlocks = p.blocks.filter(pending);
+  const detailRequest = pendingBlocks.length
+    ? '<section class="section information-request"><details><summary>Product information on request</summary><p>Contact our team for confirmed product details before placing an order.</p><ul>' +
+      pendingBlocks
+        .map(
+          (b: any) =>
+            '<li id="block-' +
+            e(b.key) +
+            '">' +
+            e(b.heading || "Product details") +
+            "</li>",
+        )
+        .join("") +
+      "</ul></details></section>"
+    : "";
+  const brand =
+    '<a class="brand" href="/">' +
+    (s.site.logoId
+      ? image(s, s.site.logoId, s.site.name + " logo")
+      : '<span class="brand-mark" aria-hidden="true">' +
+        e(s.site.name.slice(0, 1)) +
+        "</span>") +
+    "<span>" +
+    e(s.site.name) +
+    "</span></a>";
+  const heading = presentation.headline ?? cleanTitle(p);
+  const lead = presentation.summary ?? p.metaDescription;
+  const hero =
+    '<section class="hero hero-' +
+    e(layout) +
+    (firstImage ? " has-visual" : "") +
+    '"><div class="hero-copy"><h1>' +
+    e(heading) +
+    '</h1><p class="hero-lead">' +
+    e(lead) +
+    '</p><div class="hero-actions"><a class="cta" href="' +
+    e(
+      p.type === "home" || p.type === "category" ? collectionHref : "#inquiry",
+    ) +
+    '">' +
+    e(
+      presentation.primaryActionLabel ??
+        (p.type === "home" || p.type === "category"
+          ? "Explore collection"
+          : "Request details"),
+    ) +
+    "</a>" +
+    (p.type === "home" && about
+      ? '<a class="secondary-link" href="' + e(about.path) + '">Our story</a>'
+      : "") +
+    "</div></div>" +
+    (firstImage
+      ? '<figure class="hero-visual">' +
+        image(s, firstImage.assetId, firstImage.alt, true) +
+        "</figure>"
+      : "") +
+    "</section>";
+  const brandColor = /^#[0-9a-f]{6}$/i.test(s.site.brandColor)
+    ? s.site.brandColor
+    : "#49694c";
+  const ogImage = firstImage
+    ? new URL(s.assets[firstImage.assetId].path, s.settings.canonicalBaseUrl)
+        .href
+    : null;
   return (
     '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' +
     e(p.title) +
@@ -201,43 +347,58 @@ export function renderStaticPage(s: Snapshot, p: any) {
     e(p.metaDescription) +
     '"><link rel="canonical" href="' +
     e(canonical) +
-    '"><link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
-    e(s.site.brandColor) +
+    '"><meta property="og:type" content="website"><meta property="og:title" content="' +
+    e(p.title) +
+    '"><meta property="og:description" content="' +
+    e(p.metaDescription) +
+    '"><meta property="og:url" content="' +
+    e(canonical) +
+    '"><meta name="twitter:card" content="summary_large_image">' +
+    (ogImage
+      ? '<meta property="og:image" content="' +
+        e(ogImage) +
+        '"><meta name="twitter:image" content="' +
+        e(ogImage) +
+        '">'
+      : "") +
+    '<link rel="preload" href="/assets/fonts/varela-round.ttf" as="font" type="font/ttf" crossorigin><link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
+    brandColor +
     '}</style><script type="application/ld+json">' +
     json(schema) +
     '</script></head><body class="theme-' +
     e(s.site.templateId) +
-    '"><a class="skip" href="#main">Skip to content</a><header><a class="brand" href="/">' +
-    (s.site.logoId ? image(s, s.site.logoId, s.site.name + " logo") : "") +
-    e(s.site.name) +
-    '</a><nav aria-label="Main navigation">' +
+    " style-" +
+    e(style) +
+    '"><a class="skip" href="#main">Skip to content</a><header class="site-header"><div class="header-inner">' +
+    brand +
+    '<nav class="desktop-nav" aria-label="Main navigation">' +
     nav +
-    '</nav></header><main id="main"><section class="hero"><span class="eyebrow">' +
-    e(p.type === "product" ? "Product overview" : "Products & capabilities") +
-    "</span><h1>" +
-    e(p.title) +
-    "</h1><p>" +
-    e(intro?.body || p.metaDescription) +
-    '</p><a class="cta" href="#inquiry">Discuss your requirements</a>' +
-    (firstImage ? image(s, firstImage.assetId, firstImage.alt, true) : "") +
-    "</section>" +
+    '</nav><a class="header-action" href="' +
+    e(collectionHref) +
+    '">View collection</a><details class="mobile-navigation"><summary>Menu<span aria-hidden="true"> ☰</span></summary><nav aria-label="Mobile navigation">' +
+    nav +
+    '</nav></details></div></header><main id="main">' +
+    hero +
     grid +
     p.blocks
-      .filter((b: any) => b !== intro && b !== firstImage)
+      .filter((b: any) => b !== firstImage && !pending(b))
       .map((b: any) => section(s, b))
       .join("") +
+    detailRequest +
     renderInquiry(s, p) +
-    "</main><footer><span>" +
+    '</main><footer><div class="footer-brand"><strong>' +
     e(s.site.name) +
-    "</span><span>" +
+    "</strong><p>" +
     e(
       [fact(s, "address"), fact(s, "email"), fact(s, "phone")]
         .filter(Boolean)
         .join(" · "),
     ) +
-    '</span><a href="' +
+    '</p></div><nav aria-label="Footer navigation">' +
+    nav +
+    '<a href="' +
     e(privacyPath(s)) +
-    '">Privacy Policy</a><button type="button" data-cookie-settings>Privacy choices</button><a href="#main">Back to top</a></footer>' +
+    '">Privacy Policy</a><button type="button" data-cookie-settings>Privacy choices</button></nav><a class="back-top" href="#main">Back to top</a></footer>' +
     renderConsent(s) +
     "</body></html>"
   );
