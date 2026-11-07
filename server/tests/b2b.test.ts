@@ -297,3 +297,27 @@ test("AI cannot invent a public contact email or launder it through unrelated fa
     ).some((i) => i.code === "UNSOURCED_CONTACT"),
   );
 });
+
+test("single-category ranges expose approved product destinations in navigation and category cards", () => {
+  const s = fixture();
+  const html = renderStaticPage(s, s.pages[0]);
+  const navigation =
+    html.match(/<nav class="desktop-nav"[^>]*>(.*?)<\/nav>/s)?.[1] ?? "";
+  const card = {
+    ...item,
+    href: s.pages[2].path,
+    title: "Resting spaces",
+    body: "Explore the resting range.",
+  };
+  const cards = renderB2BBlock(s, s.pages[0], {
+    ...b("category-grid"),
+    items: [card],
+  });
+  assert.ok(cards?.includes(card.title));
+  assert.ok(cards?.includes(card.body));
+  for (const product of s.pages.filter((p) => p.type === "product")) {
+    assert.ok(navigation.includes(product.path));
+    assert.ok(cards?.includes(product.path));
+  }
+  assert.match(html, /class="quote-bar" hidden/);
+});

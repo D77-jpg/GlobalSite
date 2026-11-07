@@ -5,7 +5,12 @@ import {
   InquirySettingsPage,
 } from "./inquiries";
 import { PublishPage } from "./publishing";
-import { SitesPage, SiteWorkspace, PageReview } from "./sites";
+import {
+  LatestSitePreview,
+  SitesPage,
+  SiteWorkspace,
+  PageReview,
+} from "./sites";
 import {
   ProductsPage,
   ProductEditor,
@@ -1318,6 +1323,10 @@ function Workspace() {
               <Route
                 path="sites/:id"
                 element={<SiteWorkspace locale={locale} role={me.role} />}
+              />
+              <Route
+                path="sites/:id/preview"
+                element={<LatestSitePreview locale={locale} />}
               />
               <Route
                 path="sites/:id/publishing"

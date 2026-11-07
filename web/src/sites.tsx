@@ -130,6 +130,32 @@ const split = (s: string) =>
     .split(/[,，]/)
     .map((x) => x.trim())
     .filter(Boolean);
+export function LatestSitePreview({ locale }: { locale: Locale }) {
+  const { id } = useParams();
+  const t = st(locale);
+  const versions = useLoad("/sites/" + id + "/versions");
+  const ready = versions.data?.find((v: Row) => v.status === "ready");
+  useEffect(() => {
+    if (ready)
+      window.location.replace(
+        "/api/v1/site-versions/" + ready.id + "/preview/",
+      );
+  }, [ready]);
+  return (
+    <Frame title={t("previewSite")} t={t} error={versions.error}>
+      {versions.data && !ready ? (
+        <>
+          <p>{t("previewNeedsBuild")}</p>
+          <Link className="button primary" to={"/sites/" + id + "/publishing"}>
+            {t("buildPublish")}
+          </Link>
+        </>
+      ) : (
+        !versions.error && <p>{t("loading")}</p>
+      )}
+    </Frame>
+  );
+}
 export function SitesPage({ locale, role }: Props) {
   const t = st(locale),
     [cursor, setCursor] = useState(""),
@@ -186,6 +212,12 @@ export function SitesPage({ locale, role }: Props) {
                   t={t}
                 />
               </div>
+              <Link
+                className="button primary"
+                to={"/sites/" + s.id + "/preview"}
+              >
+                {t("previewSite")}
+              </Link>{" "}
               <Link className="button secondary" to={"/sites/" + s.id}>
                 {t("editPage")}
               </Link>
@@ -395,7 +427,13 @@ export function SiteWorkspace({ locale, role }: Props) {
           <Link className="button secondary" to="/sites">
             {t("back")}
           </Link>
-          <Link className="button primary" to={"/sites/" + id + "/publishing"}>
+          <Link className="button primary" to={"/sites/" + id + "/preview"}>
+            {t("previewSite")}
+          </Link>
+          <Link
+            className="button secondary"
+            to={"/sites/" + id + "/publishing"}
+          >
             {t("buildPublish")}
           </Link>
           <Link

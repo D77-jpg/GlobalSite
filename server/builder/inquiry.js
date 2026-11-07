@@ -87,6 +87,9 @@
     } catch {
       /* usable in memory */
     }
+    const bar = document.querySelector(".quote-bar");
+    if (bar)
+      bar.hidden = !quote.length && !bar.querySelector("[data-quote-add]");
     document
       .querySelectorAll("[data-quote-count]")
       .forEach((n) => (n.textContent = String(quote.length)));
@@ -156,13 +159,11 @@
     n.addEventListener("click", () => {
       const details = document.querySelector(".inquiry-preview");
       if (details) details.open = true;
-      document
-        .querySelector("#inquiry")
-        ?.scrollIntoView({
-          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-            ? "auto"
-            : "smooth",
-        });
+      document.querySelector("#inquiry")?.scrollIntoView({
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
       form?.querySelector('input[name="name"]')?.focus({ preventScroll: true });
     }),
   );
