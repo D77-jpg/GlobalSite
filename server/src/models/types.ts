@@ -75,6 +75,7 @@ export type BucketRow = TenantBase & {
   reserved: number;
 };
 export type AssetRow = TenantBase & {
+  generatedConcept?: boolean;
   key: string;
   fileName?: string;
   kind?: string;

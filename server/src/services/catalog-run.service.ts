@@ -57,6 +57,11 @@ export async function queueExtraction(
           }).session(session)
         : await Asset.findOne({ _id: id, status: "ready" }).session(session);
     ensure(source, 404, "NOT_FOUND");
+    ensure(
+      !("generatedConcept" in source && source.generatedConcept),
+      400,
+      "CONCEPT_NOT_EVIDENCE",
+    );
     [run] = await AgentRun.create(
       [
         {

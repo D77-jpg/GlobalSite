@@ -4,6 +4,14 @@ import {
   type Response,
   type NextFunction,
 } from "express";
+import {
+  imageModel,
+  configureImages,
+  generateImage,
+  imageBrief,
+  imageStatus,
+} from "../services/image-studio.service";
+import { z } from "zod";
 import multer from "multer";
 import {
   Product,
@@ -213,6 +221,33 @@ router.post(
       req.body.kind,
     );
     ok(res, { id: String(a._id), bytes: a.bytes, mime: a.mime }, 201);
+  }),
+);
+router.get(
+  "/assets/image-provider",
+  edit,
+  wrap(async (_req, res) => ok(res, await imageStatus())),
+);
+router.put(
+  "/assets/image-provider",
+  admin,
+  wrap(async (req, res) => {
+    const { apiKey, model } = z
+      .object({
+        apiKey: z.string().trim().max(512),
+        model: imageModel.optional(),
+      })
+      .strict()
+      .parse(req.body);
+    ok(res, await configureImages(apiKey, req.auth!.userId, model));
+  }),
+);
+router.post(
+  "/assets/generate-image",
+  edit,
+  wrap(async (req, res) => {
+    const key = z.string().uuid().parse(req.headers["idempotency-key"]);
+    ok(res, await generateImage(imageBrief.parse(req.body), key), 201);
   }),
 );
 router.get(

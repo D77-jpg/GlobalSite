@@ -164,6 +164,7 @@ export async function validateSource(
       { session },
     );
     ensure(a, 404, "NOT_FOUND");
+    ensure(!a.generatedConcept, 400, "CONCEPT_NOT_EVIDENCE");
     ensure(!source.sha256 || source.sha256 === a.sha256, 409, "SOURCE_CHANGED");
     source.sha256 = a.sha256;
   } else if (source.kind === "product") {

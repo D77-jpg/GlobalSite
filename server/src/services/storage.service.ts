@@ -44,6 +44,7 @@ export async function store(
   fileName = "asset",
   kind?: string,
   crmImportKey?: string,
+  generatedConcept = false,
 ) {
   ensure(
     body.length > 0 && body.length <= 10 * 1024 * 1024,
@@ -123,6 +124,7 @@ export async function store(
     }
     asset = await Asset.create({
       key: original.key,
+      ...(generatedConcept ? { generatedConcept: true } : {}),
       bytes: original.body.length,
       ...(crmImportKey ? { crmImportKey } : {}),
       totalBytes: total,
