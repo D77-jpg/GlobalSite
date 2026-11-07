@@ -6,6 +6,12 @@ import {
 } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 test.setTimeout(180000);
+// Every case exercises several public auth flows. Start a fresh shared rate
+// window instead of relaxing production limits or clearing database buckets.
+test.beforeEach(async ({ page }) => {
+  const remaining = 60000 - (Date.now() % 60000) + 250;
+  await page.waitForTimeout(remaining);
+});
 const origin = process.env.E2E_BASE_URL ?? "http://localhost:5080";
 // Respect shared authentication throttling without changing application limits.
 async function authClick(page: Page, name: string) {

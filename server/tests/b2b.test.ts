@@ -231,7 +231,7 @@ test("workflow wording is allowed while hard quantities and unknown site paths s
     blocks: [
       {
         ...b("features"),
-        body: "Keep product questions in one place.",
+        body: "Keep product questions in one place. Send one multi-product quote request. One brief for the shortlist.",
         items: [{ ...item, href: "/missing-product" }],
       },
     ],
