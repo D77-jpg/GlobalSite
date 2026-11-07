@@ -1,0 +1,34 @@
+{
+  "version": "brand-site-v1",
+  "sources": [
+    {
+      "id": "copywriting",
+      "repository": "coreyhaines31/marketingskills",
+      "commit": "88c79f6528a9347420e57ceb1fff9a60de651768",
+      "path": "skills/copywriting",
+      "license": "MIT"
+    },
+    {
+      "id": "cro",
+      "repository": "coreyhaines31/marketingskills",
+      "commit": "88c79f6528a9347420e57ceb1fff9a60de651768",
+      "path": "skills/cro",
+      "license": "MIT"
+    },
+    {
+      "id": "frontend-design",
+      "repository": "anthropics/skills",
+      "commit": "ca45fc496a3436251f191354091d557da31c15b5",
+      "path": "skills/frontend-design",
+      "license": "Apache-2.0"
+    },
+    {
+      "id": "instant-site",
+      "repository": "haoyiyin/instant-site",
+      "commit": "e4700a7b171a112e2f81ac89eaa3acfc448d0a8e",
+      "path": ".",
+      "license": "MIT"
+    }
+  ],
+  "snapshotNote": "Reference Markdown and licenses only; line endings and trailing whitespace normalized. Runtime uses the reviewed brand-site.md adaptation."
+}

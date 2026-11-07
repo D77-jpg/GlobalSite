@@ -88,6 +88,7 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
     const images = new Set<string>(
       [
         snapshot.site.logoId,
+        ...(snapshot.products ?? []).flatMap((p) => p.assetIds.slice(0, 2)),
         ...snapshot.pages.flatMap((p) =>
           p.blocks
             .filter((b: any) => b.type === "image")
@@ -138,6 +139,11 @@ export async function buildStatic(snapshot: Snapshot, readImage = readAsset) {
       '---\nimport fs from "node:fs";\nexport function getStaticPaths(){return JSON.parse(fs.readFileSync(' +
         JSON.stringify(path.join(root, "data.json")) +
         ',"utf8")).map(p=>({params:{slug:p.slug},props:{html:p.html}}));}\nconst {html}=Astro.props;\n---\n<Fragment set:html={html} />',
+    );
+    await fs.cp(
+      path.join(builder, "fonts"),
+      path.join(root, "public/assets/fonts"),
+      { recursive: true },
     );
     await fs.copyFile(
       path.join(builder, "site.css"),

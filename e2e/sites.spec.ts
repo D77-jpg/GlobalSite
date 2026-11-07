@@ -69,6 +69,19 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   ).toBeVisible();
   await page.getByRole("button", { name: "批准整页", exact: true }).click();
   await expect(page.getByText("已批准", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "添加品牌展示", exact: true }).click();
+  await page
+    .getByLabel("首屏标题", { exact: true })
+    .fill("A clear product collection");
+  await page
+    .getByLabel("首屏简介", { exact: true })
+    .fill("Explore our products and share your requirements.");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await page.reload();
+  await expect(page.getByLabel("首屏标题", { exact: true })).toHaveValue(
+    "A clear product collection",
+  );
+  await expect(page.getByText("待审核", { exact: true }).first()).toBeVisible();
   await page
     .getByLabel("段落正文", { exact: true })
     .fill("Contact our team for application guidance.");

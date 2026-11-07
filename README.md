@@ -12,7 +12,6 @@
 
 Node >=22.23.4。站点工作区 → 构建与发布：审核、体检、Astro静态版本、登录预览、zip；可选Cloudflare Pages发布与原版本回滚。使用说明见 [S5运行与验收](docs/operations/S5-运行与验收.md)，实现与安全边界见 [S5设计](docs/design/S5-构建与发布.md)。无需配置Cloudflare即可构建/预览/导出。询盘需在站点询盘设置审核并启用后重新构建。
 
-
 ## 一键启动（本地开发）
 
 需要 Docker Desktop / Docker Compose。默认不需要 .env：
@@ -97,3 +96,7 @@ npm run test:quality
 ## J1 / S7 可选 CRM 连接
 
 实现、数据/索引、部署、重试/断开、旧站隐私重建及隔离双系统联调见 [S7 连接说明](docs/design/S7-GlobalCRM连接.md)。新增 j1-s7-crm-v1 索引迁移；CRM_ALLOWED_ORIGINS 默认空，未配置时独立建站询盘仍可用。生产使用精确 CRM HTTPS 来源；本地 loopback 仅显式非生产例外。先部署 CRM C3（迁移009），再部署本站；旧站重新审核隐私模板并构建后，新询盘才可投递。
+
+### Agent 品牌设计
+
+Agent 使用随 Worker 发布的审核技能规则生成独立首屏、短导航、设计说明与安全展示数据。页面编辑支持品牌展示设置，也可在内容列表只重新生成某一页。设计规则、外部来源/许可、事实限制与验证方式见 [Agent 品牌设计与技能](docs/design/Agent-品牌设计与技能.md)。旧版本和已有资料无需迁移。

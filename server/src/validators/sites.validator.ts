@@ -107,10 +107,22 @@ export const block = z
     refs: z.array(factRef).max(50),
   })
   .strict();
+export const presentation = z
+  .object({
+    navigationLabel: z.string().trim().min(1).max(24),
+    headline: z.string().trim().min(1).max(100),
+    summary: z.string().trim().min(1).max(240),
+    primaryActionLabel: z.string().trim().min(1).max(32),
+    visualStyle: z.enum(["organic", "industrial", "minimal"]),
+    heroLayout: z.enum(["split", "stacked"]),
+    designNotes: z.string().max(500),
+  })
+  .strict();
 export const pageInput = z
   .object({
     title: z.string().trim().min(1).max(100),
     metaDescription: z.string().max(200),
+    presentation: presentation.optional(),
     refs: z.array(factRef).max(50),
     blocks: z.array(block).min(1).max(20),
   })

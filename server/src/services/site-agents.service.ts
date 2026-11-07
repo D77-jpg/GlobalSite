@@ -1,5 +1,6 @@
 import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
+import { siteSkillProfile } from "./site-skill-profile";
 import { z } from "zod";
 import {
   Site,
@@ -179,6 +180,7 @@ export async function queueAgent(
       .limit(200)
       .session(session);
     const snapshot = {
+      skillProfile: siteSkillProfile(),
       site: siteDto(site),
       products: rows.products.map(productDto),
       facts: rows.facts.map(factDto),
@@ -219,6 +221,7 @@ export async function queueAgent(
               inputHash: sha(
                 JSON.stringify({
                   site: snapshot.site,
+                  skillHash: snapshot.skillProfile.hash,
                   node: u.node ?? null,
                   facts: snapshot.facts,
                   products: snapshot.products,
@@ -425,6 +428,14 @@ function validationFeedback(error: unknown) {
     "questions",
     "id",
     "subjectId",
+    "presentation",
+    "navigationLabel",
+    "headline",
+    "summary",
+    "primaryActionLabel",
+    "visualStyle",
+    "heroLayout",
+    "designNotes",
   ]);
   // Only validator field names and limits, never model values/messages.
   return error.issues.slice(0, 12).map((issue) => ({
@@ -499,6 +510,16 @@ export function unitPrompt(run: any, unit: any) {
               page: {
                 title: unit.node.title,
                 metaDescription: "English page summary",
+                presentation: {
+                  navigationLabel: "Home",
+                  headline: "A clear, subject-specific headline",
+                  summary: "A short, visitor-focused introduction.",
+                  primaryActionLabel: "Explore the collection",
+                  visualStyle: "organic",
+                  heroLayout: "split",
+                  designNotes:
+                    "Audience, visual direction and primary action; no business claims.",
+                },
                 refs: [],
                 blocks: [
                   {
@@ -526,7 +547,7 @@ export function unitPrompt(run: any, unit: any) {
           ". Include all fields from the supplied shape; productId=null on non-product nodes, home parentKey=null; use exact selected product IDs. Keys use lowercase letters, digits and hyphens, beginning with a letter. Paths begin with /; home path=/; no cycles or duplicate keys/paths."
         : run.step === "rewrite"
           ? "Rewrite only the requested block, preserving its key and type and every other page section."
-          : 'Generate one page. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require every field in the supplied shape; allowed block types: text,specs,faq,image. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
+          : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require every field in the supplied shape; allowed block types: text,specs,faq,image. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
   const facts = s.facts.filter(
     (f: any) =>
       !unit.node?.productId ||
@@ -534,6 +555,7 @@ export function unitPrompt(run: any, unit: any) {
       f.subjectId === unit.node.productId,
   );
   const input = {
+    task: run.step,
     site: {
       name: site.name,
       templateId: site.templateId,
@@ -583,6 +605,8 @@ export function unitPrompt(run: any, unit: any) {
   return {
     system:
       basePrompt +
+      "\nReviewed brand/design skills:\n" +
+      (s.skillProfile ?? siteSkillProfile()).guidance +
       "\n" +
       instruction +
       "\nReturn the example shape in schema subject to every constraint in outputSchema; all object fields are required, with no extra fields. If validationFeedback is present, correct those fields. refs items are {factId:string,revision:integer}.",
@@ -868,7 +892,14 @@ export async function processSiteAgent(
           ...(code === "AI_OUTPUT_INVALID"
             ? {
                 pendingResult: undefined,
-                validationFeedback: validationFeedback(error),
+                validationFeedback: unit.pendingResult?.invalidReason
+                  ? [
+                      {
+                        path: "response",
+                        code: unit.pendingResult.invalidReason,
+                      },
+                    ]
+                  : validationFeedback(error),
                 // A received, metered invalid result is a known attempt. The next
                 // attempt needs a new operation ID; unresolved requests retain theirs.
                 ...(unit.pendingResult ? { operationId: undefined } : {}),

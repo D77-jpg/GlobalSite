@@ -82,3 +82,10 @@
 - 本地 AI 仅允许非生产 AI_LOCAL_BASE_URL 指定的精确 /v1，限定 loopback 或 host.docker.internal；固定解析IP连接且禁重定向。不放宽旧站/CRM SSRF，真实密钥仅通过组织设置加密保存。
 
 - 本地模型“测试连接成功”不等于 Agent 成功；研究和内容必须显式下达任务并通过真实 Worker 验证。已知格式失败须计费后用新 operationId 有限重试；未知结果不可清除 operationId 或释放预留。不得以手工生成站点替代 Agent 验收。
+
+## 品牌设计与技能
+
+- 设计规则位于 server/agent-skills/brand-site.md，外部技能的锁定版本与许可见 sources.json 和 vendor/。Worker 仅加载审核后的本地规范并冻结到新 AgentRun，不远程加载/执行技能脚本，不采用第三方部署、表单或凭证流程。
+- 页面 presentation 独立于 SEO；公开 headline/summary/navigationLabel/primaryActionLabel 同样引用 page.refs 执行事实校验，designNotes 仅后台。所有展示变更撤回审批并进入版本冻结；保留旧页面正文和旧版本字节。
+- 静态构建仅使用白名单 visualStyle/heroLayout，不执行模型 HTML/CSS/JS。导航最多四个主要页面，移动菜单可键盘操作，字体随产物本地分发并保留许可。
+- 发布验收须观察实际 Agent 页面，不把全绿性能/SEO指标当成视觉验收。至少检查 375/390、768、1440，记录真实预览截图；缺少商业事实只请求确认，不能用伪造证明填满页面。

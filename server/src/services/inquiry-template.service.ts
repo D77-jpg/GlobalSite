@@ -12,7 +12,15 @@ export function renderInquiry(s: Snapshot, p: any) {
     products = s.pages.filter((v) => v.type === "product" && v.productId),
     endpoint = c.publicId ? c.gatewayUrl + "/sites/" + c.publicId : "";
   return (
-    '<section class="section" id="inquiry"><div class="inquiry"><h2>Tell us what you need</h2><p>Your inquiry is saved before our team is notified. Please do not include sensitive personal information.</p><form data-gs-inquiry data-endpoint="' +
+    '<section class="section" id="inquiry"><div class="inquiry"><h2>Let us talk about your collection</h2><p>' +
+    (c.enabled
+      ? "Tell us which products you have in mind. Our team will follow up on your request."
+      : "Explore the contact form for this site preview. It will accept inquiries once the site owner enables it.") +
+    "</p>" +
+    (!c.enabled
+      ? '<details class="inquiry-preview"><summary>Preview the contact form</summary>'
+      : "") +
+    '<form data-gs-inquiry data-endpoint="' +
     e(endpoint) +
     '" data-policy-version="' +
     e(c.privacyVersion ?? "") +
@@ -37,14 +45,16 @@ export function renderInquiry(s: Snapshot, p: any) {
     e(c.privacyPath ?? "/privacy-policy") +
     '">Privacy Policy</a> and agree to the use of my information to respond to this inquiry.</label><div data-turnstile></div><p><button type="submit">Send inquiry</button></p></fieldset><p data-unavailable ' +
     (c.enabled ? "hidden" : "") +
-    ">Online inquiries are not enabled. Please use the company contact details on this website.</p><noscript><p>Enable JavaScript to submit securely, or contact the company using its published contact details.</p></noscript></form></div></section>"
+    ">Online inquiries are not enabled. Please use the company contact details on this website.</p><noscript><p>Enable JavaScript to submit securely, or contact the company using its published contact details.</p></noscript></form>" +
+    (!c.enabled ? "</details>" : "") +
+    "</div></section>"
   );
 }
 export function renderConsent(s?: Snapshot) {
   return (
     '<section class="gs-cookie" data-cookie-panel data-cookie-site="' +
     e(s?.inquiry?.publicId ?? s?.site?.id ?? s?.site?.name ?? "default") +
-    '" role="dialog" aria-labelledby="gs-cookie-title" hidden><h2 id="gs-cookie-title">Your privacy choices</h2><p>Only necessary functions are active. No optional analytics or advertising is loaded. You can accept or reject optional storage and change your choice at any time.</p><div><button type="button" data-cookie-choice="necessary">Reject optional</button><button type="button" data-cookie-choice="optional">Allow optional</button></div></section>'
+    '" role="dialog" aria-labelledby="gs-cookie-title" hidden><h2 id="gs-cookie-title">Your privacy choices</h2><p>Choose whether to allow optional storage. No analytics or advertising is loaded. You can change this anytime.</p><div><button type="button" data-cookie-choice="necessary">Reject optional</button><button type="button" data-cookie-choice="optional">Allow optional</button></div></section>'
   );
 }
 export function privacyPath(s: Snapshot) {

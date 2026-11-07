@@ -368,11 +368,11 @@ export function SiteWorkspace({ locale, role }: Props) {
     );
   const site = load.data,
     canEdit = role !== "viewer";
-  async function queue(step: string) {
+  async function queue(step: string, pageKey?: string) {
     await api(
       "/sites/" + id + "/agent-runs",
       "POST",
-      { step, consent: true },
+      { step, consent: true, ...(pageKey ? { pageKey } : {}) },
       { "Idempotency-Key": crypto.randomUUID() },
     );
     runs.reload();
@@ -507,6 +507,16 @@ export function SiteWorkspace({ locale, role }: Props) {
                   <h2>{n.title}</h2>
                   <p>{n.path}</p>
                   <Badge status={p?.status ?? "missing"} t={t} />
+                  {canEdit && (
+                    <button
+                      className="secondary"
+                      disabled={!consent || !site.planConfirmed || a.busy}
+                      aria-label={t("generatePage") + " " + n.title}
+                      onClick={() => void a.run(() => queue("content", n.key))}
+                    >
+                      {t("generatePage")}
+                    </button>
+                  )}
                   {p ? (
                     <>
                       <IssueList issues={p.issues} t={t} />
@@ -1195,6 +1205,7 @@ function PageEditor({
   const [data, setData] = useState<Row>({
       title: page.title,
       metaDescription: page.metaDescription,
+      ...(page.presentation ? { presentation: page.presentation } : {}),
       refs: page.refs,
       blocks: page.blocks,
     }),
@@ -1274,6 +1285,125 @@ function PageEditor({
           disabled={!canEdit || locked}
         />
       </fieldset>
+      {data.presentation ? (
+        <fieldset disabled={!canEdit || locked} className="catalog-panel">
+          <h2>{t("brandPresentation")}</h2>
+          <p className="hint">{t("presentationHint")}</p>
+          <div className="catalog-grid">
+            {(
+              [
+                "navigationLabel",
+                "headline",
+                "summary",
+                "primaryActionLabel",
+              ] as const
+            ).map((field) => (
+              <label key={field}>
+                {t(field)}
+                <input
+                  value={data.presentation[field]}
+                  maxLength={
+                    field === "navigationLabel"
+                      ? 24
+                      : field === "summary"
+                        ? 240
+                        : field === "primaryActionLabel"
+                          ? 32
+                          : 100
+                  }
+                  onChange={(e) =>
+                    update({
+                      presentation: {
+                        ...data.presentation,
+                        [field]: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </label>
+            ))}
+            <label>
+              {t("visualStyle")}
+              <select
+                value={data.presentation.visualStyle}
+                onChange={(e) =>
+                  update({
+                    presentation: {
+                      ...data.presentation,
+                      visualStyle: e.target.value,
+                    },
+                  })
+                }
+              >
+                {(["organic", "industrial", "minimal"] as const).map(
+                  (value) => (
+                    <option key={value} value={value}>
+                      {t(value)}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label>
+              {t("heroLayout")}
+              <select
+                value={data.presentation.heroLayout}
+                onChange={(e) =>
+                  update({
+                    presentation: {
+                      ...data.presentation,
+                      heroLayout: e.target.value,
+                    },
+                  })
+                }
+              >
+                <option value="split">{t("split")}</option>
+                <option value="stacked">{t("stacked")}</option>
+              </select>
+            </label>
+            <label>
+              {t("designNotes")}
+              <textarea
+                value={data.presentation.designNotes}
+                maxLength={500}
+                onChange={(e) =>
+                  update({
+                    presentation: {
+                      ...data.presentation,
+                      designNotes: e.target.value,
+                    },
+                  })
+                }
+              />
+            </label>
+          </div>
+        </fieldset>
+      ) : (
+        canEdit && (
+          <button
+            className="button secondary"
+            disabled={locked}
+            onClick={() =>
+              update({
+                presentation: {
+                  navigationLabel:
+                    page.type === "home"
+                      ? "Home"
+                      : page.title.split("|")[0].trim().slice(0, 24),
+                  headline: page.title.split("|")[0].trim().slice(0, 100),
+                  summary: page.metaDescription || "Explore the collection.",
+                  primaryActionLabel: "Explore collection",
+                  visualStyle: "organic",
+                  heroLayout: "split",
+                  designNotes: "",
+                },
+              })
+            }
+          >
+            {t("addPresentation")}
+          </button>
+        )
+      )}
       {data.blocks.map((b: Row, index: number) => (
         <section
           className={
