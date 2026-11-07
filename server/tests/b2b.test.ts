@@ -1,3 +1,4 @@
+import { renderInquiry } from "../src/services/inquiry-template.service";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
@@ -188,6 +189,8 @@ test("B2B blocks escape item text, omit unsupported proof and use approved page 
   assert(page.includes("quote-bar"));
   assert.equal((page.match(/id="collection"/g) ?? []).length, 1);
   assert(catalogueHtml(s).includes("Resting collection"));
+  s.pages[2].title = "Resting collection | SEO-only suffix";
+  assert(!renderInquiry(s, home).includes("SEO-only suffix"));
 });
 test("B2B multi-page build includes an offline catalogue and safe downloadable PDFs", async () => {
   const s = fixture(),

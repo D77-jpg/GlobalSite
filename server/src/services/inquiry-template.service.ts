@@ -36,7 +36,7 @@ export function renderInquiry(s: Snapshot, p: any) {
               '" ' +
               (p.productId === v.productId ? "checked" : "") +
               ">" +
-              e(v.title) +
+              e(v.title.split("|")[0].trim()) +
               "</label>",
           )
           .join("") +
