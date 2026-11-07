@@ -37,6 +37,10 @@ const validator = new HtmlValidate({
     "no-inline-style": "off",
     "heading-level": "off",
     "wcag/h32": "off",
+    "form-dup-name": [
+      "error",
+      { shared: ["radio", "checkbox", "submit", "button", "reset"] },
+    ],
   },
 });
 const results = [];
@@ -55,19 +59,21 @@ const server = http.createServer((req, res) => {
   const ext = pathname.split(".").at(-1);
   res.setHeader(
     "Content-Type",
-    ext === "ttf"
-      ? "font/ttf"
-      : ext === "css"
-        ? "text/css"
-        : ext === "webp"
-          ? "image/webp"
-          : ext === "json"
-            ? "application/json"
-            : ext === "txt"
-              ? "text/plain"
-              : ext === "xml"
-                ? "application/xml"
-                : "text/html",
+    ext === "js"
+      ? "text/javascript"
+      : ext === "ttf"
+        ? "font/ttf"
+        : ext === "css"
+          ? "text/css"
+          : ext === "webp"
+            ? "image/webp"
+            : ext === "json"
+              ? "application/json"
+              : ext === "txt"
+                ? "text/plain"
+                : ext === "xml"
+                  ? "application/xml"
+                  : "text/html",
   );
   res.end(entry);
 });

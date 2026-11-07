@@ -1182,6 +1182,9 @@ footer button {
   min-height: 260px;
   padding-bottom: 30px;
 }
+.b2b-site .gs-cookie {
+  bottom: 104px;
+}
 .quote-bar {
   position: fixed;
   bottom: 14px;

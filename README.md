@@ -108,3 +108,5 @@ Agent 使用随 Worker 发布的审核技能规则生成独立首屏、短导航
 “质量审查”由 Worker 生成 375/768/1440 截图；管理员看图确认后才满足 B2B 商业发布的质量门槛。模型支持图片时可在 AI 设置明确启用，否则报告标为文字或人工审查。AI 未配置仍可进行浏览器检查与人工审核。“按审查改进”会生成新的待审稿，之后需再次审查。
 
 Docker 镜像包含锁定版本的 Chromium。直接用 Node 启动 Worker 时，先执行 `npx playwright install chromium`；可选 `PLAYWRIGHT_BROWSERS_PATH` 指定已安装浏览器目录。缺失浏览器只影响截图任务，不影响核心启动。详细行为与验收见 [S8–S11 设计](docs/design/S8-S11-B2B建站.md)。
+
+本轮命令、真实 Agent 流程、实际产物成绩与完整文件清单见 [S8–S11 验收记录](docs/verification/S8-S11-验收.md)。

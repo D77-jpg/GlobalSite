@@ -128,9 +128,10 @@ export function validatePage(
       .replace(/\bB2[BC]\b/gi, "business")
       .replace(/\bin one place\b/gi, "in a shared place")
       .replace(
-        /\bone\s+(?:(?:multi-product|combined)\s+)?(?:quote\s+)?(?:request|inquiry|brief|shortlist)\b/gi,
+        /\bone\s+(?:(?:multi-product|combined)\s+)?(?:quote\s+)?(?:request|inquiry|brief|shortlist|response|reply)\b/gi,
         "a combined brief",
-      );
+      )
+      .replace(/\b(?:each|any) one\b/gi, "each item");
     for (const match of sanitized.matchAll(
       new RegExp(
         "\\d+(?:[.,]\\d+)*|\\b(?:" + Object.keys(words).join("|") + ")\\b",
