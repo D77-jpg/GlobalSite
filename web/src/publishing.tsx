@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import type { Locale } from "./i18n";
 import "./sites.css";
+import { st } from "./sites-i18n";
 import { publishingMessages } from "./publishing-i18n";
 
 type Row = Record<string, any>;
@@ -109,6 +110,11 @@ export function PublishPage({
           <Link to={base}>{t("back")}</Link>
           <h1>{t("title")}</h1>
           <p>{site?.name}</p>
+          {versions.some((v) => v.status === "ready") && (
+            <Link className="button primary" to={base + "/preview"}>
+              {st(locale)("previewSite")}
+            </Link>
+          )}
         </div>
       </div>
       {error && (

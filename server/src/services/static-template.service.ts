@@ -30,7 +30,7 @@ export type Snapshot = {
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "b2b-site-v2";
+export const templateVersion = "b2b-site-v3";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
@@ -209,13 +209,28 @@ export function renderStaticPage(s: Snapshot, p: any) {
       } as Record<string, string>
     )[v.type] ??
     cleanTitle(v);
-  const navPages = (
-    s.site.buyerProfile
-      ? ["category", "customization", "factory", "resources", "contact"]
-      : ["category", "about", "faq", "contact"]
-  )
+  const categories = s.pages.filter((v) => v.type === "category");
+  const products = s.pages.filter((v) => v.type === "product");
+  const buyingPages = [
+    "customization",
+    "resources",
+    "solution",
+    "factory",
+    "about",
+    "faq",
+  ]
     .map((type) => s.pages.find((v) => v.type === type))
     .filter(Boolean);
+  const contact = s.pages.find((v) => v.type === "contact");
+  const browse =
+    categories.length > 1 ? categories : [...categories, ...products];
+  const navPages = s.site.buyerProfile
+    ? [...browse.slice(0, buyingPages.length ? 3 : 5), ...buyingPages]
+        .slice(0, contact ? 4 : 5)
+        .concat(contact ? [contact] : [])
+    : ["category", "about", "faq", "contact"]
+        .map((type) => s.pages.find((v) => v.type === type))
+        .filter(Boolean);
   const nav = navPages
     .map(
       (v) =>
@@ -228,7 +243,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
         "</a>",
     )
     .join("");
-  const products = s.pages.filter((v) => v.type === "product");
+
   const catalog = s.pages.find((v) => v.type === "category");
   const collectionHref =
     p.path === "/" && products.length ? "#collection" : (catalog?.path ?? "/");

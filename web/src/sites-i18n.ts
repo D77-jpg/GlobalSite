@@ -1,5 +1,10 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  previewSite: ["预览网站", "Preview website"],
+  previewNeedsBuild: [
+    "还没有可预览的版本。请在构建与发布中生成首个版本。",
+    "Build the first version to preview your website.",
+  ],
   structuralReview: [
     "未配置 AI：本报告仅包含浏览器检查，请人工审查内容和截图。",
     "AI is not configured. This report contains browser checks only; inspect content and screenshots manually.",

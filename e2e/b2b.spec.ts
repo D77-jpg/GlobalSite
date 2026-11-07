@@ -201,11 +201,17 @@ test("S8-S11 buyer brief, B2B catalogue, cross-page shortlist and real worker sc
     )
     .toBe("ready");
   const preview = "/api/v1/site-versions/" + version.id + "/preview/";
-  await page.goto(preview);
+  await page.goto("/sites");
+  await page
+    .locator("article")
+    .filter({
+      has: page.getByRole("heading", { name: site.name, exact: true }),
+    })
+    .locator('a[href$="/preview"]')
+    .click();
+  await expect(page).toHaveURL(new RegExp(version.id + "/preview/"));
   await expect(page.locator(".gs-cookie")).toBeVisible();
-  const cookieBox = await page.locator(".gs-cookie").boundingBox();
-  const quoteBox = await page.locator(".quote-bar").boundingBox();
-  expect(cookieBox!.y + cookieBox!.height).toBeLessThanOrEqual(quoteBox!.y);
+  await expect(page.locator(".quote-bar")).toBeHidden();
   await page
     .getByRole("button", { name: "Reject optional", exact: true })
     .click();
@@ -215,6 +221,7 @@ test("S8-S11 buyer brief, B2B catalogue, cross-page shortlist and real worker sc
     .click();
   await expect(page.locator("[data-quote-count]")).toHaveText("1");
   await page
+    .locator(".desktop-nav")
     .getByRole("link", { name: "Play collection", exact: true })
     .click();
   await expect(page.locator("[data-quote-count]")).toHaveText("1");

@@ -11,6 +11,25 @@ export const pendingDetail = (v: string) =>
   /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
     v?.trim() ?? "",
   );
+function productImage(s: Snapshot, v: any) {
+  const source = s.products?.find((x) => x.id === v.productId);
+  const id =
+    source?.assetIds.filter((id) => s.assets[id]).at(-1) ??
+    v.blocks.find((b: any) => b.type === "image" && s.assets[b.assetId])
+      ?.assetId;
+  const a = id ? s.assets[id] : null;
+  return a
+    ? '<img loading="lazy" src="' +
+        e(a.path) +
+        '" alt="' +
+        e(v.presentation?.headline ?? v.title.split("|")[0].trim()) +
+        '" width="' +
+        a.width +
+        '" height="' +
+        a.height +
+        '">'
+    : "";
+}
 export function productCards(
   s: Snapshot,
   p: any,
@@ -19,25 +38,6 @@ export function productCards(
 ) {
   const products = s.pages.filter((v) => v.type === "product"),
     categories = s.pages.filter((v) => v.type === "category");
-  const img = (v: any) => {
-    const source = s.products?.find((x) => x.id === v.productId);
-    const id =
-      source?.assetIds.filter((id) => s.assets[id]).at(-1) ??
-      v.blocks.find((b: any) => b.type === "image" && s.assets[b.assetId])
-        ?.assetId;
-    const a = id ? s.assets[id] : null;
-    return a
-      ? '<img loading="lazy" src="' +
-          e(a.path) +
-          '" alt="' +
-          e(v.presentation?.headline ?? v.title.split("|")[0].trim()) +
-          '" width="' +
-          a.width +
-          '" height="' +
-          a.height +
-          '">'
-      : "";
-  };
   const selected =
     p.type === "category"
       ? products.filter((v) =>
@@ -80,7 +80,7 @@ export function productCards(
           '"><a class="product-visual" href="' +
           e(v.path) +
           '" tabindex="-1" aria-hidden="true">' +
-          img(v) +
+          productImage(s, v) +
           '</a><div class="product-copy"><p class="product-category">' +
           e(
             category?.presentation?.navigationLabel ??
@@ -161,22 +161,48 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
     (b.body && !pendingDetail(b.body) ? "<p>" + e(b.body) + "</p>" : "") +
     "</div>";
   let content = "";
-  if (b.type === "category-grid")
+  if (b.type === "category-grid") {
+    const categories = s.pages.filter((v) => v.type === "category");
+    const products = s.pages.filter((v) => v.type === "product");
+    const destinations =
+      categories.length < 2 && products.length ? products : categories;
     content =
       '<div class="category-grid">' +
-      s.pages
-        .filter((v) => v.type === "category")
-        .map(
-          (v) =>
+      destinations
+        .map((v) => {
+          const child = products.find((product) =>
+            product.path.startsWith(v.path.replace(/\/$/, "") + "/"),
+          );
+          const card = (b.items ?? []).find(
+            (item: any) => item.href === v.path,
+          );
+          const visual =
+            (card?.assetId ? picture(card.assetId, card.alt) : "") ||
+            productImage(s, v) ||
+            (child ? productImage(s, child) : "");
+          const title =
+            card?.title ||
+            v.presentation?.navigationLabel ||
+            v.title.split("|")[0].trim();
+          const description =
+            card?.body && !pendingDetail(card.body)
+              ? "<small>" + e(card.body) + "</small>"
+              : "";
+          return (
             '<a href="' +
             e(v.path) +
-            '"><span>' +
-            e(v.presentation?.navigationLabel ?? v.title.split("|")[0]) +
-            '</span><span aria-hidden="true">↗</span></a>',
-        )
+            '">' +
+            visual +
+            "<span>" +
+            e(title) +
+            '</span><span aria-hidden="true">↗</span>' +
+            description +
+            "</a>"
+          );
+        })
         .join("") +
       "</div>";
-  else if (b.type === "split")
+  } else if (b.type === "split")
     content =
       (a ? "<figure>" + picture(b.assetId, b.alt) + "</figure>" : "") +
       '<div class="split-copy">' +
@@ -334,7 +360,9 @@ export function catalogueHtml(s: Snapshot) {
 export function quoteBar(s: Snapshot, p: any) {
   if (!s.site.buyerProfile) return "";
   return (
-    '<aside class="quote-bar" aria-label="Inquiry shortlist"><a href="#inquiry">Inquiry list <span data-quote-count>0</span></a><span data-quote-status role="status"></span>' +
+    '<aside class="quote-bar" ' +
+    (p.productId ? "" : "hidden ") +
+    'aria-label="Inquiry shortlist"><a href="#inquiry">Inquiry list <span data-quote-count>0</span></a><span data-quote-status role="status"></span>' +
     (p.productId
       ? '<button type="button" data-quote-add="' +
         e(p.productId) +
