@@ -1,3 +1,4 @@
+import { BuyerWorkspace, SiteQuality } from "./b2b";
 import { orderedNodes, moveNode } from "./site-plan";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -368,15 +369,20 @@ export function SiteWorkspace({ locale, role }: Props) {
     );
   const site = load.data,
     canEdit = role !== "viewer";
-  async function queue(step: string, pageKey?: string) {
+  async function queue(step: string, pageKey?: string, instructions?: string) {
     await api(
       "/sites/" + id + "/agent-runs",
       "POST",
-      { step, consent: true, ...(pageKey ? { pageKey } : {}) },
+      {
+        step,
+        consent: true,
+        ...(pageKey ? { pageKey } : {}),
+        ...(instructions ? { instructions } : {}),
+      },
       { "Idempotency-Key": crypto.randomUUID() },
     );
     runs.reload();
-    setTab("runs");
+    setTab(["review", "refine"].includes(step) ? "quality" : "runs");
   }
   return (
     <Frame
@@ -402,7 +408,15 @@ export function SiteWorkspace({ locale, role }: Props) {
       }
     >
       <nav className="sites-tabs" aria-label={t("sites")}>
-        {["planning", "interview", "pages", "runs", "settings"].map((k) => (
+        {[
+          "business",
+          "planning",
+          "interview",
+          "pages",
+          "quality",
+          "runs",
+          "settings",
+        ].map((k) => (
           <button
             key={k}
             className={tab === k ? "" : "secondary"}
@@ -424,6 +438,27 @@ export function SiteWorkspace({ locale, role }: Props) {
         </label>
       )}
       <Notice t={t} error={a.error} saved={a.saved} />
+      {tab === "business" && (
+        <BuyerWorkspace
+          key={site.revision}
+          site={site}
+          products={sources.data?.products ?? []}
+          locale={locale}
+          canEdit={canEdit}
+          onSave={() => load.reload()}
+        />
+      )}
+      {tab === "quality" && (
+        <SiteQuality
+          site={site}
+          locale={locale}
+          canEdit={canEdit}
+          canApprove={role === "admin"}
+          consent={consent}
+          runs={runs.data?.items ?? []}
+          onRun={(step, instructions) => queue(step, undefined, instructions)}
+        />
+      )}
       {tab === "planning" && (
         <>
           <div className="catalog-panel">
@@ -738,6 +773,9 @@ function PlanEditor({
                       "certifications",
                       "faq",
                       "contact",
+                      "customization",
+                      "resources",
+                      "solution",
                     ].map((k) => (
                       <option key={k} value={k}>
                         {t(k)}
@@ -810,6 +848,108 @@ function PlanEditor({
                   </label>
                 )}
               </div>
+              {n.brief ? (
+                <details open>
+                  <summary>{t("pageBriefs")}</summary>
+                  <label>
+                    {t("briefPurpose")}
+                    <textarea
+                      maxLength={240}
+                      value={n.brief.purpose}
+                      onChange={(e) =>
+                        update(n.key, {
+                          brief: { ...n.brief, purpose: e.target.value },
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t("briefQuestions")}
+                    <textarea
+                      rows={4}
+                      value={n.brief.buyerQuestions.join("\n")}
+                      onChange={(e) =>
+                        update(n.key, {
+                          brief: {
+                            ...n.brief,
+                            buyerQuestions: e.target.value.split("\n"),
+                          },
+                        })
+                      }
+                      onBlur={() =>
+                        update(n.key, {
+                          brief: {
+                            ...n.brief,
+                            buyerQuestions: n.brief.buyerQuestions
+                              .map((v: string) => v.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <fieldset>
+                    <legend>{t("briefSections")}</legend>
+                    <div className="catalog-grid">
+                      {[
+                        "text",
+                        "image",
+                        "category-grid",
+                        "product-grid",
+                        "split",
+                        "features",
+                        "specs",
+                        "comparison",
+                        "customization",
+                        "process",
+                        "evidence",
+                        "case-study",
+                        "downloads",
+                        "faq",
+                        "cta",
+                      ].map((k) => (
+                        <label key={k} className="catalog-check">
+                          <input
+                            type="checkbox"
+                            checked={n.brief.sections.includes(k)}
+                            onChange={(e) =>
+                              update(n.key, {
+                                brief: {
+                                  ...n.brief,
+                                  sections: e.target.checked
+                                    ? [...n.brief.sections, k]
+                                    : n.brief.sections.filter(
+                                        (v: string) => v !== k,
+                                      ),
+                                },
+                              })
+                            }
+                          />
+                          {t(k)}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </details>
+              ) : (
+                canEdit && (
+                  <button
+                    className="secondary"
+                    onClick={() =>
+                      update(n.key, {
+                        brief: {
+                          purpose: "",
+                          buyerQuestions: [],
+                          requiredFactTypes: [],
+                          sections: [],
+                        },
+                      })
+                    }
+                  >
+                    {t("addPageBrief")}
+                  </button>
+                )
+              )}
             </fieldset>
           </article>
         ))}
@@ -1362,6 +1502,46 @@ function PageEditor({
               </select>
             </label>
             <label>
+              {t("primaryActionTarget")}
+              <select
+                value={data.presentation.primaryActionTarget ?? "collection"}
+                onChange={(e) =>
+                  update({
+                    presentation: {
+                      ...data.presentation,
+                      primaryActionTarget: e.target.value,
+                    },
+                  })
+                }
+              >
+                {["collection", "inquiry", "catalogue"].map((v) => (
+                  <option key={v} value={v}>
+                    {t(v)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t("density")}
+              <select
+                value={data.presentation.density ?? "comfortable"}
+                onChange={(e) =>
+                  update({
+                    presentation: {
+                      ...data.presentation,
+                      density: e.target.value,
+                    },
+                  })
+                }
+              >
+                {["comfortable", "compact"].map((v) => (
+                  <option key={v} value={v}>
+                    {t(v)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               {t("designNotes")}
               <textarea
                 value={data.presentation.designNotes}
@@ -1456,7 +1636,8 @@ function PageEditor({
                   onChange={(e) =>
                     blockUpdate(b.key, {
                       type: e.target.value,
-                      ...(e.target.value === "specs" && !b.table
+                      ...(["specs", "comparison"].includes(e.target.value) &&
+                      !b.table
                         ? {
                             table: {
                               columns: ["Specification", "Value"],
@@ -1467,7 +1648,23 @@ function PageEditor({
                     })
                   }
                 >
-                  {["text", "specs", "faq", "image"].map((k) => (
+                  {[
+                    "text",
+                    "specs",
+                    "faq",
+                    "image",
+                    "category-grid",
+                    "product-grid",
+                    "split",
+                    "features",
+                    "process",
+                    "customization",
+                    "evidence",
+                    "case-study",
+                    "downloads",
+                    "cta",
+                    "comparison",
+                  ].map((k) => (
                     <option key={k} value={k}>
                       {t(k)}
                     </option>
@@ -1485,7 +1682,7 @@ function PageEditor({
                 onChange={(e) => blockUpdate(b.key, { body: e.target.value })}
               />
             </label>
-            {b.type === "specs" && b.table && (
+            {["specs", "comparison"].includes(b.type) && b.table && (
               <>
                 <label>
                   {t("tableColumns")}
@@ -1647,7 +1844,7 @@ function PageEditor({
                 </button>
               </>
             )}
-            {b.type === "image" && (
+            {["image", "split"].includes(b.type) && (
               <div className="catalog-grid">
                 <label>
                   {t("image")}
@@ -1679,6 +1876,153 @@ function PageEditor({
                   />
                 </label>
               </div>
+            )}
+            {!["text", "specs", "faq", "image"].includes(b.type) && (
+              <>
+                <label>
+                  {t("blockLayout")}
+                  <select
+                    value={b.layout ?? "cards"}
+                    onChange={(e) =>
+                      blockUpdate(b.key, { layout: e.target.value })
+                    }
+                  >
+                    {["cards", "split", "reverse", "band", "compact"].map(
+                      (v) => (
+                        <option key={v} value={v}>
+                          {t(v)}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label>
+                  {t("blockTone")}
+                  <select
+                    value={b.tone ?? "light"}
+                    onChange={(e) =>
+                      blockUpdate(b.key, { tone: e.target.value })
+                    }
+                  >
+                    {["light", "sage", "dark"].map((v) => (
+                      <option key={v} value={v}>
+                        {t(v)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {(b.items ?? []).map((item: Row, i: number) => {
+                  const change = (patch: Row) =>
+                    blockUpdate(b.key, {
+                      items: b.items.map((x: Row, j: number) =>
+                        j === i ? { ...x, ...patch } : x,
+                      ),
+                    });
+                  return (
+                    <fieldset className="catalog-panel" key={i}>
+                      <legend>
+                        {t("blockItem")} {i + 1}
+                      </legend>
+                      <label>
+                        {t("heading")}
+                        <input
+                          maxLength={160}
+                          value={item.title}
+                          onChange={(e) => change({ title: e.target.value })}
+                        />
+                      </label>
+                      <label>
+                        {t("body")}
+                        <textarea
+                          maxLength={1200}
+                          value={item.body}
+                          onChange={(e) => change({ body: e.target.value })}
+                        />
+                      </label>
+                      <label>
+                        {t("internalLink")}
+                        <input
+                          value={item.href ?? ""}
+                          onChange={(e) =>
+                            change({ href: e.target.value || null })
+                          }
+                        />
+                      </label>
+                      <label>
+                        {t("image")} / PDF
+                        <select
+                          value={item.assetId ?? ""}
+                          onChange={(e) =>
+                            change({ assetId: e.target.value || null })
+                          }
+                        >
+                          <option value="">{t("none")}</option>
+                          {(assets.data?.items ?? [])
+                            .filter((a: Row) =>
+                              b.type === "downloads"
+                                ? a.mime === "application/pdf"
+                                : a.mime.startsWith("image/"),
+                            )
+                            .map((a: Row) => (
+                              <option key={a.id} value={a.id}>
+                                {a.fileName}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label>
+                        {t("alt")}
+                        <input
+                          maxLength={200}
+                          value={item.alt}
+                          onChange={(e) => change({ alt: e.target.value })}
+                        />
+                      </label>
+                      <RefPicker
+                        refs={item.refs}
+                        facts={sources.data?.facts ?? []}
+                        t={t}
+                        onChange={(refs) => change({ refs })}
+                      />
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() =>
+                          blockUpdate(b.key, {
+                            items: b.items.filter(
+                              (_: Row, j: number) => j !== i,
+                            ),
+                          })
+                        }
+                      >
+                        {t("remove")}
+                      </button>
+                    </fieldset>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={(b.items ?? []).length >= 12}
+                  onClick={() =>
+                    blockUpdate(b.key, {
+                      items: [
+                        ...(b.items ?? []),
+                        {
+                          title: "",
+                          body: "",
+                          assetId: null,
+                          alt: "",
+                          href: null,
+                          refs: [],
+                        },
+                      ],
+                    })
+                  }
+                >
+                  {t("addBlockItem")}
+                </button>
+              </>
             )}
             <RefPicker
               refs={b.refs}

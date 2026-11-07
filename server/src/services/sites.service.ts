@@ -1,3 +1,6 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { renderStaticPage, type Snapshot } from "./static-template.service";
 import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import {
@@ -30,6 +33,7 @@ export function siteDto(s: any) {
   return {
     id: String(s._id),
     revision: s.revision,
+    ...(s.buyerProfile ? { buyerProfile: s.buyerProfile } : {}),
     name: s.name,
     templateId: s.templateId,
     targetMarkets: s.targetMarkets,
@@ -275,6 +279,9 @@ export async function sources(id: string) {
 }
 export function blockDto(b: any) {
   return {
+    ...(b.items ? { items: b.items } : {}),
+    ...(b.layout ? { layout: b.layout } : {}),
+    ...(b.tone ? { tone: b.tone } : {}),
     key: b.key,
     type: b.type,
     heading: b.heading ?? "",
@@ -310,9 +317,13 @@ export async function pageView(
   const data = await pageData(page, session),
     refIds = [
       ...new Set(
-        [...data.refs, ...data.blocks.flatMap((b) => b.refs)].map(
-          (r) => r.factId,
-        ),
+        [
+          ...data.refs,
+          ...data.blocks.flatMap((b) => [
+            ...b.refs,
+            ...(b.items ?? []).flatMap((i) => i.refs),
+          ]),
+        ].map((r) => r.factId),
       ),
     ],
     facts = await FactSheet.find({ _id: { $in: refIds } }).session(
@@ -324,6 +335,7 @@ export async function pageView(
       productIds: site.productIds.map(String),
       type: page.type,
       brandName: site.name,
+      paths: site.plan?.nodes.map((n: any) => n.path),
     });
   if (
     !node ||
@@ -364,13 +376,19 @@ export async function pageView(
       token: "",
     });
   const assets = [
-    ...new Set(data.blocks.filter((b) => b.assetId).map((b) => b.assetId!)),
+    ...new Set(
+      data.blocks
+        .flatMap((b) => [b.assetId, ...(b.items ?? []).map((i) => i.assetId)])
+        .filter((id): id is string => !!id),
+    ),
   ];
   if (
     (await Asset.countDocuments({
       _id: { $in: assets },
       status: "ready",
-      mime: /^image\//,
+      mime: {
+        $in: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+      },
     }).session(session ?? null)) !== assets.length
   )
     issues.push({
@@ -455,9 +473,13 @@ export async function writePage(
   const data = v.pageInput.parse(dataInput);
   const refIds = [
     ...new Set(
-      [...data.refs, ...data.blocks.flatMap((b) => b.refs)].map(
-        (r) => r.factId,
-      ),
+      [
+        ...data.refs,
+        ...data.blocks.flatMap((b) => [
+          ...b.refs,
+          ...(b.items ?? []).flatMap((i) => i.refs),
+        ]),
+      ].map((r) => r.factId),
     ),
   ];
   ensure(
@@ -468,9 +490,34 @@ export async function writePage(
     "NOT_FOUND",
   );
   await pinAssets(
-    data.blocks.filter((b) => b.assetId).map((b) => b.assetId!),
+    data.blocks
+      .flatMap((b) => [b.assetId, ...(b.items ?? []).map((i) => i.assetId)])
+      .filter((id): id is string => !!id),
     session,
   );
+  for (const b of data.blocks) {
+    if (b.assetId)
+      ensure(
+        await Asset.exists({
+          _id: b.assetId,
+          status: "ready",
+          mime: /^image\//,
+        }).session(session),
+        400,
+        "FILE_INVALID",
+      );
+    for (const item of b.items ?? [])
+      if (item.assetId)
+        ensure(
+          await Asset.exists({
+            _id: item.assetId,
+            status: "ready",
+            mime: b.type === "downloads" ? "application/pdf" : /^image\//,
+          }).session(session),
+          400,
+          "FILE_INVALID",
+        );
+  }
   let page = await SitePage.findOne({
     siteId: site._id,
     nodeKey: node.key,
@@ -596,7 +643,13 @@ export async function reviewPage(
     const data = await pageView(page, site, session);
     if (approve) {
       ensure(!data.issues.length, 409, "PAGE_BLOCKED");
-      for (const ref of [...data.refs, ...data.blocks.flatMap((b) => b.refs)])
+      for (const ref of [
+        ...data.refs,
+        ...data.blocks.flatMap((b) => [
+          ...b.refs,
+          ...(b.items ?? []).flatMap((i) => i.refs),
+        ]),
+      ])
         ensure(
           await FactSheet.findOneAndUpdate(
             { _id: ref.factId, status: "confirmed", revision: ref.revision },
@@ -640,7 +693,78 @@ export async function preview(id: string) {
   const page = await ownedPage(id),
     site = await ownSite(String(page.siteId)),
     data = await pageView(page, site);
-  return { html: renderPage(data, site), hash: data.hash, issues: data.issues };
+  if (!site.buyerProfile)
+    return {
+      html: renderPage(data, site),
+      hash: data.hash,
+      issues: data.issues,
+    };
+  const rows = await sourceRows(site);
+  const pages = await SitePage.find({ siteId: site._id });
+  const views = [];
+  for (const row of pages) {
+    if (
+      !site.plan?.nodes.some(
+        (n: any) => n.key === row.nodeKey && n.path === row.path,
+      )
+    )
+      continue;
+    views.push({
+      ...(await pageData(row)),
+      id: String(row._id),
+      path: row.path,
+      type: row.type,
+      productId: row.productId ? String(row.productId) : null,
+    });
+  }
+  const ids = [
+    ...new Set(
+      [
+        site.logoId,
+        ...rows.products.flatMap((p: any) => p.assetIds),
+        ...views.flatMap((p: any) =>
+          p.blocks.flatMap((b: any) => [
+            b.assetId,
+            ...(b.items ?? []).map((i: any) => i.assetId),
+          ]),
+        ),
+      ]
+        .filter(Boolean)
+        .map(String),
+    ),
+  ];
+  const assets: Snapshot["assets"] = {};
+  for (const a of await Asset.find({ _id: { $in: ids } }))
+    assets[String(a._id)] = {
+      path: "/api/v1/assets/" + a._id,
+      width: a.width ?? 640,
+      height: a.height ?? 480,
+      mime: a.mime,
+    };
+  const snapshot: Snapshot = {
+    site: siteDto(site),
+    pages: views,
+    products: rows.products.map(productDto),
+    facts: rows.facts.filter((f: any) => f.status === "confirmed").map(factDto),
+    settings: { canonicalBaseUrl: "https://preview.invalid" },
+    assets,
+    createdAt: new Date().toISOString(),
+  };
+  const css = (
+    await fs.readFile(path.resolve(__dirname, "../../builder/site.css"), "utf8")
+  ).replace(/@font-face\s*\{[^}]+\}/g, "");
+  const current = views.find((p: any) => p.id === id);
+  ensure(current, 409, "PAGE_PLAN_CHANGED");
+  const html = renderStaticPage(snapshot, current)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<link\b[^>]*>/gi, "")
+    .replace(
+      "</head>",
+      '<meta name="robots" content="noindex,nofollow"><style>' +
+        css +
+        "</style></head>",
+    );
+  return { html, hash: data.hash, issues: data.issues };
 }
 export async function readiness(id: string) {
   const site = await ownSite(id),

@@ -102,6 +102,7 @@ export type TaskRow = TenantBase & {
 export type ProviderRow = TenantBase & {
   name: string;
   modelName: string;
+  supportsVision?: boolean;
   baseUrl: string;
   enabled: boolean;
   secret?: EncryptedSecret;

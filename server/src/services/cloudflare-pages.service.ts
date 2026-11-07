@@ -5,7 +5,7 @@ import { ensure, AppError } from "../errors";
 import type { Files } from "./static-builder.service";
 import { fetchWebsite } from "./website/public-web";
 export const mime = (n: string) =>
-  n.endsWith(".ttf")
+  n.endsWith(".pdf") ? "application/pdf" : n.endsWith(".ttf")
     ? "font/ttf"
     : n.endsWith(".js")
       ? "application/javascript; charset=utf-8"

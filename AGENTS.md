@@ -2,9 +2,9 @@
 
 ## 当前阶段与仓库边界
 
-- 本仓库 D:/Trade/genesis/GlobalSite，当前 J1 / S7 可选 CRM 连接；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
+- 本仓库 D:/Trade/genesis/GlobalSite，当前 S8–S11 B2B 建站与 Agent 质量闭环；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
 - 每条命令、编辑和 git 操作前确认工作目录属于本仓库。GlobalCRM 当前路径 D:/Trade/genesis/CRM/GlobalCRM，J1 明确双仓分别授权，其他本站任务只读参考；废弃旧目录禁止读取或修改。
-- 本次分支 feat/globalsite-j1-connect。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
+- 本次分支 feat/s8-s11-b2b-agent。后续用 feat/<任务编号>-<简述>，不直接推 main。两仓独立分支/提交/PR，不混仓。
 - GlobalSite 仅连接自己的 globalsite 数据库；CRM 只能通过 Integration API，不能 import/npm link 对方代码。复制须保留源路径、源 commit 和改造说明并补测试。
 
 ## 契约和架构
@@ -89,3 +89,16 @@
 - 页面 presentation 独立于 SEO；公开 headline/summary/navigationLabel/primaryActionLabel 同样引用 page.refs 执行事实校验，designNotes 仅后台。所有展示变更撤回审批并进入版本冻结；保留旧页面正文和旧版本字节。
 - 静态构建仅使用白名单 visualStyle/heroLayout，不执行模型 HTML/CSS/JS。导航最多四个主要页面，移动菜单可键盘操作，字体随产物本地分发并保留许可。
 - 发布验收须观察实际 Agent 页面，不把全绿性能/SEO指标当成视觉验收。至少检查 375/390、768、1440，记录真实预览截图；缺少商业事实只请求确认，不能用伪造证明填满页面。
+
+## S8–S11 维护约束
+
+- 见 docs/design/S8-S11-B2B建站.md。只有 GlobalSite 可修改；CRM 无新接口或依赖。buyerProfile 是私有建站指引，不是商业事实；缺口只由当前 confirmed 事实计算。
+- 新区块 items 所有公开文字、引用、图片和下载文件必须验证本组织与当前修订。evidence/customization/case-study 必须有支持其文字的确认事实；下载 PDF 必须显式选择并随页面审批。删除引用资产、构建事实快照、审批锁均覆盖嵌套 items。
+- B2B 主导航最多五个采购入口；旧站四项布局保持兼容。新可选字段不能重写旧产物；目录仅导出冻结且已审核的页面信息。
+- 参考站最多三个，robots/SSRF/公开 IPv4 固定/无脚本/无 Cookie 沿用 public-web；只研究结构，不导入对方客户、产能、认证或参数。
+- review 冻结页面、站点、产品、事实版本；截图在隔离浏览器只读取可信静态文件，禁止外网/下载/服务 Worker，有限时间/体积。截图私有同组织，稳定收据恢复，存储正常计量。
+- 模型图片输入须组织管理员显式启用，且任务显式同意；默认不发送图像。无 AI 时仅浏览器检查并明确人工审查；不得宣称做了 AI 视觉审查。
+- refine 必须使用未变更的已完成审查，每轮用户触发，保留租约 fence/幂等/已知用量结算/未知结果暂停；写入新草稿，不能批准或发布。商业发布必须确认采购必需资料，管理员确认当前截图报告，所有页面仍须批准；修改后旧质量确认失效。
+- 询价清单只保存当前站点产品 ID 至 sessionStorage，不存身份资料；跨页回填已有公开网关，不绕过隐私审核、CORS、限流和附件校验。无 JS 时产品及内容仍可读。
+
+- S8–S11 回归使用独立 Compose 项目/卷与测试 Origin，避免实际 AI 任务占用唯一 Worker 或测试撞到真实账号限流；429 遵守 Retry-After，禁止通过提高限流或清真实桶来跑绿测试。

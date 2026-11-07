@@ -1,3 +1,13 @@
+import { validatePage } from "./page-validation.service";
+import { randomUUID } from "node:crypto";
+import {
+  captureSitePage,
+  reviewImages,
+  assetImages,
+} from "./site-review.service";
+import { referenceResearch } from "./site-reference.service";
+import { procurementCoverage, sectionRecipes } from "./b2b-planning.service";
+import { AgentAiProvider } from "../models";
 import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import { siteSkillProfile } from "./site-skill-profile";
@@ -46,6 +56,8 @@ export function agentDto(r: any) {
     status: r.status,
     active: !!r.active,
     cancelRequested: !!r.cancelRequested,
+    qualityAcceptedAt: r.qualityAcceptedAt ?? null,
+    qualityAcceptedBy: r.qualityAcceptedBy ? String(r.qualityAcceptedBy) : null,
     inputSummary: r.inputSummary,
     steps: (r.steps ?? []).map((s: any) => ({
       key: s.key,
@@ -115,7 +127,9 @@ export async function queueAgent(
       result = old;
       return;
     }
-    const lockKey = ["content", "rewrite"].includes(data.step)
+    const lockKey = ["content", "rewrite", "review", "refine"].includes(
+        data.step,
+      )
         ? "content"
         : data.step,
       active = await AgentRun.findOne({
@@ -134,22 +148,50 @@ export async function queueAgent(
       409,
       "SOURCE_CHANGED",
     );
-    if (["content", "rewrite"].includes(data.step))
+    if (["content", "rewrite", "review", "refine"].includes(data.step))
       ensure(siteDto(site).planConfirmed, 409, "PLAN_NOT_CONFIRMED");
     const pages = await SitePage.find({ siteId }).session(session),
       units: any[] = [];
-    if (data.step === "content") {
+    if (["content", "review", "refine"].includes(data.step)) {
       const nodes = site.plan.nodes.filter(
         (n: any) => !data.pageKey || n.key === data.pageKey,
       );
       ensure(nodes.length, 400, "PLAN_INVALID");
-      for (const n of nodes)
+      const previous =
+        data.step === "refine"
+          ? await AgentRun.findOne({
+              siteId,
+              step: "review",
+              status: "succeeded",
+            })
+              .sort({ _id: -1 })
+              .session(session)
+          : null;
+      for (const n of nodes) {
+        const page = pages.find((p) => p.nodeKey === n.key);
+        let draft, review;
+        if (["review", "refine"].includes(data.step)) {
+          ensure(page, 409, "PAGE_MISSING");
+          draft = await pageData(page, session);
+          if (data.step === "refine") {
+            const step = previous?.steps.find((u: any) => u.key === n.key);
+            ensure(
+              step && step.expectedRevision === page.revision,
+              409,
+              "REVIEW_REQUIRED",
+            );
+            review = step.output;
+          }
+        }
         units.push({
           key: n.key,
           node: n,
-          expectedRevision:
-            pages.find((p) => p.nodeKey === n.key)?.revision ?? 0,
+          expectedRevision: page?.revision ?? 0,
+          ...(draft ? { draft } : {}),
+          ...(review ? { review } : {}),
+          instructions: data.instructions ?? "",
         });
+      }
     } else if (data.step === "rewrite") {
       const p = pages.find((p) => String(p._id) === data.pageId);
       ensure(p, 404, "NOT_FOUND");
@@ -179,7 +221,22 @@ export async function queueAgent(
       .select("type subjectId")
       .limit(200)
       .session(session);
+    const frozenPages = [];
+    if (data.step === "review")
+      for (const page of pages) {
+        const node = site.plan?.nodes.find((n: any) => n.key === page.nodeKey);
+        if (node)
+          frozenPages.push({
+            id: String(page._id),
+            nodeKey: page.nodeKey,
+            path: node.path,
+            type: node.type,
+            productId: node.productId,
+            ...(await pageData(page, session)),
+          });
+      }
     const snapshot = {
+      pages: frozenPages,
       skillProfile: siteSkillProfile(),
       site: siteDto(site),
       products: rows.products.map(productDto),
@@ -317,6 +374,53 @@ export async function retryAgent(id: string, actor: string) {
   });
   return agentDto(result);
 }
+export async function acceptQualityReview(id: string, actor: string) {
+  await mongoose.connection.transaction(async (session) => {
+    const run = await ownRun(id, session);
+    ensure(
+      run.step === "review" && run.status === "succeeded",
+      409,
+      "REVIEW_REQUIRED",
+    );
+    await assertSiteEditable(String(run.siteId), session);
+    await assertSnapshot(run, session);
+    for (const unit of run.steps) {
+      const page = await SitePage.findOne({
+        siteId: run.siteId,
+        nodeKey: unit.key,
+      }).session(session);
+      ensure(page?.revision === unit.expectedRevision, 409, "SOURCE_CHANGED");
+      const site = run.inputSnapshot.site;
+      ensure(
+        !validatePage(await pageData(page, session), run.inputSnapshot.facts, {
+          productId: unit.node?.productId,
+          productIds: site.productIds,
+          type: unit.node?.type ?? "home",
+          brandName: site.name,
+          paths: site.plan?.nodes.map((n: any) => n.path),
+        }).length,
+        409,
+        "QUALITY_BLOCKED",
+      );
+      ensure(
+        !unit.output.findings.some((f: any) => f.severity === "error") &&
+          unit.capture.metrics.every(
+            (m: any) => !m.overflow && !m.brokenImages,
+          ),
+        409,
+        "QUALITY_BLOCKED",
+      );
+    }
+    run.qualityAcceptedAt = new Date();
+    run.qualityAcceptedBy = actor;
+    await run.save({ session });
+    await AuditLog.create(
+      [{ action: "site.quality.accepted", actorId: actor, targetId: id }],
+      { session },
+    );
+  });
+  return agentDto(await ownRun(id));
+}
 export async function cancelAgent(id: string, actor: string) {
   let result: any;
   await mongoose.connection.transaction(async (session) => {
@@ -380,7 +484,33 @@ export async function assertSnapshot(
     );
   return site;
 }
+export const reviewOutput = z
+  .object({
+    summary: z.string().max(600),
+    findings: z
+      .array(
+        z
+          .object({
+            blockKey: z.string().max(60).nullable(),
+            code: z.enum([
+              "content_thin",
+              "repetition",
+              "layout",
+              "imagery",
+              "procurement",
+              "navigation",
+              "cta",
+            ]),
+            severity: z.enum(["warning", "error"]),
+            recommendation: z.string().max(500),
+          })
+          .strict(),
+      )
+      .max(12),
+  })
+  .strict();
 const outputSchemas = {
+  review: z.toJSONSchema(reviewOutput),
   research: z.toJSONSchema(v.plan, { unrepresentable: "any" }),
   interview: z.toJSONSchema(v.interviewOutput, { unrepresentable: "any" }),
   content: z.toJSONSchema(z.object({ page: v.pageInput }).strict(), {
@@ -428,6 +558,15 @@ function validationFeedback(error: unknown) {
     "questions",
     "id",
     "subjectId",
+    "items",
+    "layout",
+    "tone",
+    "brief",
+    "purpose",
+    "buyerQuestions",
+    "requiredFactTypes",
+    "sections",
+    "href",
     "presentation",
     "navigationLabel",
     "headline",
@@ -463,91 +602,137 @@ export function unitPrompt(run: any, unit: any) {
   const s = run.inputSnapshot,
     site = s.site;
   const shape =
-    run.step === "research"
+    run.step === "review"
       ? {
-          keywords: [
-            { term: "keyword", intent: "source", cluster: "cluster-key" },
-          ],
-          clusters: [
-            {
-              key: "cluster-key",
-              label: "Cluster",
-              intent: "source",
-              keywords: ["keyword"],
-            },
-          ],
-          nodes: [
-            {
-              key: "home",
-              path: "/",
-              title: "Home",
-              type: "home",
-              parentKey: null,
-              productId: null,
-              keywords: ["keyword"],
-              intent: "source",
-            },
-          ],
+          summary: "Purchasing usefulness and composition review",
+          findings: [],
         }
-      : run.step === "interview"
+      : run.step === "research"
         ? {
-            questions: [
+            keywords: [
+              { term: "keyword", intent: "source", cluster: "cluster-key" },
+            ],
+            clusters: [
               {
-                id: "founding-year",
-                type: "company.founded",
-                question: "When was the company founded?",
-                subjectId: null,
+                key: "cluster-key",
+                label: "Cluster",
+                intent: "source",
+                keywords: ["keyword"],
+              },
+            ],
+            nodes: [
+              {
+                key: "home",
+                path: "/",
+                title: "Home",
+                type: "home",
+                parentKey: null,
+                productId: null,
+                keywords: ["keyword"],
+                intent: "source",
               },
             ],
           }
-        : run.step === "rewrite"
+        : run.step === "interview"
           ? {
-              block: {
-                ...unit.draft.blocks.find((b: any) => b.key === unit.key),
-              },
-            }
-          : {
-              page: {
-                title: unit.node.title,
-                metaDescription: "English page summary",
-                presentation: {
-                  navigationLabel: "Home",
-                  headline: "A clear, subject-specific headline",
-                  summary: "A short, visitor-focused introduction.",
-                  primaryActionLabel: "Explore the collection",
-                  visualStyle: "organic",
-                  heroLayout: "split",
-                  designNotes:
-                    "Audience, visual direction and primary action; no business claims.",
+              questions: [
+                {
+                  id: "founding-year",
+                  type: "company.founded",
+                  question: "When was the company founded?",
+                  subjectId: null,
                 },
-                refs: [],
-                blocks: [
-                  {
-                    key: "overview",
-                    type: "text",
-                    heading: "Overview",
-                    body: "Text",
-                    table: null,
-                    faq: [],
-                    assetId: null,
-                    alt: "",
-                    refs: [],
+              ],
+            }
+          : run.step === "rewrite"
+            ? {
+                block: {
+                  ...unit.draft.blocks.find((b: any) => b.key === unit.key),
+                },
+              }
+            : {
+                page: {
+                  title: unit.node.title,
+                  metaDescription: "English page summary",
+                  presentation: {
+                    navigationLabel: "Home",
+                    headline: "A clear, subject-specific headline",
+                    summary: "A short, visitor-focused introduction.",
+                    primaryActionLabel: "Explore the collection",
+                    visualStyle: "organic",
+                    heroLayout: "split",
+                    designNotes:
+                      "Audience, visual direction and primary action; no business claims.",
                   },
-                ],
-              },
-            };
+                  refs: [],
+                  blocks: [
+                    {
+                      key: "overview",
+                      type: "text",
+                      heading: "Overview",
+                      body: "Text",
+                      table: null,
+                      faq: [],
+                      assetId: null,
+                      alt: "",
+                      refs: [],
+                    },
+                  ],
+                },
+              };
+  if (site.buyerProfile && ["content", "refine"].includes(run.step)) {
+    const example = (shape as any).page;
+    example.presentation.primaryActionTarget =
+      site.buyerProfile.primaryAction === "catalogue" ? "catalogue" : "inquiry";
+    example.presentation.density = "comfortable";
+    example.blocks = [
+      {
+        ...example.blocks[0],
+        key: "buying-context",
+        type: "features",
+        heading: "A specific purchasing consideration",
+        body: "A concise useful introduction",
+        items: [
+          {
+            title: "A product-relevant point",
+            body: "Describe a supported consideration, not an invented capability",
+            assetId: null,
+            alt: "",
+            href: null,
+            refs: [],
+          },
+        ],
+        layout: "cards",
+        tone: "light",
+      },
+    ];
+    if (unit.node?.type !== "product")
+      example.blocks.unshift({
+        ...example.blocks[0],
+        key: "product-range",
+        type: "product-grid",
+        heading: "Explore the product range",
+        body: "",
+        items: [],
+      });
+  }
   const instruction =
     run.step === "interview"
-      ? "Ask only missing company.name/company.founded/company.capacity/company.certifications or selected product.material/product.application/product.moq/product.samples/product.packaging/product.oem. Do not ask for secrets or personal data. Do not repeat existing confirmed or pending keys."
+      ? "Ask at most ten missing company.name/company.email/company.address/company.founded/company.capacity/company.certifications or selected product.material/product.application/product.specifications/product.leadTime/product.moq/product.samples/product.packaging/product.oem. Prioritize required buyerReadiness gaps. Ask for a public business contact email, never personal accounts. Do not ask for secrets or personal data. Do not repeat existing confirmed or pending keys."
       : run.step === "research"
-        ? "Suggest keywords, buyer intent clusters and editable page hierarchy. Include home, categories, selected product detail pages, about, factory/quality, certifications, FAQ and contact. Stable keys, unique safe lowercase paths, parent keys with no cycles, product pages refer to selected product IDs. Do not claim live research. Prefer a concise map with a combined catalog category for a small range. Allowed node.type values: " +
+        ? (site.buyerProfile
+            ? "Plan a B2B buying website. Include home, a useful category, selected product pages and contact. Only include optional company/factory/certification/customization/resource pages when current confirmed facts or selected documents can support them. Every node MUST have brief={purpose:string,buyerQuestions:string[],requiredFactTypes:string[],sections:string[]} with 3-6 specific buyer questions and allowed block types. A small real catalog is better than unsupported pages. Use referenceResearch only for information architecture, never import competitor business facts. "
+            : "") +
+          "Suggest keywords, buyer intent clusters and editable page hierarchy. Include home, categories, selected product detail pages and contact; optional company pages must have supporting information. Stable keys, unique safe lowercase paths, parent keys with no cycles, product pages refer to selected product IDs. Do not claim live research. Prefer a concise map with a combined catalog category for a small range. Allowed node.type values: " +
           v.node.shape.type.options.join(",") +
           ". Allowed intent values: " +
           v.intent.options.join(",") +
           ". Include all fields from the supplied shape; productId=null on non-product nodes, home parentKey=null; use exact selected product IDs. Keys use lowercase letters, digits and hyphens, beginning with a letter. Paths begin with /; home path=/; no cycles or duplicate keys/paths."
-        : run.step === "rewrite"
-          ? "Rewrite only the requested block, preserving its key and type and every other page section."
-          : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require every field in the supplied shape; allowed block types: text,specs,faq,image. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
+        : run.step === "review"
+          ? "Review this frozen page against its buyer brief, procurement coverage and browser measurements. Return summary and findings only. Check repetition, content usefulness, section rhythm, imagery, clear purchasing steps, unsupported claims and CTA. Do not claim you saw images unless visualInput=true; with text-only review require human screenshot inspection. Recommend additions only from current confirmed evidence. Do not fill missing facts."
+          : run.step === "rewrite"
+            ? "Rewrite only the requested block, preserving its key and type and every other page section."
+            : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require the core fields in the supplied shape; optional structured fields may be omitted. Allowed block types are given by outputSchema; use B2B structured blocks when buyerProfile is present. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
   const facts = s.facts.filter(
     (f: any) =>
       !unit.node?.productId ||
@@ -558,6 +743,7 @@ export function unitPrompt(run: any, unit: any) {
     task: run.step,
     site: {
       name: site.name,
+      ...(site.buyerProfile ? { buyerProfile: site.buyerProfile } : {}),
       templateId: site.templateId,
       targetMarkets: site.targetMarkets,
       language: site.language,
@@ -587,7 +773,44 @@ export function unitPrompt(run: any, unit: any) {
       status: f.status,
       revision: f.revision,
     })),
+    siteMap: (site.plan?.nodes ?? []).map((n: any) => ({
+      key: n.key,
+      path: n.path,
+      type: n.type,
+      title: n.title,
+    })),
+    ...(unit.draft
+      ? {
+          validationIssues: validatePage(unit.draft, s.facts, {
+            productId: unit.node?.productId,
+            productIds: site.productIds,
+            type: unit.node?.type ?? "home",
+            brandName: site.name,
+            paths: site.plan?.nodes.map((n: any) => n.path),
+          }),
+        }
+      : {}),
     pendingTypes: s.pendingTypes,
+    referenceResearch: unit.referenceResearch ?? [],
+    buyerReadiness: site.buyerProfile
+      ? procurementCoverage(site, s.products, s.facts)
+      : null,
+    pageBrief: unit.node?.brief ?? null,
+    availableSections: sectionRecipes[unit.node?.type ?? "home"],
+    ...(run.step === "review"
+      ? {
+          page: unit.draft,
+          browser: unit.capture?.metrics ?? [],
+          visualInput: !!unit.visualInput,
+        }
+      : {}),
+    ...(run.step === "refine"
+      ? {
+          previousPage: unit.draft,
+          review: unit.review,
+          requestedEdit: unit.instructions,
+        }
+      : {}),
     node: unit.node ?? null,
     ...(run.step === "rewrite"
       ? {
@@ -597,7 +820,12 @@ export function unitPrompt(run: any, unit: any) {
         }
       : {}),
     schema: shape,
-    outputSchema: outputSchemas[run.step as keyof typeof outputSchemas],
+    outputSchema:
+      outputSchemas[
+        (run.step === "refine"
+          ? "content"
+          : run.step) as keyof typeof outputSchemas
+      ],
     ...(unit.validationFeedback
       ? { validationFeedback: unit.validationFeedback }
       : {}),
@@ -609,12 +837,18 @@ export function unitPrompt(run: any, unit: any) {
       (s.skillProfile ?? siteSkillProfile()).guidance +
       "\n" +
       instruction +
+      (site.buyerProfile
+        ? "\nB2B purchase-first composition: follow buyerProfile audiences and node.brief. Use structured category-grid/product-grid/split/features/process/customization/evidence/case-study/downloads/cta/comparison alongside legacy blocks. Items are {title,body,assetId:null,alt:empty string,href:null,refs:[]}. All optional fields may be omitted. Use distinct recipes for home/category/product; homepage needs product discovery, meaningful context and a procurement CTA, not three introductions saying the same thing. Never publish private design notes. Evidence, case-study and customization items require matching confirmed refs. Omit optional sections with no evidence; retain required product placeholders internally. A reference website is layout research, not proof about this company. Use an image block with a selected asset for the hero whenever images exist. Aim for 350-650 useful words across 6-9 purposeful home sections when enough evidence exists; product pages need meaningful confirmed specifications and buying context rather than an introduction duplicated across sections. Each page should answer its own buyer questions; do not use giant repeated images to fill space. Choose primaryActionTarget inquiry/catalogue/collection, and concise B2B headings. Use exact siteMap paths for internal links; never guess shortened product URLs. Resolve supplied validationIssues using confirmed evidence or neutral wording, never invented facts. New structured fields are public text and subject to the same fact gate."
+        : "") +
+      (run.step === "refine"
+        ? "\nRefine the full previous page using the supplied review. Keep its purpose and confirmed refs, remove redundant sections, use the structured section recipes, and return a complete page in the content schema. New draft needs human approval."
+        : "") +
       "\nReturn the example shape in schema subject to every constraint in outputSchema; all object fields are required, with no extra fields. If validationFeedback is present, correct those fields. refs items are {factId:string,revision:integer}.",
     input,
   };
 }
 const allowedInterview =
-  /^(company\.(name|founded|capacity|certifications)|product\.(material|application|moq|samples|packaging|oem))$/;
+  /^(company\.(name|email|address|founded|capacity|certifications)|product\.(material|application|specifications|leadTime|moq|samples|packaging|oem))$/;
 async function applyUnit(
   run: any,
   index: number,
@@ -659,8 +893,62 @@ async function applyUnit(
             ),
         ),
       };
+    } else if (r.step === "review") {
+      const current = await SitePage.findOne({
+        siteId: r.siteId,
+        nodeKey: unit.key,
+      }).session(session);
+      ensure(
+        current?.revision === unit.expectedRevision,
+        409,
+        "SOURCE_CHANGED",
+      );
+      const report = reviewOutput.parse(output);
+      const validation = validatePage(unit.draft, r.inputSnapshot.facts, {
+        productId: unit.node?.productId,
+        productIds: site.productIds.map(String),
+        type: unit.node?.type ?? "home",
+        brandName: site.name,
+        paths: site.plan?.nodes.map((n: any) => n.path),
+      });
+      if (validation.length) {
+        report.findings = report.findings.slice(0, 11);
+        report.findings.push({
+          blockKey: null,
+          code: validation.some((i) => i.code === "PAGE_LINK_INVALID")
+            ? "navigation"
+            : "procurement",
+          severity: "error",
+          recommendation:
+            "Resolve the current fact or link validation issues listed in the page editor before approval.",
+        });
+      }
+      output = {
+        ...report,
+        metrics: unit.capture.metrics,
+        requiresHumanVisualReview: !(result.visualInput ?? unit.visualInput),
+        reviewMode:
+          result.reviewMode ??
+          ((result.visualInput ?? unit.visualInput) ? "visual" : "text"),
+        screenshots: [375, 768, 1440].map((width) => ({
+          width,
+          url:
+            "/api/v1/agent-runs/" +
+            r._id +
+            "/screenshots/" +
+            unit.key +
+            "/" +
+            width,
+        })),
+      };
     } else if (r.step === "research") {
       const d = validatePlan(output, site);
+      if (site.buyerProfile)
+        ensure(
+          d.nodes.every((n) => !!n.brief),
+          502,
+          "AI_OUTPUT_INVALID",
+        );
       await Site.updateOne(
         { _id: site._id },
         {
@@ -735,6 +1023,7 @@ async function applyUnit(
 export async function processSiteAgent(
   task: any,
   provider = callSiteAgent,
+  reviewer = captureSitePage,
 ): Promise<{ status: "done" | "dead" | "pending"; error?: string }> {
   let run = await ownRun(task.payload.runId);
   if (terminal.includes(run.status)) return { status: "done" };
@@ -796,9 +1085,137 @@ export async function processSiteAgent(
           fresh.markModified("steps");
           await fresh.save({ session });
         });
-        const start = Date.now(),
-          prompt = unitPrompt(run, unit);
-        result = await provider(
+        const start = Date.now();
+        if (run.step === "research" && !unit.referenceResearch) {
+          const references = await referenceResearch(
+            run.inputSnapshot.site.buyerProfile?.referenceUrls ?? [],
+          );
+          await mongoose.connection.transaction(async (session) => {
+            await fenceRun(task, session);
+            const fresh = await ownRun(String(run._id), session);
+            ensure(!fresh.cancelRequested, 409, "AGENT_CANCELLED");
+            fresh.steps[index].referenceResearch = references;
+            fresh.markModified("steps");
+            await fresh.save({ session });
+          });
+          unit = { ...unit, referenceResearch: references };
+        }
+        if (run.step === "review" && !unit.capture) {
+          const snapshot = {
+            site: run.inputSnapshot.site,
+            pages: run.inputSnapshot.pages,
+            products: run.inputSnapshot.products,
+            facts: run.inputSnapshot.facts,
+            assets: {},
+            settings: { canonicalBaseUrl: "https://review.invalid" },
+            inquiry: { enabled: false },
+            createdAt: run.createdAt.toISOString(),
+          };
+          if (!unit.captureKey) {
+            const key = randomUUID();
+            await mongoose.connection.transaction(async (session) => {
+              await fenceRun(task, session);
+              const fresh = await ownRun(String(run._id), session);
+              fresh.steps[index].captureKey = key;
+              fresh.markModified("steps");
+              await fresh.save({ session });
+            });
+            unit.captureKey = key;
+          }
+          const capture = await reviewer(
+            snapshot,
+            unit.node.path,
+            unit.captureKey,
+          );
+          const config = await AgentAiProvider.findOne({ name: "default" });
+          await mongoose.connection.transaction(async (session) => {
+            await fenceRun(task, session);
+            const fresh = await ownRun(String(run._id), session);
+            ensure(!fresh.cancelRequested, 409, "AGENT_CANCELLED");
+            fresh.steps[index].capture = capture;
+            fresh.steps[index].visualInput = !!config?.supportsVision;
+            fresh.steps[index].reviewMode = !config?.enabled
+              ? "structural"
+              : config.supportsVision
+                ? "visual"
+                : "text";
+            fresh.markModified("steps");
+            await fresh.save({ session });
+          });
+          unit = { ...unit, capture, visualInput: !!config?.supportsVision };
+        }
+        const prompt = unitPrompt(run, unit);
+        const config = await AgentAiProvider.findOne({ name: "default" });
+        const images =
+          run.step === "review" && unit.visualInput
+            ? await reviewImages(unit.capture.artifactKey)
+            : ["content", "refine", "rewrite"].includes(run.step) &&
+                config?.supportsVision
+              ? await assetImages(
+                  run.inputSnapshot.products
+                    .filter(
+                      (p: any) =>
+                        !unit.node?.productId || p.id === unit.node.productId,
+                    )
+                    .flatMap((p: any) => p.assetIds ?? []),
+                )
+              : [];
+        const selectedProvider =
+          run.step === "review" &&
+          (!config?.enabled || !config.secret) &&
+          provider === callSiteAgent
+            ? async (
+                _system: string,
+                _input: unknown,
+                _operation: string,
+                save: (r: AgentResult) => Promise<void>,
+              ) => {
+                const findings: any[] = [];
+                if (unit.capture.metrics.some((m: any) => m.overflow))
+                  findings.push({
+                    blockKey: null,
+                    code: "layout",
+                    severity: "error",
+                    recommendation:
+                      "Correct horizontal overflow at the recorded viewport.",
+                  });
+                if (unit.capture.metrics.some((m: any) => m.brokenImages))
+                  findings.push({
+                    blockKey: null,
+                    code: "imagery",
+                    severity: "error",
+                    recommendation:
+                      "Replace unavailable images before publishing.",
+                  });
+                if (
+                  procurementCoverage(
+                    run.inputSnapshot.site,
+                    run.inputSnapshot.products,
+                    run.inputSnapshot.facts,
+                  ).gaps.length
+                )
+                  findings.push({
+                    blockKey: null,
+                    code: "procurement",
+                    severity: "warning",
+                    recommendation:
+                      "Review the procurement information gaps and confirm required company and product data.",
+                  });
+                const r = {
+                  output: {
+                    summary:
+                      "Browser measurements and screenshots are ready. AI is not configured; a human must inspect content, images and purchasing usefulness.",
+                    findings,
+                  },
+                  tokens: 0,
+                  visualInput: false,
+                  reviewMode: "structural" as const,
+                };
+                await save(r);
+                return r;
+              }
+            : provider;
+        result = await selectedProvider(
           prompt.system,
           prompt.input,
           operationId,
@@ -830,6 +1247,7 @@ export async function processSiteAgent(
               await fresh.save({ session });
             });
           },
+          images,
         );
       } else await settle("ai_tokens", operationId, result.tokens);
       await applyUnit(run, index, result, task);

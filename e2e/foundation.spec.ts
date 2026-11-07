@@ -1,10 +1,33 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page,
+  type APIRequestContext,
+} from "@playwright/test";
 import { randomBytes } from "node:crypto";
+test.setTimeout(180000);
 const origin = process.env.E2E_BASE_URL ?? "http://localhost:5080";
+// Respect shared authentication throttling without changing application limits.
+async function authClick(page: Page, name: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const responsePromise = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/v1/auth/") &&
+        ["POST", "PUT"].includes(r.request().method()),
+    );
+    await page.getByRole("button", { name, exact: true }).click();
+    const response = await responsePromise;
+    if (response.status() !== 429) return;
+    expect(attempt).toBe(0);
+    const delay = Number(response.headers()["retry-after"] ?? 60) * 1000;
+    expect(delay).toBeLessThanOrEqual(60000);
+    await page.waitForTimeout(delay);
+  }
+}
 async function seed(request: APIRequestContext) {
   const password = "Fixture-" + randomBytes(20).toString("hex"),
     email = "browser-" + randomBytes(8).toString("hex") + "@example.invalid";
-  const signup = await request.post("/api/v1/auth/register", {
+  let signup = await request.post("/api/v1/auth/register", {
     headers: { Origin: origin },
     data: {
       email,
@@ -14,6 +37,21 @@ async function seed(request: APIRequestContext) {
       locale: "en",
     },
   });
+  if (signup.status() === 429) {
+    const delay = Number(signup.headers()["retry-after"] ?? 60) * 1000;
+    expect(delay).toBeLessThanOrEqual(60000);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    signup = await request.post("/api/v1/auth/register", {
+      headers: { Origin: origin },
+      data: {
+        email,
+        password,
+        name: "Demo User",
+        organizationName: "Demo Export Studio",
+        locale: "en",
+      },
+    });
+  }
   expect(signup.status()).toBe(202);
   const info = await signup.json();
   const mail = await request.get("/api/v1/dev/mail/" + info.data.devReceipt);
@@ -43,19 +81,19 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
     .fill("Demo Export Studio");
   await page.getByLabel("工作邮箱", { exact: true }).fill(email);
   await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "创建账号", exact: true }).click();
+  await authClick(page, "创建账号");
   await expect(page.getByText("请查看邮箱，完成验证后再登录。")).toBeVisible();
   await page.getByRole("link", { name: "返回登录" }).click();
   await page.getByRole("link", { name: "重新发送验证邮件" }).click();
   await page.getByLabel("工作邮箱", { exact: true }).fill(email);
-  await page.getByRole("button", { name: "继续", exact: true }).click();
+  await authClick(page, "继续");
   await page.getByRole("button", { name: "查看开发邮件" }).click();
   await page.locator(".mail-body a").click();
   await expect(page.getByText("邮箱已验证，可以登录了。")).toBeVisible();
   await page.getByRole("link", { name: "返回登录" }).click();
   await page.getByLabel("工作邮箱", { exact: true }).fill(email);
   await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await authClick(page, "登录");
   await expect(
     page.getByRole("heading", { name: "Demo Export Studio", exact: true }),
   ).toBeVisible();
@@ -100,19 +138,19 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
     .getByRole("link", { name: "个人安全" })
     .click();
   await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "发送验证码" }).click();
+  await authClick(page, "发送验证码");
   await page.getByRole("button", { name: "查看开发邮件" }).click();
   const code = (await page.locator(".mail-body").innerText()).match(
     /[0-9]{6}/,
   )![0];
   await page.getByLabel("六位验证码").fill(code);
-  await page.getByRole("button", { name: "启用", exact: true }).click();
+  await authClick(page, "启用");
   await expect(page.getByText("已启用", { exact: true })).toBeVisible();
   await expect(page.getByText("当前会话", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "退出登录" }).click();
   await page.getByLabel("工作邮箱", { exact: true }).fill(email);
   await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await authClick(page, "登录");
   await expect(
     page.getByRole("heading", { name: "检查你的邮箱" }),
   ).toBeVisible();
@@ -121,7 +159,7 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
     /[0-9]{6}/,
   )![0];
   await page.getByLabel("六位验证码").fill(loginCode);
-  await page.getByRole("button", { name: "验证并继续" }).click();
+  await authClick(page, "验证并继续");
   await expect(page.getByRole("navigation")).toBeVisible();
   expect(failures).toEqual([]);
 });
@@ -134,7 +172,7 @@ test("mobile: sign in, navigate settings, switch language and avoid horizontal o
   await page.goto("/login");
   await page.getByLabel("工作邮箱", { exact: true }).fill(user.email);
   await page.getByLabel("密码", { exact: true }).fill(user.password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await authClick(page, "登录");
   await expect(
     page.getByRole("heading", { name: "Demo Export Studio", exact: true }),
   ).toBeVisible();

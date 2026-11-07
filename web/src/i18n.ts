@@ -115,6 +115,8 @@ export const messages = {
     keepKey: "留空以保留已有密钥",
     configured: "已配置",
     unconfigured: "尚未配置",
+    supportsVision:
+      "模型支持图片输入（允许向该服务商发送资料缩略图和页面截图）",
     aiEnabled: "启用此服务",
     testConnection: "测试连接",
     testSuccess: "连接测试成功",
@@ -278,6 +280,8 @@ export const messages = {
     keepKey: "Leave empty to keep the existing key",
     configured: "Configured",
     unconfigured: "Not configured",
+    supportsVision:
+      "Model supports image input (allows asset thumbnails and page screenshots to be sent to this provider)",
     aiEnabled: "Enable this provider",
     testConnection: "Test connection",
     testSuccess: "Connection test succeeded",

@@ -1018,11 +1018,15 @@ function AiPage() {
   const { me } = useContext(Auth);
   const { data, error, reload } = useData("/ai/provider");
   const [enabled, setEnabled] = useState(false);
+  const [supportsVision, setSupportsVision] = useState(false);
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>();
   useEffect(() => {
-    if (data) setEnabled(data.enabled);
+    if (data) {
+      setEnabled(data.enabled);
+      setSupportsVision(!!data.supportsVision);
+    }
   }, [data]);
   return (
     <>
@@ -1065,6 +1069,7 @@ function AiPage() {
                 modelName: value.modelName,
                 baseUrl: value.baseUrl,
                 enabled,
+                supportsVision,
                 ...(value.apiKey ? { apiKey: value.apiKey } : {}),
               });
               setSuccess(t("saved"));
@@ -1078,6 +1083,14 @@ function AiPage() {
                 onChange={(e) => setEnabled(e.target.checked)}
               />
               {t("aiEnabled")}
+            </label>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={supportsVision}
+                onChange={(e) => setSupportsVision(e.target.checked)}
+              />
+              {t("supportsVision")}
             </label>
           </Form>
           <button

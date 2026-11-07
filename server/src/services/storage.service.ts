@@ -204,7 +204,9 @@ export async function removeAsset(id: string) {
     ensure(
       !(await Product.exists({ assetIds: id }).session(session)) &&
         !(await Site.exists({ logoId: id }).session(session)) &&
-        !(await SiteBlock.exists({ assetId: id }).session(session)) &&
+        !(await SiteBlock.exists({
+          $or: [{ assetId: id }, { "items.assetId": id }],
+        }).session(session)) &&
         !(await FactSheet.exists({
           "source.kind": "asset",
           "source.refId": id,

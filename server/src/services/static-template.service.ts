@@ -1,3 +1,4 @@
+import { renderB2BBlock, productCards, quoteBar } from "./b2b-template.service";
 import {
   renderInquiry,
   renderConsent,
@@ -22,11 +23,14 @@ export type Snapshot = {
   }>;
   facts: any[];
   settings: any;
-  assets: Record<string, { path: string; width: number; height: number }>;
+  assets: Record<
+    string,
+    { path: string; width: number; height: number; mime?: string }
+  >;
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "brand-site-v1";
+export const templateVersion = "b2b-site-v2";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
@@ -45,7 +49,9 @@ function image(s: Snapshot, id: string, alt: string, hero = false) {
     ' decoding="async">'
   );
 }
-function section(s: Snapshot, b: any) {
+function section(s: Snapshot, b: any, p?: any) {
+  const rich = renderB2BBlock(s, p, b);
+  if (rich !== null) return rich;
   let html = "";
   if (b.type === "image") html = image(s, b.assetId, b.alt);
   else if (b.type === "specs" && b.table)
@@ -191,6 +197,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
     v.presentation?.navigationLabel ??
     (
       {
+        customization: "Private label",
+        resources: "Resources",
+        solution: "Solutions",
         category: "Collection",
         about: "Our story",
         faq: "FAQs",
@@ -200,7 +209,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
       } as Record<string, string>
     )[v.type] ??
     cleanTitle(v);
-  const navPages = ["category", "about", "faq", "contact"]
+  const navPages = (
+    s.site.buyerProfile
+      ? ["category", "customization", "factory", "resources", "contact"]
+      : ["category", "about", "faq", "contact"]
+  )
     .map((type) => s.pages.find((v) => v.type === type))
     .filter(Boolean);
   const nav = navPages
@@ -221,60 +234,66 @@ export function renderStaticPage(s: Snapshot, p: any) {
     p.path === "/" && products.length ? "#collection" : (catalog?.path ?? "/");
   const about = s.pages.find((v) => v.type === "about");
   const grid =
-    ["/", catalog?.path].includes(p.path) && products.length
-      ? '<section class="collection section" id="collection"><div class="section-heading"><div><p class="section-kicker">The collection</p><h2>Explore the everyday essentials</h2></div>' +
-        (catalog && p.path !== catalog.path
-          ? '<a class="text-link" href="' +
-            e(catalog.path) +
-            '">View collection</a>'
-          : "") +
-        '</div><div class="product-grid">' +
-        products
-          .map((v) => {
-            const product = s.products?.find(
-              (product) => product.id === v.productId,
-            );
-            const assetId = product?.assetIds
-              .filter((id) => s.assets[id])
-              .at(-1);
-            const b = v.blocks.find(
-              (b: any) => b.type === "image" && s.assets[b.assetId],
-            );
-            const visual = assetId
-              ? image(s, assetId, cleanTitle(v) + " collection image")
-              : b
-                ? image(s, b.assetId, b.alt)
-                : "";
-            return (
-              '<article class="product-card">' +
-              (visual
-                ? '<a class="product-visual" href="' +
-                  e(v.path) +
-                  '" tabindex="-1" aria-hidden="true">' +
-                  visual +
-                  "</a>"
-                : "") +
-              '<div class="product-copy"><h3><a href="' +
-              e(v.path) +
-              '">' +
-              e(v.presentation?.navigationLabel ?? cleanTitle(v)) +
-              "</a></h3>" +
-              (v.presentation?.summary
-                ? "<p>" + e(v.presentation.summary) + "</p>"
-                : "") +
-              '<a class="text-link" href="' +
-              e(v.path) +
-              '">Explore product<span aria-hidden="true"> ↗</span></a></div></article>'
-            );
-          })
-          .join("") +
-        "</div></section>"
+    ["/", catalog?.path].includes(p.path) &&
+    products.length &&
+    !p.blocks.some((b: any) => b.type === "product-grid")
+      ? s.site.buyerProfile
+        ? productCards(s, p)
+        : '<section class="collection section" id="collection"><div class="section-heading"><div><p class="section-kicker">The collection</p><h2>Explore the everyday essentials</h2></div>' +
+          (catalog && p.path !== catalog.path
+            ? '<a class="text-link" href="' +
+              e(catalog.path) +
+              '">View collection</a>'
+            : "") +
+          '</div><div class="product-grid">' +
+          products
+            .map((v) => {
+              const product = s.products?.find(
+                (product) => product.id === v.productId,
+              );
+              const assetId = product?.assetIds
+                .filter((id) => s.assets[id])
+                .at(-1);
+              const b = v.blocks.find(
+                (b: any) => b.type === "image" && s.assets[b.assetId],
+              );
+              const visual = assetId
+                ? image(s, assetId, cleanTitle(v) + " collection image")
+                : b
+                  ? image(s, b.assetId, b.alt)
+                  : "";
+              return (
+                '<article class="product-card">' +
+                (visual
+                  ? '<a class="product-visual" href="' +
+                    e(v.path) +
+                    '" tabindex="-1" aria-hidden="true">' +
+                    visual +
+                    "</a>"
+                  : "") +
+                '<div class="product-copy"><h3><a href="' +
+                e(v.path) +
+                '">' +
+                e(v.presentation?.navigationLabel ?? cleanTitle(v)) +
+                "</a></h3>" +
+                (v.presentation?.summary
+                  ? "<p>" + e(v.presentation.summary) + "</p>"
+                  : "") +
+                '<a class="text-link" href="' +
+                e(v.path) +
+                '">Explore product<span aria-hidden="true"> ↗</span></a></div></article>'
+              );
+            })
+            .join("") +
+          "</div></section>"
       : "";
   const pending = (b: any) =>
     /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
       b.body?.trim() ?? "",
     ) &&
     !b.faq?.length &&
+    !b.items?.length &&
+    !["product-grid", "category-grid", "downloads", "cta"].includes(b.type) &&
     (!b.table || !b.table.rows?.length);
   const pendingBlocks = p.blocks.filter(pending);
   const detailRequest = pendingBlocks.length
@@ -313,7 +332,13 @@ export function renderStaticPage(s: Snapshot, p: any) {
     e(lead) +
     '</p><div class="hero-actions"><a class="cta" href="' +
     e(
-      p.type === "home" || p.type === "category" ? collectionHref : "#inquiry",
+      presentation.primaryActionTarget === "inquiry"
+        ? "#inquiry"
+        : presentation.primaryActionTarget === "catalogue"
+          ? "/catalogue.html"
+          : p.type === "home" || p.type === "category"
+            ? collectionHref
+            : "#inquiry",
     ) +
     '">' +
     e(
@@ -367,6 +392,12 @@ export function renderStaticPage(s: Snapshot, p: any) {
     json(schema) +
     '</script></head><body class="theme-' +
     e(s.site.templateId) +
+    (s.site.buyerProfile
+      ? " b2b-site page-" +
+        e(p.type) +
+        " density-" +
+        e(presentation.density ?? "comfortable")
+      : "") +
     " style-" +
     e(style) +
     '"><a class="skip" href="#main">Skip to content</a><header class="site-header"><div class="header-inner">' +
@@ -374,18 +405,26 @@ export function renderStaticPage(s: Snapshot, p: any) {
     '<nav class="desktop-nav" aria-label="Main navigation">' +
     nav +
     '</nav><a class="header-action" href="' +
-    e(collectionHref) +
-    '">View collection</a><details class="mobile-navigation"><summary>Menu<span aria-hidden="true"> ☰</span></summary><nav aria-label="Mobile navigation">' +
+    e(s.site.buyerProfile ? "#inquiry" : collectionHref) +
+    '">' +
+    (s.site.buyerProfile ? "Request a quote" : "View collection") +
+    '</a><details class="mobile-navigation"><summary>Menu<span aria-hidden="true"> ☰</span></summary><nav aria-label="Mobile navigation">' +
     nav +
     '</nav></details></div></header><main id="main">' +
+    (s.site.buyerProfile && p.path !== "/"
+      ? '<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true"> / </span><span>' +
+        e(cleanTitle(p)) +
+        "</span></nav>"
+      : "") +
     hero +
     grid +
     p.blocks
       .filter((b: any) => b !== firstImage && !pending(b))
-      .map((b: any) => section(s, b))
+      .map((b: any) => section(s, b, p))
       .join("") +
     detailRequest +
     renderInquiry(s, p) +
+    quoteBar(s, p) +
     '</main><footer><div class="footer-brand"><strong>' +
     e(s.site.name) +
     "</strong><p>" +
