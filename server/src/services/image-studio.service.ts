@@ -8,7 +8,13 @@ import { reserve, settle } from "./usage.service";
 import { detectMime, store } from "./storage.service";
 
 const base = "https://www.codex789.com/v1";
-const model = "gemini-3.1-flash-image";
+const defaultModel = "gemini-3.1-flash-image";
+export const imageModel = z.enum([
+  defaultModel,
+  "gpt-image-2",
+  "gpt-image-2.5-sunburst",
+  "gpt-image-2.6-sunburst",
+]);
 const shots = {
   campaign:
     "Wide landscape editorial campaign photograph. Stage the subject in the right half. Leave quiet negative space on the left for a headline.",
@@ -26,11 +32,15 @@ export const imageBrief = z
 const purpose = () => "image-provider:" + tenantContext()!.organizationId;
 export async function imageStatus() {
   const p = await AgentAiProvider.findOne({ name: "images" })
-    .select("enabled")
+    .select("enabled modelName")
     .lean();
-  return { configured: !!p?.enabled, model };
+  return { configured: !!p?.enabled, model: p?.modelName ?? defaultModel };
 }
-export async function configureImages(key: string, userId: string) {
+export async function configureImages(
+  key: string,
+  userId: string,
+  model: z.infer<typeof imageModel> = defaultModel,
+) {
   if (key)
     await AgentAiProvider.updateOne(
       { name: "images" },
@@ -112,21 +122,34 @@ export async function generateImage(
     input.subject,
     "Original illustrative brand imagery. No text, logo, watermark, badges or certification marks.",
   ].join(" ");
-  let response;
-  try {
-    response = await fetch(base + "/chat/completions", {
-      method: "POST",
-      redirect: "error",
-      signal: AbortSignal.timeout(180000),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + decrypt(p.secret, purpose()),
-      },
-      body: JSON.stringify({
+  const model = imageModel.parse(p.modelName),
+    chat = model === defaultModel;
+  const payload = chat
+    ? {
         model,
         messages: [{ role: "user", content: "Generate one image. " + prompt }],
-      }),
-    });
+      }
+    : {
+        model,
+        prompt,
+        n: 1,
+        size: input.composition === "campaign" ? "1536x1024" : "1024x1024",
+      };
+  let response;
+  try {
+    response = await fetch(
+      base + (chat ? "/chat/completions" : "/images/generations"),
+      {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(180000),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + decrypt(p.secret, purpose()),
+        },
+        body: JSON.stringify(payload),
+      },
+    );
   } catch {
     throw new AppError(502, "IMAGE_REQUEST_FAILED");
   }

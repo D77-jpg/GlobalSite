@@ -1,5 +1,6 @@
 import type { Locale } from "./i18n";
 export const catalogMessages = {
+  imageModel: ["生图模型", "Image model"],
   CONCEPT_NOT_EVIDENCE: [
     "概念配图仅用于视觉展示。请使用原始资料提取事实。",
     "Concept imagery is for illustration. Use source documents for facts.",

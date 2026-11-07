@@ -2286,7 +2286,9 @@ paths:
             schema:
               type: object
               required: [apiKey]
-              properties: {apiKey: {type: string, maxLength: 512, writeOnly: true, description: Empty disconnects.}}
+              properties:
+                apiKey: {type: string, maxLength: 512, writeOnly: true, description: Empty disconnects.}
+                model: {type: string, default: gemini-3.1-flash-image, enum: [gemini-3.1-flash-image, gpt-image-2, gpt-image-2.5-sunburst, gpt-image-2.6-sunburst]}
       responses:
         "200":
           description: "Configuration status. The key is never returned."

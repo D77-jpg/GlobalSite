@@ -1158,10 +1158,25 @@ test("organization image provider generates once and stores an illustration in i
     .png()
     .toBuffer();
   let calls = 0;
+  let model = "gemini-3.1-flash-image";
   mock.method(globalThis, "fetch", async (url: any, init: any) => {
-    assert.equal(url, "https://www.codex789.com/v1/chat/completions");
+    const chat = model.startsWith("gemini");
+    assert.equal(
+      url,
+      "https://www.codex789.com/v1/" +
+        (chat ? "chat/completions" : "images/generations"),
+    );
+    const payload = JSON.parse(init.body);
+    assert.equal(payload.model, model);
+    if (!chat) {
+      assert.equal(payload.size, "1536x1024");
+      assert.equal(payload.n, 1);
+      assert.ok(payload.prompt.includes("Cerulean studio"));
+    }
     assert.equal(init.headers.Authorization, "Bearer " + credential);
     calls++;
+    if (!chat)
+      return Response.json({ data: [{ b64_json: png.toString("base64") }] });
     return Response.json({
       choices: [
         {
@@ -1195,6 +1210,22 @@ test("organization image provider generates once and stores an illustration in i
     .send({ kind: "asset", id, consent: true });
   assert.equal(extraction.body.error.code, "CONCEPT_NOT_EVIDENCE");
   await role("admin");
+  model = "gpt-image-2.5-sunburst";
+  const switched = await a.client.request("PUT", config, {
+    apiKey: credential,
+    model,
+  });
+  assert.equal(switched.body.data.model, model);
+  assert.equal(
+    (
+      await a.client
+        .make("POST", path)
+        .set("Idempotency-Key", randomUUID())
+        .send(brief)
+    ).status,
+    201,
+  );
+  assert.equal(calls, 2);
   assert.equal(
     (await a.client.request("PUT", config, { apiKey: "" })).body.data
       .configured,

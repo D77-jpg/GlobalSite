@@ -5,6 +5,7 @@ import {
   type NextFunction,
 } from "express";
 import {
+  imageModel,
   configureImages,
   generateImage,
   imageBrief,
@@ -231,11 +232,14 @@ router.put(
   "/assets/image-provider",
   admin,
   wrap(async (req, res) => {
-    const { apiKey } = z
-      .object({ apiKey: z.string().trim().max(512) })
+    const { apiKey, model } = z
+      .object({
+        apiKey: z.string().trim().max(512),
+        model: imageModel.optional(),
+      })
       .strict()
       .parse(req.body);
-    ok(res, await configureImages(apiKey, req.auth!.userId));
+    ok(res, await configureImages(apiKey, req.auth!.userId, model));
   }),
 );
 router.post(

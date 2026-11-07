@@ -881,7 +881,9 @@ function ImageStudio({
   const t = catalogText(locale),
     status = useLoad("/assets/image-provider"),
     action = useAction();
-  const [key, setKey] = useState(""),
+  const [selectedModel, setSelectedModel] = useState(""),
+    model = selectedModel || status.data?.model || "gemini-3.1-flash-image",
+    [key, setKey] = useState(""),
     [subject, setSubject] = useState(""),
     [composition, setComposition] = useState("campaign"),
     [asset, setAsset] = useState("");
@@ -891,7 +893,23 @@ function ImageStudio({
       {role === "admin" && (
         <details open={status.data && !status.data.configured}>
           <summary>{t("imageConnection")}</summary>
-          <p>codex789.com · gemini-3.1-flash-image</p>
+          <p>codex789.com · {status.data?.model}</p>
+          <label>
+            {t("imageModel")}
+            <select
+              value={model}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {[
+                "gemini-3.1-flash-image",
+                "gpt-image-2",
+                "gpt-image-2.5-sunburst",
+                "gpt-image-2.6-sunburst",
+              ].map((v) => (
+                <option key={v}>{v}</option>
+              ))}
+            </select>
+          </label>
           <label>
             {t("imageKey")}
             <input
@@ -906,7 +924,10 @@ function ImageStudio({
             onClick={() =>
               void action.run(async () => {
                 status.replace(
-                  await api("/assets/image-provider", "PUT", { apiKey: key }),
+                  await api("/assets/image-provider", "PUT", {
+                    apiKey: key,
+                    model,
+                  }),
                 );
                 setKey("");
               })
