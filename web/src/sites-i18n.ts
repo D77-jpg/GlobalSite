@@ -1,5 +1,14 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  businessBrief: [
+    "业务描述与建站目标",
+    "Business description and website goals",
+  ],
+  design: ["设计提案", "Design proposals"],
+  DESIGN_REQUIRED: [
+    "请先生成并选定设计方案，再生成整站内容。",
+    "Generate and select a design before writing the full site.",
+  ],
   guide: ["建站向导", "Site guide"],
   reviewMethod: ["本次审查方式", "Recorded review method"],
   reviewMethod_structural: ["浏览器结构检查", "Browser structure checks"],

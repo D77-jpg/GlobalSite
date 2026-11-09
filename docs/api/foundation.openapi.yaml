@@ -2260,24 +2260,24 @@ paths:
           description: "data contains configured (boolean) and model (string)."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/ImageProviderResult"}
+              schema: { $ref: "#/components/schemas/ImageProviderResult" }
         "400":
           description: "Invalid input"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "401":
           description: "Session expired"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "403":
           description: "Insufficient role or CSRF rejected"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
     put:
-      security: [{cookieAuth: [], csrfHeader: []}]
+      security: [ { cookieAuth: [], csrfHeader: [] } ]
       summary: Set or disconnect the organization's image provider (admin)
       requestBody:
         required: true
@@ -2285,78 +2285,83 @@ paths:
           application/json:
             schema:
               type: object
-              required: [apiKey]
+              required: [ apiKey ]
               properties:
-                apiKey: {type: string, maxLength: 512, writeOnly: true, description: Empty disconnects.}
-                model: {type: string, default: gemini-3.1-flash-image, enum: [gemini-3.1-flash-image, gpt-image-2, gpt-image-2.5-sunburst, gpt-image-2.6-sunburst]}
+                apiKey: { type: string, maxLength: 512, writeOnly: true, description: Empty disconnects. }
+                model:
+                  {
+                    type: string,
+                    default: gemini-3.1-flash-image,
+                    enum: [ gemini-3.1-flash-image, gpt-image-2, gpt-image-2.5-sunburst, gpt-image-2.6-sunburst ]
+                  }
       responses:
         "200":
           description: "Configuration status. The key is never returned."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/ImageProviderResult"}
+              schema: { $ref: "#/components/schemas/ImageProviderResult" }
         "400":
           description: "Invalid input"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "401":
           description: "Session expired"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "403":
           description: "Insufficient role or CSRF rejected"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
   /assets/generate-image:
     post:
-      security: [{cookieAuth: [], csrfHeader: []}]
+      security: [ { cookieAuth: [], csrfHeader: [] } ]
       summary: Generate a concept image for the organization's private asset library (editor or admin)
       parameters:
-        - {in: header, name: Idempotency-Key, required: true, schema: {type: string, format: uuid}}
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, format: uuid } }
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [subject, composition]
+              required: [ subject, composition ]
               properties:
-                subject: {type: string, minLength: 3, maxLength: 600}
-                composition: {type: string, enum: [campaign, still-life, detail]}
+                subject: { type: string, minLength: 3, maxLength: 600 }
+                composition: { type: string, enum: [ campaign, still-life, detail ] }
       responses:
         "201":
           description: "data.id identifies the new image Asset."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/GeneratedImageResult"}
+              schema: { $ref: "#/components/schemas/GeneratedImageResult" }
         "409":
           description: "Disconnected, quota exceeded or previously submitted request."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "502":
           description: "Provider failure or unusable image."
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "400":
           description: "Invalid input"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "401":
           description: "Session expired"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
         "403":
           description: "Insufficient role or CSRF rejected"
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
+              schema: { $ref: "#/components/schemas/Error" }
   /assets:
     post:
       operationId: foundation30
@@ -5502,8 +5507,7 @@ paths:
             maxLength: 100
             pattern: ^[A-Za-z0-9_-]{8,100}$
           description: >-
-            Replay returns same run; one active run per site/step (content and rewrite share the content
-            lock).
+            Replay returns same run; one active run per site/step (content and rewrite share the content lock).
       responses:
         "202":
           description: Success
@@ -10196,7 +10200,8 @@ paths:
   /agent-runs/{id}/accept-review:
     post:
       operationId: acceptSiteQualityReview
-      summary: S11 administrator confirms current screenshots and buying content; rejects stale reviews and blocking findings
+      summary: S11 administrator confirms current screenshots and buying content; rejects stale reviews and blocking
+        findings
       security:
         - cookieAuth: []
           csrfHeader: []
@@ -10275,6 +10280,208 @@ paths:
             schema:
               type: object
               additionalProperties: false
+  /sites/{id}/design-proposals/{runId}/{key}/preview:
+    get:
+      operationId: previewSiteDesignDirection
+      summary: Private homepage proposal; current site, plan and source revision checks
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: key
+          in: path
+          required: true
+          schema:
+            enum:
+              - primary
+              - alternate
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    properties:
+                      html:
+                        type: string
+                      issues:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SiteIssue"
+                        maxItems: 500
+                      hash:
+                        type: string
+                        minLength: 1
+                        maxLength: 200
+                    required:
+                      - html
+                      - issues
+                      - hash
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /sites/{id}/design-direction:
+    post:
+      operationId: selectSiteDesignDirection
+      summary: Save a selected homepage draft and shared visual rules transactionally, without approval or publishing
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+        "400":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - revision
+                - runId
+                - key
+              additionalProperties: false
+              properties:
+                revision:
+                  type: integer
+                  minimum: 1
+                runId:
+                  type: string
+                  pattern: ^[a-f0-9]{24}$
+                key:
+                  enum:
+                    - primary
+                    - alternate
 components:
   securitySchemes:
     cookieAuth:
@@ -11566,7 +11773,7 @@ components:
         sites:
           type: integer
           minimum: 1
-        images: {type: integer}
+        images: { type: integer }
         ai_tokens:
           type: integer
           minimum: 1
@@ -11648,8 +11855,8 @@ components:
         supportsVision:
           type: boolean
           description: >-
-            Explicit opt-in: the configured model accepts image inputs. Disabled by default; text-only reviews require human
-            screenshot approval.
+            Explicit opt-in: the configured model accepts image inputs. Disabled by default; text-only reviews
+            require human screenshot approval.
       required:
         - modelName
         - baseUrl
@@ -11957,8 +12164,8 @@ components:
         supportsVision:
           type: boolean
           description: >-
-            Explicit opt-in: the configured model accepts image inputs. Disabled by default; text-only reviews require human
-            screenshot approval.
+            Explicit opt-in: the configured model accepts image inputs. Disabled by default; text-only reviews
+            require human screenshot approval.
       required:
         - modelName
         - baseUrl
@@ -12246,25 +12453,25 @@ components:
               type: boolean
     ImageProviderResult:
       type: object
-      required: [success, data]
+      required: [ success, data ]
       properties:
-        success: {type: boolean, enum: [true]}
+        success: { type: boolean, enum: [ true ] }
         data:
           type: object
-          required: [configured, model]
+          required: [ configured, model ]
           additionalProperties: false
           properties:
-            configured: {type: boolean}
-            model: {type: string}
+            configured: { type: boolean }
+            model: { type: string }
     GeneratedImageResult:
       type: object
-      required: [success, data]
+      required: [ success, data ]
       properties:
-        success: {type: boolean, enum: [true]}
+        success: { type: boolean, enum: [ true ] }
         data:
           type: object
-          required: [id]
-          properties: {id: {type: string, pattern: "^[0-9a-f]{24}$"}}
+          required: [ id ]
+          properties: { id: { type: string, pattern: "^[0-9a-f]{24}$" } }
     CatalogAsset:
       type: object
       required:
@@ -13241,6 +13448,7 @@ components:
             - machinery
             - building-hardware
             - packaging-bags
+            - adaptive
         targetMarkets:
           type: array
           items:
@@ -13271,6 +13479,10 @@ components:
             - archived
         buyerProfile:
           $ref: "#/components/schemas/SiteBuyerProfile"
+        businessBrief:
+          type: string
+          maxLength: 2000
+          description: Private user business description and goals, not confirmed factual evidence
       required:
         - name
         - templateId
@@ -13419,8 +13631,8 @@ components:
     SitePresentation:
       type: object
       description: >-
-        Optional Agent-authored brand presentation, independent of SEO. All public text is checked against page fact
-        references; designNotes is private and never rendered.
+        Optional Agent-authored brand presentation, independent of SEO. All public text is checked against
+        page fact references; designNotes is private and never rendered.
       additionalProperties: false
       properties:
         navigationLabel:
@@ -13532,6 +13744,7 @@ components:
             - rewrite
             - review
             - refine
+            - design
         consent:
           const: true
         pageKey:
@@ -13686,6 +13899,44 @@ components:
           type: string
         buyerProfile:
           $ref: "#/components/schemas/SiteBuyerProfile"
+        designDirection:
+          type: object
+          additionalProperties: false
+          required:
+            - runId
+            - key
+            - visualStyle
+            - heroLayout
+            - density
+            - rationale
+          properties:
+            runId:
+              type: string
+              pattern: ^[a-f0-9]{24}$
+            key:
+              enum:
+                - primary
+                - alternate
+            visualStyle:
+              enum:
+                - organic
+                - industrial
+                - minimal
+            heroLayout:
+              enum:
+                - split
+                - stacked
+            density:
+              enum:
+                - comfortable
+                - compact
+            rationale:
+              type: string
+              maxLength: 500
+        businessBrief:
+          type: string
+          maxLength: 2000
+          description: Private user business description and goals, not confirmed factual evidence
       required:
         - id
         - revision
@@ -14338,11 +14589,15 @@ x-s4-agents:
 x-s8-s11-b2b:
   status: implemented
   notes:
-    - Interview asks at most ten missing company/business-contact or selected product procurement facts per round; all answers remain candidates.
+    - Interview asks at most ten missing company/business-contact or selected product procurement facts per
+      round; all answers remain candidates.
     - Buyer profiles and page briefs are private instructions, never evidence for public business claims.
     - Reference sites are bounded robots-aware SSRF-protected reads; their content is not company evidence.
-    - Optional structured blocks preserve old pages. All public item text, assets and links are validated against the confirmed sitemap.
+    - Optional structured blocks preserve old pages. All public item text, assets and links are validated
+      against the confirmed sitemap.
     - Public email addresses must match explicitly referenced confirmed company contact facts.
-    - Hard numerical claims require evidence; narrowly bounded workflow wording such as in one place is not a business quantity.
-    - Reviews freeze page revisions and private screenshot artifacts. Refine requires an unchanged review and writes new drafts, never approvals.
+    - Hard numerical claims require evidence; narrowly bounded workflow wording such as in one place is not a
+      business quantity.
+    - Reviews freeze page revisions and private screenshot artifacts. Refine requires an unchanged review and
+      writes new drafts, never approvals.
     - B2B commercial publication requires confirmed procurement data; draft review remains available with gaps.

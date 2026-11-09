@@ -1,3 +1,4 @@
+import { previewDesign, selectDesign } from "../services/site-design.service";
 import { ensure } from "../errors";
 import { reviewScreenshot } from "../services/site-review.service";
 import {
@@ -185,6 +186,27 @@ r.post(
   wrap(async (req, res) =>
     ok(res, await agents.interviewAnswers(id(req), req.body, actor(req)), 201),
   ),
+);
+r.get(
+  "/sites/:id/design-proposals/:runId/:key/preview",
+  wrap(async (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    ok(
+      res,
+      await previewDesign(
+        id(req),
+        objectId.parse(req.params.runId),
+        v.selectDesignInput.shape.key.parse(req.params.key),
+      ),
+    );
+  }),
+);
+r.post(
+  "/sites/:id/design-direction",
+  edit,
+  wrap(async (req, res) => {
+    ok(res, await selectDesign(id(req), req.body, actor(req)));
+  }),
 );
 r.get(
   "/sites/:id/pages",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { objectId, revision } from "./catalog.validator";
 export const templates = [
+  { id: "adaptive", name: "Agent-composed website", industry: "adaptive" },
   { id: "machinery", name: "Machinery & equipment", industry: "machinery" },
   {
     id: "building-hardware",
@@ -62,8 +63,14 @@ export const pageBrief = z
 export const siteInput = z
   .object({
     buyerProfile: buyerProfile.optional(),
+    businessBrief: z.string().trim().max(2000).optional(),
     name: z.string().trim().min(1).max(120),
-    templateId: z.enum(["machinery", "building-hardware", "packaging-bags"]),
+    templateId: z.enum([
+      "adaptive",
+      "machinery",
+      "building-hardware",
+      "packaging-bags",
+    ]),
     targetMarkets: z.array(z.string().trim().min(1).max(80)).min(1).max(10),
     language: z.literal("en"),
     brandColor: z.string().regex(/^#[a-fA-F0-9]{6}$/),
@@ -220,6 +227,43 @@ export const pageInput = z
   })
   .strict()
   .refine((x) => new Set(x.blocks.map((b) => b.key)).size === x.blocks.length);
+export const designOutput = z
+  .object({
+    directions: z
+      .array(
+        z
+          .object({
+            key: z.enum(["primary", "alternate"]),
+            label: z.string().trim().min(1).max(80),
+            rationale: z.string().trim().min(1).max(500),
+            page: pageInput.refine((p) => !!p.presentation),
+          })
+          .strict(),
+      )
+      .length(2),
+  })
+  .strict()
+  .refine((d) => new Set(d.directions.map((v) => v.key)).size === 2)
+  .refine((d) => {
+    const [a, b] = d.directions.map((v) => v.page);
+    return (
+      JSON.stringify([
+        a.presentation?.visualStyle,
+        a.presentation?.heroLayout,
+        a.presentation?.density,
+        a.blocks.map((v) => [v.type, v.layout, v.tone]),
+      ]) !==
+      JSON.stringify([
+        b.presentation?.visualStyle,
+        b.presentation?.heroLayout,
+        b.presentation?.density,
+        b.blocks.map((v) => [v.type, v.layout, v.tone]),
+      ])
+    );
+  });
+export const selectDesignInput = z
+  .object({ revision, runId: objectId, key: z.enum(["primary", "alternate"]) })
+  .strict();
 export const pagePatch = z.object({ revision, data: pageInput }).strict();
 export const review = z
   .object({ revision, reason: z.string().trim().max(500).optional() })
@@ -227,6 +271,7 @@ export const review = z
 export const agentInput = z
   .object({
     step: z.enum([
+      "design",
       "interview",
       "research",
       "content",

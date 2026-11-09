@@ -149,7 +149,7 @@ after(async () => {
   }
 });
 
-async function newSite() {
+async function newSite(extra: Record<string, unknown> = {}) {
   const r = await a.client.request("POST", "/sites", {
     name: "Fixture Export",
     templateId: "machinery",
@@ -158,6 +158,7 @@ async function newSite() {
     brandColor: "#126a54",
     logoId: null,
     productIds: [],
+    ...extra,
   });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   return r.body.data;
@@ -269,7 +270,7 @@ test("sites isolate organizations, enforce role/plan limits and validate logo/pr
   await role("admin");
   assert.equal(
     (await a.client.request("GET", "/site-templates")).body.data.length,
-    3,
+    4,
   );
   await assert.rejects(() => m.Site.find(), /TENANT_REQUIRED/);
   await assert.rejects(() => m.SitePage.find(), /TENANT_REQUIRED/);
@@ -1798,5 +1799,182 @@ test("known metered format errors retry promptly but stop after the unit attempt
   assert.equal(
     await tenant(() => m.SitePage.countDocuments({ siteId: site.id })),
     0,
+  );
+});
+
+const proposalPage = (style = "organic", layout = "split") => ({
+  ...draft(),
+  presentation: {
+    navigationLabel: "Home",
+    headline: "Products for thoughtful buyers",
+    summary: "Explore our collection and discuss your sourcing needs.",
+    primaryActionLabel: "Request a quote",
+    visualStyle: style,
+    heroLayout: layout,
+    density: "comfortable",
+    designNotes: "Use product photography and a clear buying journey.",
+  },
+});
+const proposals = () => ({
+  directions: [
+    {
+      key: "primary",
+      label: "Product showcase",
+      rationale: "Put the range and buying journey first.",
+      page: proposalPage(),
+    },
+    {
+      key: "alternate",
+      label: "Editorial collection",
+      rationale: "Use a compact centered composition.",
+      page: proposalPage("minimal", "stacked"),
+    },
+  ],
+});
+test("design proposals run once in Worker, stay private, select atomically and enforce shared style", async () => {
+  const site = await planSite(
+    await newSite({
+      templateId: "adaptive",
+      businessBrief: "Cat supplies for wholesale buyers.",
+    }),
+    [
+      home,
+      {
+        ...home,
+        key: "contact",
+        path: "/contact",
+        title: "Contact",
+        type: "contact",
+      },
+    ],
+  );
+  const rejected = await queue(site, "content");
+  assert.equal(rejected.body.error.code, "DESIGN_REQUIRED");
+  const response = await queue(site, "design", randomUUID(), {
+    instructions: "Use larger product images",
+  });
+  assert.equal(response.status, 202, JSON.stringify(response.body));
+  const runId = response.body.data.id;
+  const { processSiteAgent, unitPrompt } = await import(
+    "../src/services/site-agents.service"
+  );
+  const run = await tenant(() => m.AgentRun.findById(runId));
+  const prompt = unitPrompt(run, run.steps[0]);
+  assert.equal(
+    (prompt.input as any).businessBrief,
+    "Cat supplies for wholesale buyers.",
+  );
+  assert.match((prompt.input as any).requestedEdit, /larger product/);
+  const task = await taskFor(runId);
+  let calls = 0;
+  const provider = async (_s: any, _i: any, _o: any, save: any) => {
+    calls++;
+    const result = { output: proposals(), tokens: 25 };
+    await save(result);
+    return result;
+  };
+  assert.equal(
+    (await tenant(() => processSiteAgent(task, provider))).status,
+    "done",
+  );
+  await tenant(() => processSiteAgent(task, provider));
+  assert.equal(calls, 1);
+  assert.equal(
+    await tenant(() => m.SitePage.countDocuments({ siteId: site.id })),
+    0,
+  );
+  const url =
+    "/sites/" + site.id + "/design-proposals/" + runId + "/primary/preview";
+  const preview = await a.client.request("GET", url);
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  assert.match(preview.body.data.html, /noindex/);
+  assert.match(preview.body.data.html, /Products for thoughtful buyers/);
+  assert.match(preview.body.data.html, /href="\/contact"/);
+  assert.equal(preview.headers["cache-control"], "private, no-store");
+  assert.equal((await b.client.request("GET", url)).status, 404);
+  const select = "/sites/" + site.id + "/design-direction",
+    input = { revision: site.revision, runId, key: "primary" };
+  await role("viewer");
+  assert.equal((await a.client.request("POST", select, input)).status, 403);
+  await role("admin");
+  const results = await Promise.all([
+    a.client.request("POST", select, input),
+    a.client.request("POST", select, input),
+  ]);
+  assert(
+    results.every((r) => r.status === 200),
+    JSON.stringify(results.map((r) => r.body)),
+  );
+  const chosen = results[0].body.data;
+  assert.equal(chosen.designDirection.visualStyle, "organic");
+  assert.equal(
+    await tenant(() =>
+      m.AuditLog.countDocuments({
+        action: "site.design.selected",
+        targetId: site.id,
+      }),
+    ),
+    1,
+  );
+  const homePage = (
+    await a.client.request("GET", "/sites/" + site.id + "/pages")
+  ).body.data.items[0];
+  assert.equal(homePage.status, "draft"); // Selection never grants approval.
+  assert.equal(homePage.presentation.visualStyle, "organic");
+  assert.equal((await a.client.request("GET", url)).status, 409);
+  const content = (await queue(chosen, "content")).body.data;
+  assert(content.id);
+  assert.equal(
+    (
+      await tenant(async () =>
+        processSiteAgent(
+          await taskFor(content.id),
+          await providerFor({ page: proposalPage("industrial", "stacked") }),
+        ),
+      )
+    ).status,
+    "done",
+  );
+  const after = (await a.client.request("GET", "/pages/" + homePage.id)).body
+    .data;
+  assert.equal(after.presentation.visualStyle, "organic");
+  assert.equal(after.revision, homePage.revision);
+  const generated = (
+    await a.client.request("GET", "/sites/" + site.id + "/pages")
+  ).body.data.items.find((p: any) => p.nodeKey === "contact");
+  assert.equal(generated.presentation.visualStyle, "organic");
+});
+test("design selection refuses stale homepage edits and proposal schema rejects identical directions", async () => {
+  const { designOutput } = await import("../src/validators/sites.validator");
+  const same = proposals();
+  same.directions[1].page = same.directions[0].page;
+  assert.equal(designOutput.safeParse(same).success, false);
+  const site = await planSite(await newSite());
+  const run = (await queue(site, "design")).body.data;
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  assert.equal(
+    (
+      await tenant(async () =>
+        processSiteAgent(await taskFor(run.id), await providerFor(proposals())),
+      )
+    ).status,
+    "done",
+  );
+  await a.client.request("POST", "/sites/" + site.id + "/pages", {
+    nodeKey: "home",
+  });
+  const result = await a.client.request(
+    "POST",
+    "/sites/" + site.id + "/design-direction",
+    { revision: site.revision, runId: run.id, key: "alternate" },
+  );
+  assert.equal(result.status, 409);
+  assert.equal(result.body.error.code, "SOURCE_CHANGED");
+  assert.equal(
+    (await a.client.request("GET", "/sites/" + site.id)).body.data
+      .designDirection,
+    undefined,
   );
 });

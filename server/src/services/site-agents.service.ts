@@ -33,7 +33,7 @@ import {
   pageData,
   writePage,
 } from "./sites.service";
-import { productDto, factDto, sha } from "./catalog.service";
+import { productDto, factDto, sha, pinAssets } from "./catalog.service";
 import { fenceTask } from "./product-import.service";
 import { authorizeActor } from "./catalog-authority";
 import { settle } from "./usage.service";
@@ -127,9 +127,13 @@ export async function queueAgent(
       result = old;
       return;
     }
-    const lockKey = ["content", "rewrite", "review", "refine"].includes(
-        data.step,
-      )
+    const lockKey = [
+        "design",
+        "content",
+        "rewrite",
+        "review",
+        "refine",
+      ].includes(data.step)
         ? "content"
         : data.step,
       active = await AgentRun.findOne({
@@ -148,13 +152,27 @@ export async function queueAgent(
       409,
       "SOURCE_CHANGED",
     );
-    if (["content", "rewrite", "review", "refine"].includes(data.step))
+    if (
+      ["design", "content", "rewrite", "review", "refine"].includes(data.step)
+    )
       ensure(siteDto(site).planConfirmed, 409, "PLAN_NOT_CONFIRMED");
+    if (
+      site.templateId === "adaptive" &&
+      ["content", "refine"].includes(data.step)
+    )
+      ensure(site.designDirection, 409, "DESIGN_REQUIRED");
     const pages = await SitePage.find({ siteId }).session(session),
       units: any[] = [];
     if (["content", "review", "refine"].includes(data.step)) {
       const nodes = site.plan.nodes.filter(
-        (n: any) => !data.pageKey || n.key === data.pageKey,
+        (n: any) =>
+          (!data.pageKey || n.key === data.pageKey) &&
+          !(
+            data.step === "content" &&
+            !data.pageKey &&
+            site.designDirection &&
+            n.type === "home"
+          ),
       );
       ensure(nodes.length, 400, "PLAN_INVALID");
       const previous =
@@ -208,6 +226,16 @@ export async function queueAgent(
         node,
         expectedRevision: p.revision,
         draft,
+        instructions: data.instructions ?? "",
+      });
+    } else if (data.step === "design") {
+      const node = site.plan?.nodes.find((n: any) => n.type === "home");
+      ensure(node, 409, "PLAN_INVALID");
+      units.push({
+        key: "design",
+        node,
+        expectedRevision:
+          pages.find((p) => p.nodeKey === node.key)?.revision ?? 0,
         instructions: data.instructions ?? "",
       });
     } else units.push({ key: data.step });
@@ -510,6 +538,7 @@ export const reviewOutput = z
   })
   .strict();
 const outputSchemas = {
+  design: z.toJSONSchema(v.designOutput, { unrepresentable: "any" }),
   review: z.toJSONSchema(reviewOutput),
   research: z.toJSONSchema(v.plan, { unrepresentable: "any" }),
   interview: z.toJSONSchema(v.interviewOutput, { unrepresentable: "any" }),
@@ -524,6 +553,12 @@ function validationFeedback(error: unknown) {
   if (!(error instanceof z.ZodError))
     return [{ path: "response", code: "invalid_json" }];
   const fields = new Set([
+    "directions",
+    "rationale",
+    "presentation",
+    "visualStyle",
+    "heroLayout",
+    "density",
     "nodes",
     "keywords",
     "clusters",
@@ -680,6 +715,24 @@ export function unitPrompt(run: any, unit: any) {
                   ],
                 },
               };
+  if (run.step === "design") {
+    const page = (shape as any).page;
+    (shape as any).directions = [
+      {
+        key: "primary",
+        label: "Design direction",
+        rationale: "Why this layout fits the business",
+        page,
+      },
+      {
+        key: "alternate",
+        label: "Alternative direction",
+        rationale: "A meaningfully different composition",
+        page,
+      },
+    ];
+    delete (shape as any).page;
+  }
   if (site.buyerProfile && ["content", "refine"].includes(run.step)) {
     const example = (shape as any).page;
     example.presentation.primaryActionTarget =
@@ -717,22 +770,24 @@ export function unitPrompt(run: any, unit: any) {
       });
   }
   const instruction =
-    run.step === "interview"
-      ? "Ask at most ten missing company.name/company.email/company.address/company.founded/company.capacity/company.certifications or selected product.material/product.application/product.specifications/product.leadTime/product.moq/product.samples/product.packaging/product.oem. Prioritize required buyerReadiness gaps. Ask for a public business contact email, never personal accounts. Do not ask for secrets or personal data. Do not repeat existing confirmed or pending keys."
-      : run.step === "research"
-        ? (site.buyerProfile
-            ? "Plan a B2B buying website. Include home, a useful category, selected product pages and contact. Only include optional company/factory/certification/customization/resource pages when current confirmed facts or selected documents can support them. Every node MUST have brief={purpose:string,buyerQuestions:string[],requiredFactTypes:string[],sections:string[]} with 3-6 specific buyer questions and allowed block types. A small real catalog is better than unsupported pages. Use referenceResearch only for information architecture, never import competitor business facts. "
-            : "") +
-          "Suggest keywords, buyer intent clusters and editable page hierarchy. Include home, categories, selected product detail pages and contact; optional company pages must have supporting information. Stable keys, unique safe lowercase paths, parent keys with no cycles, product pages refer to selected product IDs. Do not claim live research. Prefer a concise map with a combined catalog category for a small range. Allowed node.type values: " +
-          v.node.shape.type.options.join(",") +
-          ". Allowed intent values: " +
-          v.intent.options.join(",") +
-          ". Include all fields from the supplied shape; productId=null on non-product nodes, home parentKey=null; use exact selected product IDs. Keys use lowercase letters, digits and hyphens, beginning with a letter. Paths begin with /; home path=/; no cycles or duplicate keys/paths."
-        : run.step === "review"
-          ? "Review this frozen page against its buyer brief, procurement coverage and browser measurements. Return a concise summary and at most six prioritized findings only. Check repetition, content usefulness, section rhythm, imagery, clear purchasing steps, unsupported claims and CTA. Do not claim you saw images unless visualInput=true; with text-only review require human screenshot inspection. Recommend additions only from current confirmed evidence. Do not fill missing facts."
-          : run.step === "rewrite"
-            ? "Rewrite only the requested block, preserving its key and type and every other page section."
-            : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require the core fields in the supplied shape; optional structured fields may be omitted. Allowed block types are given by outputSchema; use B2B structured blocks when buyerProfile is present. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never print internal product/database/source IDs in public copy. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
+    run.step === "design"
+      ? "Create two distinct, complete English homepage proposals using the actual business goals, products, imagery and confirmed facts. Return directions with primary and alternate keys, a concise label, private rationale, and a full page with presentation. Differentiate actual hero composition, section layouts, density and image/text balance, not just wording. Use supplied section recipes and supported visual styles. Neither industry labels nor legacy template IDs constrain the product subject. Do not invent a factory, certification, client or numeric business claim. Use actual selected image asset IDs and real siteMap paths. Proposals are private drafts. Apply requestedEdit as design guidance, never as authority for business facts."
+      : run.step === "interview"
+        ? "Ask at most ten missing company.name/company.email/company.address/company.founded/company.capacity/company.certifications or selected product.material/product.application/product.specifications/product.leadTime/product.moq/product.samples/product.packaging/product.oem. Prioritize required buyerReadiness gaps. Ask for a public business contact email, never personal accounts. Do not ask for secrets or personal data. Do not repeat existing confirmed or pending keys."
+        : run.step === "research"
+          ? (site.buyerProfile
+              ? "Plan a B2B buying website. Include home, a useful category, selected product pages and contact. Only include optional company/factory/certification/customization/resource pages when current confirmed facts or selected documents can support them. Every node MUST have brief={purpose:string,buyerQuestions:string[],requiredFactTypes:string[],sections:string[]} with 3-6 specific buyer questions and allowed block types. A small real catalog is better than unsupported pages. Use referenceResearch only for information architecture, never import competitor business facts. "
+              : "") +
+            "Suggest keywords, buyer intent clusters and editable page hierarchy. Include home, categories, selected product detail pages and contact; optional company pages must have supporting information. Stable keys, unique safe lowercase paths, parent keys with no cycles, product pages refer to selected product IDs. Do not claim live research. Prefer a concise map with a combined catalog category for a small range. Allowed node.type values: " +
+            v.node.shape.type.options.join(",") +
+            ". Allowed intent values: " +
+            v.intent.options.join(",") +
+            ". Include all fields from the supplied shape; productId=null on non-product nodes, home parentKey=null; use exact selected product IDs. Keys use lowercase letters, digits and hyphens, beginning with a letter. Paths begin with /; home path=/; no cycles or duplicate keys/paths."
+          : run.step === "review"
+            ? "Review this frozen page against its buyer brief, procurement coverage and browser measurements. Return a concise summary and at most six prioritized findings only. Check repetition, content usefulness, section rhythm, imagery, clear purchasing steps, unsupported claims and CTA. Do not claim you saw images unless visualInput=true; with text-only review require human screenshot inspection. Recommend additions only from current confirmed evidence. Do not fill missing facts."
+            : run.step === "rewrite"
+              ? "Rewrite only the requested block, preserving its key and type and every other page section."
+              : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require the core fields in the supplied shape; optional structured fields may be omitted. Allowed block types are given by outputSchema; use B2B structured blocks when buyerProfile is present. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never print internal product/database/source IDs in public copy. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
   const facts = s.facts.filter(
     (f: any) =>
       !unit.node?.productId ||
@@ -811,6 +866,9 @@ export function unitPrompt(run: any, unit: any) {
           requestedEdit: unit.instructions,
         }
       : {}),
+    requestedEdit: unit.instructions ?? "",
+    selectedDesignDirection: site.designDirection ?? null,
+    businessBrief: site.businessBrief ?? "",
     node: unit.node ?? null,
     ...(run.step === "rewrite"
       ? {
@@ -941,6 +999,19 @@ async function applyUnit(
             width,
         })),
       };
+    } else if (r.step === "design") {
+      output = v.designOutput.parse(output);
+      for (const d of output.directions) {
+        await pinAssets(
+          d.page.blocks
+            .flatMap((b: any) => [
+              b.assetId,
+              ...(b.items ?? []).map((i: any) => i.assetId),
+            ])
+            .filter(Boolean),
+          session,
+        );
+      }
     } else if (r.step === "research") {
       const d = validatePlan(output, site);
       if (site.buyerProfile)
@@ -981,6 +1052,13 @@ async function applyUnit(
           ),
         };
       } else data = v.pageInput.parse(output?.page);
+      if (site.designDirection && data.presentation) {
+        data.presentation = {
+          ...data.presentation,
+          visualStyle: site.designDirection.visualStyle,
+          density: site.designDirection.density,
+        };
+      }
       const page = await writePage(
         site,
         unit.node,
@@ -1149,7 +1227,7 @@ export async function processSiteAgent(
         const images =
           run.step === "review" && unit.visualInput
             ? await reviewImages(unit.capture.artifactKey)
-            : ["content", "refine", "rewrite"].includes(run.step) &&
+            : ["design", "content", "refine", "rewrite"].includes(run.step) &&
                 config?.supportsVision
               ? await assetImages(
                   run.inputSnapshot.products

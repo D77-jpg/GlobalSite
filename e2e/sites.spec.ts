@@ -43,6 +43,11 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     .getByLabel("面向哪些客户", { exact: true })
     .fill("Wholesale buyers");
   await expect(page.locator('input[type="color"]')).toHaveCount(0);
+  await expect(page.getByText("基础版式", { exact: true })).toHaveCount(0);
+  await page
+    .getByLabel("描述你的业务与建站目标", { exact: true })
+    .fill("We supply travel products for wholesale buyers.");
+
   await page
     .getByRole("button", { name: "下一步，选择产品", exact: true })
     .click();
@@ -69,6 +74,10 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   );
   const siteData = (await created.json()).data;
   expect(siteData.productIds).toEqual([productId]);
+  expect(siteData.templateId).toBe("adaptive");
+  expect(siteData.businessBrief).toBe(
+    "We supply travel products for wholesale buyers.",
+  );
   expect(siteData.buyerProfile.audiences).toEqual(["Wholesale buyers"]);
 
   await expect(
@@ -155,14 +164,18 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   await expect(
     page.getByRole("heading", { name: "建站向导", exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "预览并选择设计方案", exact: true })
+    .click();
+  await expect(page).toHaveURL(/tab=design/);
   const generate = page.getByRole("button", {
-    name: "让 Agent 生成页面",
+    name: "生成两种首页方案",
     exact: true,
   });
   await expect(generate).toBeDisabled();
-  await page.locator(".guide-consent input").check();
+  await page.locator(".design-consent input").check();
   await generate.click();
-  await expect(page).toHaveURL((url) => !url.searchParams.has("tab"));
+  await page.getByRole("button", { name: "建站向导", exact: true }).click();
   await expect(page.locator(".guide-next [role=status]")).toContainText(
     "已暂停",
     { timeout: 20000 },
