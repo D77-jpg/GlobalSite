@@ -1,3 +1,4 @@
+import { useCatalogueQuery } from "./catalog-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -5,6 +6,7 @@ import { api, ApiError } from "./api";
 import { crmMessages } from "./crm-i18n";
 import type { Locale } from "./i18n";
 import "./crm.css";
+import "./operations.css";
 type Row = Record<string, any>;
 const translate = (locale: Locale) => (key: string) =>
   crmMessages[key as keyof typeof crmMessages]?.[locale === "zh" ? 0 : 1] ??
@@ -30,12 +32,19 @@ export function CrmConnectionPage({
   role: string;
 }) {
   const t = translate(locale),
-    [state, setState] = useState<Row>(),
+    connection = useCatalogueQuery(
+      role === "admin" ? "/crm/connection" : null,
+      5000,
+    ),
+    state = connection.data as Row | undefined,
     [error, setError] = useState<unknown>(),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [full, setFull] = useState(false),
-    [candidates, setCandidates] = useState<Row[]>([]),
+    [candidates, setCandidates] = useState<Row[]>(),
+    [candidateBusy, setCandidateBusy] = useState(false),
+    [candidateError, setCandidateError] = useState<unknown>(),
+    candidateRequest = useRef(0),
     [cursor, setCursor] = useState<string | null>(null);
   const form = useForm<{
     baseUrl: string;
@@ -46,35 +55,31 @@ export function CrmConnectionPage({
     defaultValues: { baseUrl: "", projectId: "", credential: "", revision: 0 },
   });
   const c = state?.connection;
-  async function load() {
-    const result = await api("/crm/connection");
-    setState(result);
-    return result;
-  }
   async function loadCandidates(next?: string) {
-    const data = await api(
-      "/crm/sync-candidates" + (next ? "?cursor=" + next : ""),
-    );
-    setCandidates((v) => (next ? [...v, ...data.items] : data.items));
-    setCursor(data.nextCursor);
+    const request = ++candidateRequest.current;
+    setCandidateBusy(true);
+    setCandidateError(undefined);
+    try {
+      const data = await api(
+        "/crm/sync-candidates" +
+          (next ? "?cursor=" + encodeURIComponent(next) : ""),
+      );
+      if (request !== candidateRequest.current) return;
+      setCandidates((previous) =>
+        next ? [...(previous ?? []), ...data.items] : data.items,
+      );
+      setCursor(data.nextCursor);
+    } catch (error) {
+      if (request === candidateRequest.current) setCandidateError(error);
+    } finally {
+      if (request === candidateRequest.current) setCandidateBusy(false);
+    }
   }
   useEffect(() => {
     if (role !== "admin") return;
-    let live = true;
-    const refresh = () =>
-      void api("/crm/connection")
-        .then((d) => {
-          if (live) setState(d);
-        })
-        .catch((e) => {
-          if (live) setError(e);
-        });
-    refresh();
-    void loadCandidates().catch(setError);
-    const timer = setInterval(refresh, 5000);
+    void loadCandidates();
     return () => {
-      live = false;
-      clearInterval(timer);
+      candidateRequest.current++;
     };
   }, [role]);
   useEffect(() => {
@@ -97,7 +102,7 @@ export function CrmConnectionPage({
       setError(e);
     } finally {
       form.setValue("credential", "");
-      await load().catch(() => undefined);
+      connection.reload();
       setBusy(false);
     }
   }
@@ -115,14 +120,20 @@ export function CrmConnectionPage({
   }
   if (role !== "admin") return <p>{t("adminOnly")}</p>;
   return (
-    <div className="catalog crm">
-      <div className="catalog-heading">
+    <div className="catalog crm ops-workspace">
+      <header className="catalog-heading ops-header">
         <div>
           <h1>{t("title")}</h1>
           <p>{t("sub")}</p>
         </div>
-      </div>
-      <Failure error={error} t={t} />
+      </header>
+      <nav className="ops-section-nav" aria-label={t("sections")}>
+        <a href="#crm-connection">{t("connection")}</a>
+        {c?.active && <a href="#crm-sync">{t("resources")}</a>}
+        <a href="#crm-candidates">{t("candidates")}</a>
+        <a href="#crm-deliveries">{t("deliveries")}</a>
+      </nav>
+      <Failure error={error ?? connection.error} t={t} />
       {message ? (
         <p role="status" className="notice">
           {message}
@@ -130,12 +141,19 @@ export function CrmConnectionPage({
       ) : null}
       <section className="catalog-panel">
         <h2>{t("status")}</h2>
-        <p className="catalog-badge">{t(c?.status ?? "disconnected")}</p>
+        {state ? (
+          <p className={"catalog-badge " + (c?.status ?? "disconnected")}>
+            {t(c?.status ?? "disconnected")}
+          </p>
+        ) : (
+          !connection.error && <p role="status">{t("loading")}</p>
+        )}
         {c?.lastErrorCode ? <p>{t(c.lastErrorCode)}</p> : null}
         <p>{t("disconnectedHint")}</p>
         <p>{t("privacyHint")}</p>
       </section>
       <form
+        id="crm-connection"
         className="catalog-panel"
         onSubmit={form.handleSubmit((data) =>
           action(() =>
@@ -225,7 +243,7 @@ export function CrmConnectionPage({
               {t("disconnect")}
             </button>
           </div>
-          <h2>{t("resources")}</h2>
+          <h2 id="crm-sync">{t("resources")}</h2>
           <p>{t("syncHint")}</p>
           <label className="inquiry-check">
             <input
@@ -273,17 +291,20 @@ export function CrmConnectionPage({
         </section>
       ) : null}
       <section className="catalog-panel">
-        <h2>{t("candidates")}</h2>
+        <h2 id="crm-candidates">{t("candidates")}</h2>
         <p>{t("candidateHint")}</p>
         <Link to="/facts">{t("facts")}</Link>{" "}
         <button
           className="secondary"
-          onClick={() => void loadCandidates().catch(setError)}
+          disabled={candidateBusy || busy}
+          onClick={() => void loadCandidates()}
         >
           {t("details")}
         </button>
-        {!candidates.length ? <p>{t("noCandidates")}</p> : null}
-        {candidates.map((p) => (
+        <Failure error={candidateError} t={t} />
+        {!candidates && !candidateError && <p role="status">{t("loading")}</p>}
+        {candidates?.length === 0 && <p>{t("noCandidates")}</p>}
+        {candidates?.map((p) => (
           <article key={p.id} className="crm-candidate">
             <h3>{p.localName}</h3>
             <p>
@@ -344,14 +365,17 @@ export function CrmConnectionPage({
           </article>
         ))}
         {cursor ? (
-          <button onClick={() => void loadCandidates(cursor).catch(setError)}>
+          <button
+            disabled={candidateBusy || busy}
+            onClick={() => void loadCandidates(cursor)}
+          >
             {t("more")}
           </button>
         ) : null}
       </section>
       <section className="catalog-panel">
-        <h2>{t("deliveries")}</h2>
-        {!state?.deliveries.length ? <p>{t("noDeliveries")}</p> : null}
+        <h2 id="crm-deliveries">{t("deliveries")}</h2>
+        {state && !state.deliveries.length ? <p>{t("noDeliveries")}</p> : null}
         {state?.deliveries.map((d: Row) => (
           <article key={d.id} className="crm-candidate">
             <Link to={"/inquiries/" + d.inquiryId}>{t("openInquiry")}</Link>

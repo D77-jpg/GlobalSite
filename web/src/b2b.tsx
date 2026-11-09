@@ -154,7 +154,14 @@ export function BuyerWorkspace({
         <p>{t("coverageHint")}</p>
         {coverage && (
           <>
-            <strong className="b2b-coverage">{coverage.coverage}%</strong>
+            <div className="studio-coverage">
+              <strong className="b2b-coverage">{coverage.coverage}%</strong>
+              <progress
+                max={100}
+                value={coverage.coverage}
+                aria-label={t("procurementCoverage")}
+              />
+            </div>
             <p>
               {t(
                 coverage.canPublish ? "procurementReady" : "procurementMissing",
@@ -338,8 +345,8 @@ export function SiteQuality({
               )
             )}
             {r.errorCode && <p role="alert">{t(r.errorCode)}</p>}
-            {r.steps.map((u: Row) => (
-              <details key={u.key} open={r.id === latest?.id}>
+            {r.steps.map((u: Row, i: number) => (
+              <details key={u.key} open={r.id === latest?.id && i === 0}>
                 <summary>
                   {site.plan.nodes.find((n: Row) => n.key === u.key)?.title ??
                     u.key}{" "}

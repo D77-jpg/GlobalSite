@@ -1,3 +1,4 @@
+import { useCatalogueQuery as useLoad } from "./catalog-query";
 import { CrmInquiryPanel } from "./crm";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -6,39 +7,13 @@ import { api, ApiError } from "./api";
 import { inquiryMessages } from "./inquiry-i18n";
 import type { Locale } from "./i18n";
 import "./inquiries.css";
+import "./operations.css";
 type Row = Record<string, any>;
 type Props = { locale: Locale; role: string };
 const translator = (locale: Locale) => (key: string) =>
   inquiryMessages[key as keyof typeof inquiryMessages]?.[
     locale === "zh" ? 0 : 1
   ] ?? inquiryMessages.error[locale === "zh" ? 0 : 1];
-function useLoad(path: string, poll = false) {
-  const [data, setData] = useState<any>(),
-    [error, setError] = useState<unknown>(),
-    [version, setVersion] = useState(0);
-  useEffect(() => {
-    let live = true;
-    const load = () =>
-      void api(path)
-        .then((d) => {
-          if (live) {
-            setData(d);
-            setError(undefined);
-          }
-        })
-        .catch((e) => {
-          if (live) setError(e);
-        });
-    setData(undefined);
-    load();
-    const timer = poll ? setInterval(load, 5000) : undefined;
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
-  }, [path, poll, version]);
-  return { data, error, reload: () => setVersion((v) => v + 1) };
-}
 function Notice({ error, t }: { error: unknown; t: (key: string) => string }) {
   return error ? (
     <p className="notice error" role="alert">
@@ -55,11 +30,27 @@ function Status({ value, t }: { value: string; t: (key: string) => string }) {
 }
 const fmt = (s: string, locale: Locale) =>
   new Date(s).toLocaleString(locale === "zh" ? "zh-CN" : "en");
-export function InquiriesPage({ locale, role: _role }: Props) {
+export function InquiriesPage({ locale }: Props) {
+  const [params] = useSearchParams();
+  const initialSiteId = params.get("siteId") ?? "";
+  return (
+    <InquiryInbox
+      key={initialSiteId}
+      locale={locale}
+      initialSiteId={initialSiteId}
+    />
+  );
+}
+function InquiryInbox({
+  locale,
+  initialSiteId,
+}: {
+  locale: Locale;
+  initialSiteId: string;
+}) {
   const t = translator(locale),
-    [params] = useSearchParams(),
     [filters, setFilters] = useState<Row>({
-      siteId: params.get("siteId") ?? "",
+      siteId: initialSiteId,
       status: "",
       minSpamScore: "",
       maxSpamScore: "",
@@ -68,7 +59,9 @@ export function InquiriesPage({ locale, role: _role }: Props) {
       includeDuplicates: false,
     }),
     [query, setQuery] = useState(() =>
-      params.get("siteId") ? "siteId=" + params.get("siteId") : "",
+      initialSiteId
+        ? new URLSearchParams({ siteId: initialSiteId }).toString()
+        : "",
     ),
     [cursor, setCursor] = useState(""),
     form = useForm<Row>({ defaultValues: filters }),
@@ -86,8 +79,8 @@ export function InquiriesPage({ locale, role: _role }: Props) {
     setQuery(q.toString());
   }
   return (
-    <div className="catalog inquiries">
-      <div className="catalog-heading">
+    <div className="catalog inquiries ops-workspace">
+      <header className="catalog-heading ops-header">
         <div>
           <h1>{t("inquiries")}</h1>
           <p>{t("sub")}</p>
@@ -98,8 +91,8 @@ export function InquiriesPage({ locale, role: _role }: Props) {
         >
           {t("export")}
         </a>
-      </div>
-      <Notice error={load.error} t={t} />
+      </header>
+      <Notice error={load.error ?? sites.error} t={t} />
       <form
         className="catalog-panel inquiry-filters"
         onSubmit={form.handleSubmit(filter)}
@@ -116,46 +109,71 @@ export function InquiriesPage({ locale, role: _role }: Props) {
               ))}
             </select>
           </label>
-          <label>
-            {t("status")}
-            <select aria-label={t("status")} {...form.register("status")}>
-              <option value="">{t("allStatuses")}</option>
-              {["new", "following", "resolved", "spam"].map((s) => (
-                <option key={s} value={s}>
-                  {t(s)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {["minSpamScore", "maxSpamScore"].map((k) => (
-            <label key={k}>
-              {t(k === "minSpamScore" ? "minScore" : "maxScore")}
+        </div>
+        <div className="ops-status-tabs" role="group" aria-label={t("status")}>
+          {["", "new", "following", "resolved", "spam"].map((status) => (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={filters.status === status}
+              onClick={() => {
+                form.setValue("status", status);
+                filter(form.getValues());
+              }}
+            >
+              {t(status || "allStatuses")}
+            </button>
+          ))}
+        </div>
+        <details className="ops-advanced">
+          <summary>
+            {t("advancedFilters")}
+            {[
+              filters.minSpamScore,
+              filters.maxSpamScore,
+              filters.from,
+              filters.to,
+              filters.includeDuplicates,
+            ].some(Boolean) && " · " + t("activeFilters")}
+          </summary>
+          <div className="catalog-grid">
+            {["minSpamScore", "maxSpamScore"].map((k) => (
+              <label key={k}>
+                {t(k === "minSpamScore" ? "minScore" : "maxScore")}
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  aria-label={t(k === "minSpamScore" ? "minScore" : "maxScore")}
+                  {...form.register(k)}
+                />
+              </label>
+            ))}
+            <label>
+              {t("from")}
               <input
-                type="number"
-                min="0"
-                max="100"
-                aria-label={t(k === "minSpamScore" ? "minScore" : "maxScore")}
-                {...form.register(k)}
+                type="date"
+                aria-label={t("from")}
+                {...form.register("from")}
               />
             </label>
-          ))}
-          <label>
-            {t("from")}
-            <input
-              type="date"
-              aria-label={t("from")}
-              {...form.register("from")}
-            />
+            <label>
+              {t("to")}
+              <input
+                type="date"
+                aria-label={t("to")}
+                {...form.register("to")}
+              />
+            </label>
+          </div>
+          <label className="inquiry-check">
+            <input type="checkbox" {...form.register("includeDuplicates")} />
+            {t("duplicates")}
           </label>
-          <label>
-            {t("to")}
-            <input type="date" aria-label={t("to")} {...form.register("to")} />
-          </label>
-        </div>
-        <label className="inquiry-check">
-          <input type="checkbox" {...form.register("includeDuplicates")} />
-          {t("duplicates")}
-        </label>
+          <p className="ops-caption">
+            {t("scoreHint")} {t("duplicateHint")}
+          </p>
+        </details>
         <div className="catalog-actions">
           <button className="primary">{t("filter")}</button>
           <button type="button" className="secondary" onClick={load.reload}>
@@ -171,9 +189,20 @@ export function InquiriesPage({ locale, role: _role }: Props) {
           )}
         </div>
       </form>
-      <p>{t("scoreHint")}</p>
-      <p>{t("duplicateHint")}</p>
       <section className="catalog-panel inquiry-table">
+        <div className="ops-panel-title">
+          <h2>{t("inbox")}</h2>
+          {load.data && (
+            <span>
+              {load.data.items.length} {t("thisPage")}
+            </span>
+          )}
+        </div>
+        {!load.data && !load.error && (
+          <p role="status" className="ops-loading">
+            {t("loading")}
+          </p>
+        )}
         <table>
           <thead>
             <tr>
@@ -187,13 +216,13 @@ export function InquiriesPage({ locale, role: _role }: Props) {
           <tbody>
             {load.data?.items.map((r: Row) => (
               <tr key={r.id}>
-                <td>{fmt(r.receivedAt, locale)}</td>
-                <td>
+                <td data-label={t("received")}>{fmt(r.receivedAt, locale)}</td>
+                <td data-label={t("contact")}>
                   <Link to={"/inquiries/" + r.id}>{r.contact.name}</Link>
                   <div>{r.contact.company}</div>
                   <div>{r.contact.email}</div>
                 </td>
-                <td>
+                <td data-label={t("status")}>
                   <Status value={r.status} t={t} />
                   {r.duplicateOf && (
                     <p>
@@ -203,20 +232,24 @@ export function InquiriesPage({ locale, role: _role }: Props) {
                     </p>
                   )}
                 </td>
-                <td>
-                  {r.spamScore}
+                <td data-label={t("score")}>
+                  {r.spamScore ?? "—"}
                   <div>
                     {t(
                       r.classification === "ai" ? "aiState" : r.classification,
                     )}
                   </div>
                 </td>
-                <td>{t(r.notificationStatus)}</td>
+                <td data-label={t("notification")}>
+                  {t(r.notificationStatus)}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {load.data && !load.data.items.length && <p>{t("empty")}</p>}
+        {load.data && !load.data.items.length && (
+          <p className="catalog-empty">{t("empty")}</p>
+        )}
       </section>
       <div className="catalog-actions">
         {cursor && <button onClick={() => setCursor("")}>{t("latest")}</button>}
@@ -229,10 +262,13 @@ export function InquiriesPage({ locale, role: _role }: Props) {
     </div>
   );
 }
-export function InquiryDetailPage({ locale, role }: Props) {
-  const { id } = useParams(),
-    t = translator(locale),
-    load = useLoad("/inquiries/" + id, true),
+export function InquiryDetailPage(props: Props) {
+  const { id } = useParams();
+  return <InquiryDetailPageBody key={id} {...props} id={id!} />;
+}
+function InquiryDetailPageBody({ locale, role, id }: Props & { id: string }) {
+  const t = translator(locale),
+    load = useLoad("/inquiries/" + id, 5000),
     [error, setError] = useState<unknown>(),
     [busy, setBusy] = useState(false),
     [note, setNote] = useState(""),
@@ -251,13 +287,35 @@ export function InquiryDetailPage({ locale, role }: Props) {
     }
   }
   return (
-    <div className="catalog inquiries">
-      <Link to="/inquiries">{t("back")}</Link>
-      <h1>{t("inquiries")}</h1>
+    <div className="catalog inquiries ops-workspace">
+      <header className="catalog-heading ops-header">
+        <div>
+          <h1>{t("details")}</h1>
+          {d && (
+            <p>
+              {d.contact.company} · {fmt(d.receivedAt, locale)}
+            </p>
+          )}
+        </div>
+        <Link className="button secondary" to="/inquiries">
+          {t("back")}
+        </Link>
+      </header>
+      {!d && !load.error && (
+        <p role="status" className="ops-loading">
+          {t("loading")}
+        </p>
+      )}
       <Notice error={error ?? load.error} t={t} />
       {d && (
         <>
-          <div className="catalog-panel">
+          <nav className="ops-section-nav" aria-label={t("sections")}>
+            <a href="#inquiry-contact">{t("contact")}</a>
+            <a href="#inquiry-message">{t("message")}</a>
+            <a href="#inquiry-notes">{t("followUp")}</a>
+            <a href="#inquiry-delivery">{t("delivery")}</a>
+          </nav>
+          <div id="inquiry-contact" className="catalog-panel">
             <h2>{d.contact.name}</h2>
             <p>
               {fmt(d.receivedAt, locale)} · <Status value={d.status} t={t} />
@@ -306,7 +364,7 @@ export function InquiryDetailPage({ locale, role }: Props) {
               <p>{t("readonly")}</p>
             )}
           </div>
-          <section className="catalog-panel">
+          <section id="inquiry-message" className="catalog-panel">
             <h2>{t("message")}</h2>
             <p className="inquiry-message">{d.message}</p>
             {d.productIds.length > 0 && (
@@ -389,7 +447,7 @@ export function InquiryDetailPage({ locale, role }: Props) {
             </dl>
             {d.source.preview && <p>{t("preview")}</p>}
           </section>
-          <section className="catalog-panel">
+          <section id="inquiry-notes" className="catalog-panel">
             <h2>{t("notes")}</h2>
             {d.notes.map((n: Row) => (
               <article key={n.id}>
@@ -431,7 +489,7 @@ export function InquiryDetailPage({ locale, role }: Props) {
             inquiryId={d.id}
             onChange={load.reload}
           />
-          <section className="catalog-panel">
+          <section id="inquiry-delivery" className="catalog-panel">
             <h2>{t("notification")}</h2>
             <p>{t(d.notificationStatus)}</p>
             {d.deliveries.map((r: Row) => (
@@ -465,9 +523,12 @@ export function InquiryDetailPage({ locale, role }: Props) {
     </div>
   );
 }
-export function InquirySettingsPage({ locale, role }: Props) {
-  const { id } = useParams(),
-    t = translator(locale),
+export function InquirySettingsPage(props: Props) {
+  const { id } = useParams();
+  return <InquirySettingsPageBody key={id} {...props} id={id!} />;
+}
+function InquirySettingsPageBody({ locale, role, id }: Props & { id: string }) {
+  const t = translator(locale),
     form = useForm<Row>(),
     [data, setData] = useState<Row>(),
     [site, setSite] = useState<Row>(),
@@ -502,10 +563,16 @@ export function InquirySettingsPage({ locale, role }: Props) {
     };
   }, [id, admin, form]);
   return (
-    <div className="catalog inquiries">
-      <Link to={"/inquiries?siteId=" + id}>{t("back")}</Link>
-      <h1>{t("settings")}</h1>
-      <p>{site?.name}</p>
+    <div className="catalog inquiries ops-workspace">
+      <header className="catalog-heading ops-header">
+        <div>
+          <h1>{t("settings")}</h1>
+          <p>{site?.name}</p>
+        </div>
+        <Link className="button secondary" to={"/inquiries?siteId=" + id}>
+          {t("back")}
+        </Link>
+      </header>
       <Notice error={error} t={t} />
       {saved && (
         <p className="notice success" role="status">

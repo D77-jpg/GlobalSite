@@ -458,12 +458,12 @@ small,
   padding: 0 14px;
   margin-bottom: 13px;
 }
-nav {
+.sidebar nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-nav a {
+.sidebar nav a {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -475,10 +475,10 @@ nav a {
   text-decoration: none !important;
   min-height: 44px;
 }
-nav a:hover {
+.sidebar nav a:hover {
   background: #f6f8f4;
 }
-nav a.active {
+.sidebar nav a.active {
   background: #eaf2e5;
   color: #2a5a31;
   box-shadow: inset 3px 0 #7d9c51;

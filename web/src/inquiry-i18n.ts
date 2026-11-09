@@ -1,4 +1,13 @@
 export const inquiryMessages = {
+  advancedFilters: ["更多筛选", "More filters"],
+  activeFilters: ["已启用", "active"],
+  loading: ["正在加载询盘…", "Loading inquiries…"],
+  inbox: ["询盘收件箱", "Inquiry inbox"],
+  thisPage: ["条 · 当前页", "on this page"],
+  details: ["询盘详情", "Inquiry details"],
+  followUp: ["跟进记录", "Follow-up"],
+  delivery: ["通知与投递", "Delivery"],
+  sections: ["询盘分区", "Inquiry sections"],
   deviceUnknown: ["未知", "Unknown"],
   inquiries: ["询盘管理", "Inquiries"],
   sub: [

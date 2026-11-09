@@ -109,6 +109,12 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     .click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Agent 任务", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "关键词与站点地图", exact: true })
+    .click();
   await page.getByRole("button", { name: "添加页面", exact: true }).click();
   await page.getByRole("button", { name: "添加页面", exact: true }).click();
   await page

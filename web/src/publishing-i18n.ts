@@ -1,4 +1,13 @@
 export const publishingMessages = {
+  loading: ["正在加载…", "Loading…"],
+  noVersions: [
+    "尚无构建版本。完成体检后即可构建预览。",
+    "No versions yet. Run preflight to prepare your first preview.",
+  ],
+  noDeployments: [
+    "正式发布记录将显示在这里。",
+    "Production deployments will appear here.",
+  ],
   versionReady: ["版本就绪", "Version ready"],
   PUBLICATION_IN_PROGRESS: [
     "正在发布，请等待发布结果核对完成后再编辑。",

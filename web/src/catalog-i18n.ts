@@ -1,5 +1,21 @@
 import type { Locale } from "./i18n";
 export const catalogMessages = {
+  productList: ["产品清单", "Product list"],
+  thisPage: ["条 · 当前页", "on this page"],
+  nextPage: ["下一页", "Next page"],
+  prevPage: ["上一页", "Previous page"],
+  pagination: ["分页", "Pagination"],
+  pageIndex: ["页码", "Page"],
+  catalogReview: ["资料复核", "Catalogue review"],
+  missingSpecs: ["待补规格", "Missing specs"],
+  pageScope: [
+    "按当前筛选结果的这一页统计。",
+    "Counts apply to this page of filtered results.",
+  ],
+  inspectSpecs: ["查看规格资料", "Review specifications"],
+  productBasics: ["基本资料", "Product details"],
+  productSections: ["产品编辑分区", "Product sections"],
+  importSteps: ["导入步骤", "Import steps"],
   imageModel: ["生图模型", "Image model"],
   CONCEPT_NOT_EVIDENCE: [
     "概念配图仅用于视觉展示。请使用原始资料提取事实。",

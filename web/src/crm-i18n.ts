@@ -1,4 +1,7 @@
 export const crmMessages = {
+  loading: ["正在读取连接信息…", "Loading connection…"],
+  sections: ["连接工作区", "Connection workspace"],
+  connection: ["连接配置", "Connection settings"],
   title: ["连接 GlobalCRM", "Connect GlobalCRM"],
   sub: [
     "GlobalSite 可独立使用。连接后可同步公开资料，并把新询盘交给 CRM 跟进。",

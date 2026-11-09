@@ -238,14 +238,22 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
     fullPage: false,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect
-    .poll(
-      async () =>
-        (await page.locator(".sidebar").boundingBox())!.x +
-        (await page.locator(".sidebar").boundingBox())!.width,
-    )
-    .toBeLessThanOrEqual(0);
+  await expect(page.locator(".sidebar")).toBeHidden();
+  await expect(page.locator(".mobile-menu")).toBeVisible();
   await expect(page.getByLabel("状态", { exact: true })).toBeVisible();
+  await page.goto("/inquiries?siteId=" + site.id);
+  await page.getByRole("button", { name: "跟进中", exact: true }).click();
+  const buyer = page.getByRole("link", { name: "Fixture Buyer", exact: true });
+  const record = page.locator("tr").filter({ has: buyer });
+  await expect(record.getByText("跟进中", { exact: true })).toBeVisible();
+  await expect(record).toHaveCSS("display", "grid");
+  await buyer.click();
+  await expect(page.getByLabel("状态", { exact: true })).toHaveValue(
+    "following",
+  );
+  await expect(
+    page.getByText("Synthetic follow-up note", { exact: true }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
