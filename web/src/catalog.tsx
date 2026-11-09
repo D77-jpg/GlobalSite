@@ -1,5 +1,6 @@
+import { AssetTile, AssetPreview } from "./asset-library";
 import { useCatalogueQuery as useLoad } from "./catalog-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -8,7 +9,17 @@ import {
 } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { api, ApiError } from "./api";
-import { ArrowUpRight, Box, ClipboardList, FileCheck2 } from "lucide-react";
+import {
+  ArrowUpRight,
+  Box,
+  ClipboardList,
+  FileCheck2,
+  UploadCloud,
+  LayoutGrid,
+  List,
+  Sparkles,
+  X,
+} from "lucide-react";
 import "./operations.css";
 import { catalogText, catalogMessages } from "./catalog-i18n";
 import type { Locale } from "./i18n";
@@ -22,6 +33,10 @@ function useAction() {
     error,
     busy,
     saved,
+    clear: () => {
+      setError(undefined);
+      setSaved(false);
+    },
     run: async (fn: () => Promise<unknown>) => {
       setBusy(true);
       setError(undefined);
@@ -1194,23 +1209,89 @@ export function AssetsPage({ locale, role }: Props) {
   const t = catalogText(locale),
     [kind, setKind] = useState(""),
     pages = useCursor(),
-    { cursor } = pages,
     [file, setFile] = useState<File>(),
     [uploadKind, setUploadKind] = useState("image"),
+    [uploadOpen, setUploadOpen] = useState(false),
+    [studioOpen, setStudioOpen] = useState(false),
+    [view, setView] = useState<"grid" | "list">("grid"),
+    [selected, setSelected] = useState<Item>(),
+    [dragging, setDragging] = useState(false),
+    [fileError, setFileError] = useState(false),
+    input = useRef<HTMLInputElement>(null),
+    extractionPanel = useRef<HTMLElement>(null),
     a = useAction(),
     [extractId, setExtractId] = useState<string>();
   const load = useLoad(
     "/assets?" +
       new URLSearchParams({
         ...(kind ? { kind } : {}),
-        ...(cursor ? { cursor } : {}),
+        ...(pages.cursor ? { cursor: pages.cursor } : {}),
       }),
   );
+  useEffect(() => {
+    if (extractId && extractionPanel.current) {
+      extractionPanel.current.scrollIntoView({
+        block: "start",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+      extractionPanel.current.focus({ preventScroll: true });
+    }
+  }, [extractId]);
+  async function remove(asset: Item) {
+    if (!window.confirm(t("deleteAsk"))) return;
+    await a.run(async () => {
+      await api("/assets/" + asset.id, "DELETE");
+      setSelected(undefined);
+      if (extractId === asset.id) setExtractId(undefined);
+      load.reload();
+    });
+  }
+  function pick(files: FileList | null) {
+    if (a.busy) return;
+    setFileError(!!files && files.length > 1);
+    if (files?.length === 1) {
+      setFile(files[0]);
+      if (uploadKind !== "certificate")
+        setUploadKind(
+          files[0].type === "application/pdf" ? "document" : "image",
+        );
+    } else if (files && files.length > 1) {
+      setFile(undefined);
+      if (input.current) input.current.value = "";
+    }
+  }
   return (
-    <Frame title={t("assets")} sub={t("assetsSub")} t={t} error={load.error}>
-      {role !== "viewer" && (
-        <details className="ops-tool">
-          <summary>{t("imageStudio")}</summary>
+    <Frame
+      title={t("assets")}
+      sub={t("assetLibrarySub")}
+      t={t}
+      error={load.error}
+      actions={
+        role !== "viewer" && (
+          <>
+            <button
+              className="secondary"
+              aria-expanded={studioOpen}
+              onClick={() => setStudioOpen(!studioOpen)}
+            >
+              <Sparkles size={16} />
+              {t("imageStudio")}
+            </button>
+            <button
+              aria-expanded={uploadOpen}
+              onClick={() => setUploadOpen(!uploadOpen)}
+            >
+              <UploadCloud size={16} />
+              {t("uploadAssets")}
+            </button>
+          </>
+        )
+      }
+    >
+      <div className="asset-library">
+        {role !== "viewer" && studioOpen && (
           <ImageStudio
             locale={locale}
             role={role}
@@ -1220,136 +1301,213 @@ export function AssetsPage({ locale, role }: Props) {
               load.reload();
             }}
           />
-        </details>
-      )}
-      {role !== "viewer" && (
-        <form
-          className="catalog-panel"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void a.run(async () => {
-              if (!file) return;
-              const form = new FormData();
-              form.set("kind", uploadKind);
-              form.set("file", file);
-              await api("/assets", "POST", form);
-              pages.reset();
-              load.reload();
-            });
-          }}
-        >
-          <p>{t("fileHint")}</p>
-          <div className="catalog-toolbar">
-            <label>
-              {t("kind")}
-              <select
-                value={uploadKind}
-                onChange={(e) => setUploadKind(e.target.value)}
-              >
-                {["image", "document", "certificate"].map((k) => (
-                  <option key={k} value={k}>
-                    {t(k)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t("file")}
-              <input
-                required
-                type="file"
-                accept="image/png,image/jpeg,image/webp,application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0])}
-              />
-            </label>
-            <button disabled={!file || a.busy}>
-              {a.busy ? t("saving") : t("upload")}
-            </button>
-          </div>
-          <Notice error={a.error} saved={a.saved} t={t} />
-        </form>
-      )}
-      <label className="catalog-filter">
-        {t("kind")}
-        <select
-          value={kind}
-          onChange={(e) => {
-            pages.reset();
-            setKind(e.target.value);
-          }}
-        >
-          <option value="">{t("all")}</option>
-          {["image", "document", "certificate"].map((k) => (
-            <option key={k} value={k}>
-              {t(k)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="catalog-assets">
-        <Rows items={load.data?.items} error={load.error} t={t}>
-          {(r) => (
-            <article className="catalog-asset" key={r.id}>
-              <div className="catalog-preview">
-                {r.mime.startsWith("image/") ? (
-                  <img
-                    src={r.thumbnailUrl ?? r.url}
-                    alt={r.fileName}
-                    loading="lazy"
-                  />
-                ) : (
-                  <span>PDF</span>
-                )}
+        )}
+        {role !== "viewer" && uploadOpen && (
+          <form
+            className="asset-upload-panel"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void a.run(async () => {
+                if (!file) return;
+                const body = new FormData();
+                body.set("kind", uploadKind);
+                body.set("file", file);
+                await api("/assets", "POST", body);
+                setFile(undefined);
+                if (input.current) input.current.value = "";
+                pages.reset();
+                load.reload();
+              });
+            }}
+          >
+            <div
+              className={"asset-dropzone" + (dragging ? " is-dragging" : "")}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                pick(e.dataTransfer.files);
+              }}
+            >
+              <UploadCloud size={26} />
+              <div>
+                <strong>{file ? file.name : t("assetDropTitle")}</strong>
+                <p>{t("fileHint")}</p>
               </div>
-              <h3>{r.fileName}</h3>
-              <p className="muted">
-                {t(r.kind)} · {Math.ceil(r.bytes / 1024)} KB
-                {r.width ? " · " + r.width + " × " + r.height : ""}
-              </p>
-              <div className="catalog-actions">
-                <a
-                  href={"/api/v1/assets/" + r.id + "/download"}
-                  className="button secondary"
+              <label className="button secondary asset-file-label">
+                {file ? t("replaceFile") : t("chooseFile")}
+                <input
+                  ref={input}
+                  aria-label={t("file")}
+                  type="file"
+                  disabled={a.busy}
+                  accept="image/png,image/jpeg,image/webp,application/pdf"
+                  onChange={(e) => pick(e.target.files)}
+                />
+              </label>
+            </div>
+            <div className="asset-upload-footer">
+              <label>
+                {t("kind")}
+                <select
+                  value={uploadKind}
+                  disabled={a.busy}
+                  onChange={(e) => setUploadKind(e.target.value)}
                 >
-                  {t("download")}
-                </a>
-                {role !== "viewer" && (
-                  <>
-                    <button
-                      className="secondary"
-                      onClick={() => setExtractId(r.id)}
-                    >
-                      {t("extract")}
-                    </button>
-                    <button
-                      className="secondary"
-                      disabled={a.busy}
-                      onClick={() => {
-                        if (window.confirm(t("deleteAsk")))
-                          void a.run(async () => {
-                            await api("/assets/" + r.id, "DELETE");
-                            load.reload();
-                          });
-                      }}
-                    >
-                      {t("delete")}
-                    </button>
-                  </>
-                )}
+                  {["image", "document", "certificate"].map((k) => (
+                    <option key={k} value={k}>
+                      {t(k)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={a.busy}
+                  onClick={() => setUploadOpen(false)}
+                >
+                  {t("close")}
+                </button>
+                <button disabled={!file || a.busy}>
+                  {a.busy ? t("saving") : t("upload")}
+                </button>
               </div>
-            </article>
-          )}
-        </Rows>
+            </div>
+            {fileError && (
+              <p role="alert" className="notice error">
+                {t("assetOneFile")}
+              </p>
+            )}
+          </form>
+        )}
+        <Notice error={a.error} saved={a.saved} t={t} />
+        <div className="asset-toolbar">
+          <div className="asset-filters" role="group" aria-label={t("kind")}>
+            {["", "image", "document", "certificate"].map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => {
+                  pages.reset();
+                  setKind(k);
+                }}
+              >
+                {t(k || "all")}
+              </button>
+            ))}
+          </div>
+          <div className="asset-view-options">
+            {load.data && (
+              <span>
+                {load.data.items.length} {t("assetsOnPage")}
+              </span>
+            )}
+            <div role="group" aria-label={t("assetView")}>
+              <button
+                type="button"
+                aria-label={t("gridView")}
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              >
+                <LayoutGrid size={17} />
+              </button>
+              <button
+                type="button"
+                aria-label={t("listView")}
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                <List size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+        {!load.data && !load.error && (
+          <div className="asset-loading" role="status">
+            {t("loading")}
+          </div>
+        )}
+        {load.data?.items.length === 0 && (
+          <div className="asset-empty">
+            <UploadCloud size={32} />
+            <h2>{t("noAssets")}</h2>
+            <p>{t(role === "viewer" ? "noAssetsViewer" : "noAssetsHint")}</p>
+            {role !== "viewer" && (
+              <button onClick={() => setUploadOpen(true)}>
+                {t("uploadAssets")}
+              </button>
+            )}
+          </div>
+        )}
+        <div className={"asset-grid" + (view === "list" ? " asset-list" : "")}>
+          {load.data?.items.map((r: Item) => (
+            <AssetTile
+              key={r.id}
+              asset={r}
+              t={t}
+              canEdit={role !== "viewer"}
+              busy={a.busy}
+              onPreview={() => {
+                a.clear();
+                setSelected(r);
+              }}
+              onExtract={() => {
+                setSelected(undefined);
+                setExtractId(r.id);
+              }}
+              onDelete={() => void remove(r)}
+            />
+          ))}
+        </div>
+        <Pager list={load.data} pages={pages} t={t} />
+        {selected && (
+          <AssetPreview
+            asset={selected}
+            t={t}
+            canEdit={role !== "viewer"}
+            busy={a.busy}
+            error={
+              a.error instanceof ApiError
+                ? t(a.error.code in catalogMessages ? a.error.code : "failed")
+                : a.error
+                  ? t("failed")
+                  : undefined
+            }
+            onClose={() => setSelected(undefined)}
+            onExtract={() => {
+              setSelected(undefined);
+              setExtractId(selected.id);
+            }}
+            onDelete={() => void remove(selected)}
+          />
+        )}
+        {extractId && (
+          <section
+            className="asset-extraction"
+            ref={extractionPanel}
+            tabIndex={-1}
+          >
+            <div className="asset-extraction-heading">
+              <h2>{t("extract")}</h2>
+              <button
+                className="secondary"
+                aria-label={t("close")}
+                onClick={() => setExtractId(undefined)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <Extraction key={extractId} kind="asset" id={extractId} t={t} />
+          </section>
+        )}
       </div>
-      <Pager list={load.data} pages={pages} t={t} />
-      {extractId && (
-        <>
-          <Extraction key={extractId} kind="asset" id={extractId} t={t} />
-          <button className="secondary" onClick={() => setExtractId(undefined)}>
-            {t("close")}
-          </button>
-        </>
-      )}
     </Frame>
   );
 }

@@ -1,5 +1,39 @@
 import type { Locale } from "./i18n";
 export const catalogMessages = {
+  assetLibrarySub: [
+    "管理网站图片、产品资料和证书。",
+    "Manage website imagery, product documents and certificates.",
+  ],
+  uploadAssets: ["上传资料", "Upload files"],
+  assetDropTitle: ["拖入文件，或点击选择", "Drop a file here or choose a file"],
+  chooseFile: ["选择文件", "Choose file"],
+  replaceFile: ["更换文件", "Replace file"],
+  assetOneFile: ["请每次选择一个文件。", "Choose one file at a time."],
+  previewAsset: ["预览资料", "Preview file"],
+  assetActions: ["文件操作", "File actions"],
+  assetDetails: ["文件详情", "File details"],
+  fileSize: ["文件大小", "File size"],
+  dimensions: ["图片尺寸", "Dimensions"],
+  fileFormat: ["文件格式", "File format"],
+  imageUnavailable: ["图片暂时无法显示", "Image unavailable"],
+  pdfPreviewHint: [
+    "下载原件查看完整 PDF 内容。",
+    "Download the original to read the PDF.",
+  ],
+  assetsOnPage: ["个文件 · 当前页", "files on this page"],
+  assetView: ["显示方式", "View mode"],
+  gridView: ["网格视图", "Grid view"],
+  listView: ["列表视图", "List view"],
+  noAssets: ["这里还没有资料", "No files here yet"],
+  noAssetsHint: [
+    "上传图片、PDF 或证书，用于网站内容与企业事实。",
+    "Upload images, PDFs or certificates for your website and fact library.",
+  ],
+  noAssetsViewer: [
+    "组织上传的资料会显示在这里。",
+    "Files uploaded by your organization will appear here.",
+  ],
+
   productList: ["产品清单", "Product list"],
   thisPage: ["条 · 当前页", "on this page"],
   nextPage: ["下一页", "Next page"],

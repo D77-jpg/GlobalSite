@@ -48,21 +48,82 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
   page.on("pageerror", (e) => errors.push(e.message));
   await login(page, request);
   await page.goto("/assets");
-  // Valid one-pixel PNG fixture, re-encoded and checked by the image pipeline.
   await page
-    .getByLabel("文件", { exact: true })
-    .setInputFiles({
-      name: "fixture.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWMQygqBIwbiOABOIw0BkpnXJwAAAABJRU5ErkJggg==",
-        "base64",
-      ),
-    });
+    .getByRole("button", { name: "上传资料", exact: true })
+    .first()
+    .click();
+  // Valid one-pixel PNG fixture, re-encoded and checked by the image pipeline.
+  await page.getByLabel("文件", { exact: true }).setInputFiles({
+    name: "fixture.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWMQygqBIwbiOABOIw0BkpnXJwAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+  });
   await page.getByRole("button", { name: "上传", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "fixture.png", exact: true }),
   ).toBeVisible();
+  await expect(page.getByLabel("文件", { exact: true })).toHaveValue("");
+  const openAsset = page.getByRole("button", {
+    name: "预览资料 fixture.png",
+    exact: true,
+  });
+  await openAsset.click();
+  const modal = page.getByRole("dialog", { name: "预览资料", exact: true });
+  await expect(
+    modal.getByRole("heading", { name: "fixture.png", exact: true }),
+  ).toBeVisible();
+  await expect(modal.locator("img")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(0);
+  const menu = page.getByRole("button", {
+    name: "文件操作 fixture.png",
+    exact: true,
+  });
+  await menu.click();
+  await expect(
+    page
+      .locator(".asset-menu-content")
+      .getByRole("link", { name: "下载原件", exact: true }),
+  ).toHaveAttribute("href", /\/api\/v1\/assets\/[a-f0-9]{24}\/download/);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeFocused();
+  await page.getByRole("button", { name: "列表视图", exact: true }).click();
+  await expect(page.locator(".asset-list")).toBeVisible();
+  await page.getByRole("button", { name: "网格视图", exact: true }).click();
+  await page.getByRole("button", { name: "PDF 文档", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "这里还没有资料", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "图片", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "fixture.png", exact: true }),
+  ).toBeVisible();
+  await menu.click();
+  await page
+    .locator(".asset-menu-content")
+    .getByRole("button", { name: "提取候选事实", exact: true })
+    .click();
+  await expect(page.locator(".asset-extraction")).toBeFocused();
+  await page.locator(".asset-extraction-heading button").click();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "test-results/s18-assets-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await openAsset.click();
+  await expect(modal).toBeVisible();
+  expect(await modal.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: "test-results/s18-assets-mobile-preview.png" });
+  await modal.getByRole("button", { name: "关闭", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/products/new");
   await page.getByLabel("产品名称", { exact: true }).fill("Fixture Pump");
   await page.getByLabel("产品编号", { exact: true }).fill("E2E-PUMP");
@@ -93,15 +154,13 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
     fullPage: true,
   });
   await page.goto("/products/imports");
-  await page
-    .getByLabel("文件", { exact: true })
-    .setInputFiles({
-      name: "catalog.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        "name,sku,material\nImported Pump,IMPORT-E2E,Steel\n,INVALID-E2E,Steel",
-      ),
-    });
+  await page.getByLabel("文件", { exact: true }).setInputFiles({
+    name: "catalog.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "name,sku,material\nImported Pump,IMPORT-E2E,Steel\n,INVALID-E2E,Steel",
+    ),
+  });
   await page.getByRole("button", { name: "上传", exact: true }).click();
   await expect(
     page.getByText("总行数: 2 · 有效行: 1 · 错误行: 1", { exact: true }),
