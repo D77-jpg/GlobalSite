@@ -1203,3 +1203,41 @@
     grid-column: 1/-1;
   }
 }
+
+.product-shell .usage-line progress {
+  appearance: none;
+  border: 0;
+  border-radius: 3px;
+  background: #edf0f2;
+}
+.product-shell .usage-line progress::-webkit-progress-bar {
+  background: #edf0f2;
+  border-radius: 3px;
+}
+.product-shell .usage-line progress::-webkit-progress-value {
+  background: #77838e;
+  border-radius: 3px;
+}
+.product-shell .usage-line progress::-moz-progress-bar {
+  background: #77838e;
+  border-radius: 3px;
+}
+.product-shell .settings-section-body .detail-row {
+  padding: 10px 0;
+}
+@media (max-width: 760px) {
+  .product-shell .ops-product-line:not(.ops-colheads) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px 12px;
+  }
+  .product-shell .ops-product-line .ops-product-id {
+    width: 100%;
+  }
+  .product-shell .ops-product-line .ops-category {
+    display: none;
+  }
+  .product-shell .ops-product-line .ops-updated {
+    width: 100%;
+  }
+}
