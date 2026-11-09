@@ -1,3 +1,4 @@
+import { trustedPreview } from "./trusted-preview";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Sparkles, ArrowUpRight } from "lucide-react";
@@ -77,34 +78,12 @@ function MiniPreview({
   expanded: boolean;
   title: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null),
-    [width, setWidth] = useState(0);
-  useEffect(() => {
-    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
-    if (ref.current) ro.observe(ref.current);
-    return () => ro.disconnect();
-  }, []);
   return (
-    <div
-      ref={ref}
-      className={"proposal-canvas" + (expanded ? " expanded" : "")}
-      style={expanded ? undefined : { height: (width * 900) / 1280 }}
-    >
+    <div className={"proposal-canvas" + (expanded ? " expanded" : "")}>
       <iframe
         title={title}
         sandbox="allow-same-origin"
-        srcDoc={html}
-        style={
-          expanded
-            ? undefined
-            : {
-                width: 1280,
-                height: 900,
-                transform: "scale(" + width / 1280 + ")",
-                transformOrigin: "top left",
-                pointerEvents: "none",
-              }
-        }
+        srcDoc={trustedPreview(html)}
       />
     </div>
   );

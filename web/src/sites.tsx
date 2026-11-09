@@ -1,3 +1,4 @@
+import { trustedPreview } from "./trusted-preview";
 import { RunList } from "./agent-tasks";
 export { RunList } from "./agent-tasks";
 import { SiteDesign } from "./site-design";
@@ -2534,7 +2535,7 @@ function PageEditor({
           <iframe
             title={t("preview")}
             sandbox="allow-same-origin"
-            srcDoc={preview}
+            srcDoc={trustedPreview(preview)}
             className={"sites-preview " + (mobile ? "mobile" : "")}
           />
         )}

@@ -758,12 +758,18 @@ test("provider uses configured model and meters output; no provider is a paused/
     }),
   );
   mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
-  let model = "";
+  let model = "",
+    expectedBudget = 16384;
+  const deadlines: number[] = [];
+  mock.method(AbortSignal, "timeout", (ms: number) => {
+    deadlines.push(ms);
+    return new AbortController().signal;
+  });
   mock.method(globalThis, "fetch", async (_url: any, options: any) => {
     const request = JSON.parse(options.body);
     model = request.model;
     // Content needs room for both reasoning and the complete page JSON.
-    assert.equal(request.max_tokens, 16384);
+    assert.equal(request.max_tokens, expectedBudget);
     return new Response(
       JSON.stringify({
         usage: { total_tokens: 45 },
@@ -781,6 +787,26 @@ test("provider uses configured model and meters output; no provider is a paused/
   );
   assert.equal(result.tokens, 45);
   assert.equal(model, "configured-fixture-model");
+  expectedBudget = 32768;
+  const designOperation = randomUUID();
+  const design = await tenant(() =>
+    callSiteAgent(
+      "Return both full proposals",
+      { task: "design" },
+      designOperation,
+      async () => {},
+    ),
+  );
+  assert.equal(design.tokens, 45);
+  assert.deepEqual(deadlines, [120000, 240000]);
+  const reservation = await tenant(() =>
+    m.UsageRecord.findOne({
+      metric: "ai_tokens",
+      operationId: designOperation,
+    }),
+  );
+  assert(reservation.amount > 32768);
+  assert.equal(reservation.state, "settled");
 });
 
 test("multi-page transient retry resumes only the failed page and stale dispatch cannot affect the new attempt", async () => {

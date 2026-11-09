@@ -59,15 +59,17 @@ export async function callSiteAgent(
   const task = (input as { task?: string })?.task;
   // Reasoning models share this cap with their complete structured page output.
   const maxTokens =
-    task === "rewrite"
-      ? 8192
-      : ["design", "content", "refine", "review"].includes(task ?? "")
-        ? 16384
-        : task === "research"
-          ? (input as any)?.site?.buyerProfile
-            ? 16384
-            : 6144
-          : 8192;
+    task === "design"
+      ? 32768
+      : task === "rewrite"
+        ? 8192
+        : ["content", "refine", "review"].includes(task ?? "")
+          ? 16384
+          : task === "research"
+            ? (input as any)?.site?.buyerProfile
+              ? 16384
+              : 6144
+            : 8192;
   // UTF-8 bytes bound message tokens; max_tokens already counts output tokens,
   // including reasoning. Add envelope headroom instead of multiplying tokens by bytes.
   const budget =
@@ -88,7 +90,9 @@ export async function callSiteAgent(
       {
         method: "POST",
         redirect: "error",
-        signal: AbortSignal.timeout(120000),
+        // Two full proposal JSON documents share the model's reasoning/output cap.
+        // Keep a bounded design deadline while the Worker renews its fenced lease.
+        signal: AbortSignal.timeout(task === "design" ? 240000 : 120000),
         headers: {
           "Content-Type": "application/json",
           Authorization:
