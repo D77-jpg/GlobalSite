@@ -1,0 +1,134 @@
+.design-workspace {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+}
+.design-workspace > header h2 {
+  margin: 12px 0;
+  font-size: 23px;
+}
+.design-workspace > header p,
+.proposal header p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.design-selected {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background: #eef5ef;
+  border: 1px solid #d0e0d4;
+  border-radius: 9px;
+  margin: 24px 0;
+}
+.design-selected > div {
+  flex: 1;
+  min-width: 0;
+}
+.design-selected p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.design-selected small {
+  color: var(--muted);
+}
+.design-selected > a {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+.design-proposals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+.proposal {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 0;
+}
+.proposal > header {
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.proposal h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.proposal.expanded {
+  grid-column: 1/-1;
+}
+.proposal > footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-top: 1px solid var(--line);
+}
+.proposal-canvas {
+  position: relative;
+  overflow: hidden;
+  background: #f6f7f6;
+}
+.proposal-canvas iframe {
+  border: 0;
+  display: block;
+  max-width: none;
+}
+.proposal-canvas.expanded iframe {
+  width: 100%;
+  height: 760px;
+}
+.design-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(250px, 1fr);
+  gap: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+}
+.design-composer textarea {
+  margin-top: 10px;
+}
+.design-workspace .design-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.design-consent input {
+  width: 16px !important;
+  min-height: 16px !important;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.design-composer > div > button {
+  margin: 16px 0 10px;
+}
+.design-composer small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .design-workspace {
+    padding: 18px;
+  }
+  .design-proposals,
+  .design-composer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .design-selected {
+    flex-wrap: wrap;
+  }
+  .proposal-canvas.expanded iframe {
+    height: 650px;
+  }
+}

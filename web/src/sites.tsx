@@ -1,3 +1,4 @@
+import { SiteDesign } from "./site-design";
 import { SiteGuide } from "./site-journey";
 import { BuyerWorkspace, SiteQuality } from "./b2b";
 import { orderedNodes, moveNode } from "./site-plan";
@@ -139,6 +140,7 @@ function Frame({
   );
 }
 const templateLabels: Record<string, [string, string]> = {
+  adaptive: ["Agent 智能设计", "Agent-composed design"],
   machinery: ["机械设备", "Machinery & equipment"],
   "building-hardware": ["建材五金", "Building materials & hardware"],
   "packaging-bags": ["包装 / 箱包", "Packaging & bags"],
@@ -272,7 +274,6 @@ export function SitesPage({ locale, role }: Props) {
 }
 function SiteForm({
   site,
-  locale,
   t,
   done,
 }: {
@@ -305,6 +306,7 @@ function SiteForm({
         a.run(async () => {
           const data = {
             name: v.name,
+            businessBrief: v.businessBrief ?? site?.businessBrief ?? "",
             templateId: v.templateId,
             targetMarkets: split(v.targetMarkets),
             language: "en",
@@ -337,14 +339,12 @@ function SiteForm({
             <small>{t("nameHint")}</small>
           </label>
           <label>
-            {t("template")}
-            <select aria-label={t("template")} {...register("templateId")}>
-              {Object.entries(templateLabels).map(([id, pair]) => (
-                <option key={id} value={id}>
-                  {pair[locale === "zh" ? 0 : 1]}
-                </option>
-              ))}
-            </select>
+            {t("businessBrief")}
+            <textarea
+              rows={4}
+              maxLength={2000}
+              {...register("businessBrief")}
+            />
           </label>
           <label>
             {t("markets")}
@@ -406,6 +406,7 @@ function SiteForm({
 }
 const workspaceTabs = [
   "guide",
+  "design",
   "planning",
   "interview",
   "business",
@@ -589,6 +590,20 @@ export function SiteWorkspace({ locale, role }: Props) {
           setConsent={setConsent}
           queue={(step) => a.run(() => queue(step))}
           setTab={setTab}
+        />
+      )}
+      {tab === "design" && (
+        <SiteDesign
+          site={site}
+          runs={runs.data?.items ?? []}
+          locale={locale}
+          canEdit={canEdit}
+          onSave={() => {
+            load.reload();
+            runs.reload();
+            pages.reload();
+            ready.reload();
+          }}
         />
       )}
       {tab === "business" && (
@@ -1443,6 +1458,11 @@ export function RunList({
                     {t("recordedFindings")} · {s.output.findings.length}
                   </p>
                 )}
+                {s.output?.directions?.length > 0 && (
+                  <Link to={"/sites/" + r.siteId + "?tab=design"}>
+                    {t("design")}
+                  </Link>
+                )}
                 {s.output?.nodes && (
                   <Link to={"/sites/" + r.siteId + "?tab=planning"}>
                     {t("openGeneratedPlan")} · {s.output.nodes.length}
@@ -1461,6 +1481,11 @@ export function RunList({
                 )}
                 {s.output?.pageId && (
                   <Link to={"/pages/" + s.output.pageId}>{t("editPage")}</Link>
+                )}
+                {s.output?.directions?.length > 0 && (
+                  <Link to={"/sites/" + r.siteId + "?tab=design"}>
+                    {t("design")}
+                  </Link>
                 )}
                 {s.output?.nodes && (
                   <ul>

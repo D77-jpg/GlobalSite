@@ -43,6 +43,7 @@ export function BuyerWorkspace({
     try {
       const data = Object.fromEntries(
         [
+          "businessBrief",
           "name",
           "templateId",
           "targetMarkets",

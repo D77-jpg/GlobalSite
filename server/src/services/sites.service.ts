@@ -34,6 +34,8 @@ export function siteDto(s: any) {
     id: String(s._id),
     revision: s.revision,
     ...(s.buyerProfile ? { buyerProfile: s.buyerProfile } : {}),
+    ...(s.designDirection ? { designDirection: s.designDirection } : {}),
+    ...(s.businessBrief ? { businessBrief: s.businessBrief } : {}),
     name: s.name,
     templateId: s.templateId,
     targetMarkets: s.targetMarkets,
@@ -98,7 +100,11 @@ export async function saveSite(
       );
       result = await Site.findOneAndUpdate(
         { _id: id, revision },
-        { $set: data, $inc: { revision: 1 }, $unset: { confirmedPlanHash: 1 } },
+        {
+          $set: data,
+          $inc: { revision: 1 },
+          $unset: { confirmedPlanHash: 1, designDirection: 1 },
+        },
         { session, new: true },
       );
       ensure(result, 409, "REVISION_CONFLICT");
@@ -689,11 +695,29 @@ export async function reviewPage(
   });
   return pageView(result);
 }
-export async function preview(id: string) {
-  const page = await ownedPage(id),
-    site = await ownSite(String(page.siteId)),
-    data = await pageView(page, site);
-  if (!site.buyerProfile)
+export async function preview(
+  id: string,
+  draft?: { site: any; node: any; data: v.PageInput },
+) {
+  const page = draft ? { siteId: draft.site._id } : await ownedPage(id),
+    site = draft?.site ?? (await ownSite(String(page.siteId))),
+    data = draft
+      ? {
+          ...draft.data,
+          hash: sha(JSON.stringify(draft.data)),
+          issues: validatePage(
+            draft.data,
+            (await sourceRows(site)).facts.map(factDto),
+            {
+              productIds: site.productIds.map(String),
+              type: "home",
+              brandName: site.name,
+              paths: site.plan.nodes.map((n: any) => n.path),
+            },
+          ),
+        }
+      : await pageView(page, site);
+  if (!site.buyerProfile && !draft)
     return {
       html: renderPage(data, site),
       hash: data.hash,
@@ -715,6 +739,17 @@ export async function preview(id: string) {
       path: row.path,
       type: row.type,
       productId: row.productId ? String(row.productId) : null,
+    });
+  }
+  if (draft) {
+    const old = views.findIndex((p) => p.path === draft.node.path);
+    if (old >= 0) views.splice(old, 1);
+    views.push({
+      ...draft.data,
+      id,
+      path: draft.node.path,
+      type: draft.node.type,
+      productId: null,
     });
   }
   const ids = [

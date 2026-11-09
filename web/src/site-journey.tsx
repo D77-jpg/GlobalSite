@@ -28,7 +28,7 @@ const copy = {
     marketHint: "多个市场用逗号分隔，例如 United States, Germany",
     audience: "面向哪些客户",
     audienceHint: "例如宠物用品进口商、零售品牌",
-    needs: "希望网站帮你实现什么",
+    needs: "描述你的业务与建站目标",
     needsHint: "例如展示猫窝、猫抓板和玩具，吸引批发商询价",
     next: "下一步，选择产品",
     previous: "上一步",
@@ -76,6 +76,7 @@ const copy = {
     later: "后续步骤",
     start: "让 Agent 规划网站",
     viewPlan: "查看并确认网站结构",
+    design: "预览并选择设计方案",
     generate: "让 Agent 生成页面",
     review: "审核页面内容",
     publish: "检查、构建与预览",
@@ -107,7 +108,7 @@ const copy = {
     marketHint: "Separate markets with commas, e.g. United States, Germany",
     audience: "Who are your buyers?",
     audienceHint: "For example, pet product importers and retail brands",
-    needs: "What should this website achieve?",
+    needs: "Describe your business and website goals",
     needsHint:
       "For example, showcase cat beds, scratchers and toys to attract wholesale inquiries",
     next: "Continue to products",
@@ -164,6 +165,7 @@ const copy = {
     later: "Upcoming",
     start: "Ask the agent to plan",
     viewPlan: "Review and confirm the sitemap",
+    design: "Preview and choose a design",
     generate: "Ask the agent to write",
     review: "Review page content",
     publish: "Check, build & preview",
@@ -228,7 +230,7 @@ export function SiteCreation({
       targetMarkets: "United States",
       audience: "",
       needs: "",
-      templateId: "packaging-bags",
+      templateId: "adaptive",
     },
   });
   if (role === "viewer") return <Navigate to="/sites" replace />;
@@ -259,13 +261,14 @@ export function SiteCreation({
         brandColor: "#126a54",
         logoId: null,
         productIds: ids,
+        businessBrief: value.needs.trim(),
         status: "draft",
         ...(value.audience.trim()
           ? {
               buyerProfile: {
                 businessModel: "wholesale",
                 audiences: [value.audience.trim()],
-                buyerNeeds: value.needs.trim() ? [value.needs.trim()] : [],
+                buyerNeeds: [],
                 primaryAction: "quote",
                 referenceUrls: [],
               },
@@ -347,35 +350,12 @@ export function SiteCreation({
                 <label>
                   {c.needs}
                   <textarea
-                    maxLength={160}
+                    maxLength={2000}
                     rows={3}
                     placeholder={c.needsHint}
                     {...form.register("needs")}
                   />
                 </label>
-                <div className="creation-layouts">
-                  <h3>{c.look}</h3>
-                  <p>{c.lookHint}</p>
-                  <div>
-                    {[
-                      ["machinery", c.machinery],
-                      ["building-hardware", c.hardware],
-                      ["packaging-bags", c.bags],
-                    ].map(([id, label]) => (
-                      <label key={id}>
-                        <input
-                          type="radio"
-                          value={id}
-                          {...form.register("templateId")}
-                        />
-                        <span>
-                          <Box size={20} />
-                          {label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
               </section>
             ) : (
               <section className="creation-surface">
@@ -578,7 +558,10 @@ export function SiteGuide({
   const c = copy[locale],
     t = st(locale);
   if (!sources || !pages || !runs) return <p role="status">{c.wait}</p>;
-  const hasSources = site.productIds.length > 0 || sources.facts.length > 0;
+  const hasSources =
+    site.productIds.length > 0 ||
+    sources.facts.length > 0 ||
+    !!site.businessBrief?.trim();
   const expected = site.plan?.nodes?.length ?? 0;
   const drafted = pages.filter((p) =>
     site.plan?.nodes.some((n: Record<string, any>) => n.key === p.nodeKey),
@@ -610,6 +593,10 @@ export function SiteGuide({
   } else if (stage === 2) {
     action = drafted.length < expected ? c.generate : c.review;
     target = drafted.length < expected ? "content" : "pages";
+    if (site.templateId === "adaptive" && !site.designDirection) {
+      action = c.design;
+      target = "design";
+    }
   } else if (stage === 3) {
     action = c.publish;
     target = "publishing";
@@ -637,7 +624,13 @@ export function SiteGuide({
           {[
             [c.prepare, c.prepareSub, "settings"],
             [c.planning, c.planningSub, "planning"],
-            [c.writing, c.writingSub, "pages"],
+            [
+              c.writing,
+              c.writingSub,
+              site.templateId === "adaptive" && !site.designDirection
+                ? "design"
+                : "pages",
+            ],
             [c.preview, c.previewSub, "publishing"],
           ].map(([title, desc, tab], i) => (
             <li

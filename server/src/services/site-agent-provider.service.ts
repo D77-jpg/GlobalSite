@@ -61,7 +61,7 @@ export async function callSiteAgent(
   const maxTokens =
     task === "rewrite"
       ? 8192
-      : ["content", "refine", "review"].includes(task ?? "")
+      : ["design", "content", "refine", "review"].includes(task ?? "")
         ? 16384
         : task === "research"
           ? (input as any)?.site?.buyerProfile

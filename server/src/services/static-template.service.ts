@@ -189,6 +189,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     home = s.pages.find((v) => v.path === "/"),
     presentation = p.presentation ?? {},
     style =
+      s.site.designDirection?.visualStyle ??
       presentation.visualStyle ??
       home?.presentation?.visualStyle ??
       (s.site.templateId === "packaging-bags"
@@ -248,14 +249,20 @@ export function renderStaticPage(s: Snapshot, p: any) {
       return link(
         v.path,
         label(v),
-        artwork ? '<span aria-hidden="true">' + image(s, artwork.assetId, artwork.alt || label(v)) + "</span>" : "",
+        artwork
+          ? '<span aria-hidden="true">' +
+              image(s, artwork.assetId, artwork.alt || label(v)) +
+              "</span>"
+          : "",
       );
     })
     .join("");
   const rangeMenu =
     '<details class="range-menu"><summary>Products</summary><div class="range-panel"><div class="range-index">' +
     catalogueLink +
-    (categories.length === 1 ? link(categories[0].path, label(categories[0])) : "") +
+    (categories.length === 1
+      ? link(categories[0].path, label(categories[0]))
+      : "") +
     '</div><div class="range-tiles">' +
     rangeLinks +
     "</div></div></details>";
@@ -266,8 +273,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
   ]) {
     const block = home?.blocks.find(
       (v: any) =>
-        v.type === type &&
-        (type === "faq" ? v.faq?.length : v.items?.length),
+        v.type === type && (type === "faq" ? v.faq?.length : v.items?.length),
     );
     if (block && !buyingPages.some((v) => v.type === type)) {
       buyingLinks.push(link("/#block-" + block.key, title));
@@ -460,7 +466,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
       ? " b2b-site page-" +
         e(p.type) +
         " density-" +
-        e(presentation.density ?? "comfortable")
+        e(
+          s.site.designDirection?.density ??
+            presentation.density ??
+            "comfortable",
+        )
       : "") +
     " style-" +
     e(style) +
