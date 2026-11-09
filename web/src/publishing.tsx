@@ -37,7 +37,6 @@ export function PublishPage({
     [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(false),
     [historyLoaded, setHistoryLoaded] = useState(false),
-    [colors, setColors] = useState<string[]>([]),
     [domain, setDomain] = useState<Row>(),
     [clear, setClear] = useState(false);
   const form = useForm<Row>(),
@@ -395,66 +394,6 @@ export function PublishPage({
           </button>
         )}
         {domain && <p role="status">{t(domain.status)}</p>}
-        {edit && (
-          <>
-            <p>{t("paletteHint")}</p>
-            <button
-              disabled={busy}
-              onClick={() =>
-                void action(async () =>
-                  setColors(
-                    (await api(base + "/brand-palette", "POST", {})).colors,
-                  ),
-                )
-              }
-            >
-              {t("palette")}
-            </button>
-            <div className="publish-colors">
-              {colors.map((c) => (
-                <button
-                  key={c}
-                  disabled={busy}
-                  onClick={() =>
-                    void action(async () => {
-                      const s = await api(base);
-                      const {
-                        name,
-                        templateId,
-                        targetMarkets,
-                        language,
-                        logoId,
-                        productIds,
-                        status,
-                      } = s;
-                      setSite(
-                        await api(base, "PATCH", {
-                          revision: s.revision,
-                          data: {
-                            name,
-                            templateId,
-                            targetMarkets,
-                            language,
-                            logoId,
-                            productIds,
-                            status,
-                            brandColor: c,
-                          },
-                        }),
-                      );
-                    })
-                  }
-                >
-                  <svg width="28" height="18" aria-hidden="true">
-                    <rect width="28" height="18" rx="3" fill={c} />
-                  </svg>{" "}
-                  {c}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        {!edit && <p>{t("readonly")}</p>}
       </details>
       <section className="catalog-panel">
         <div className="studio-section-heading">

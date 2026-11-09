@@ -1,3 +1,4 @@
+import { SiteCreation } from "./site-journey";
 import { WorkspaceFrame } from "./workspace-frame";
 import { AgentWorkbench } from "./agent-workbench";
 import { CrmConnectionPage } from "./crm";
@@ -1224,6 +1225,10 @@ function WorkspaceRoutes({ me }: { me: Me }) {
         <Route
           path="sites/:id/inquiry-settings"
           element={<InquirySettingsPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="sites/new"
+          element={<SiteCreation locale={locale} role={me.role} />}
         />
         <Route
           path="sites"
