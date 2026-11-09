@@ -463,3 +463,26 @@
     grid-column: 1;
   }
 }
+
+.site-creation button {
+  padding: 10px 16px;
+  border: 1px solid var(--ws-border);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.site-creation button.primary {
+  background: #174d38;
+  color: white;
+  border-color: #174d38;
+  font-weight: 600;
+}
+.site-creation button.secondary {
+  background: white;
+  color: var(--ink);
+}
+.site-creation button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
