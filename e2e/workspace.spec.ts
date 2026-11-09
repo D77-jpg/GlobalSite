@@ -104,6 +104,7 @@ test("workspace navigation, agent handoff and responsive screens", async ({
       await page.keyboard.press("Control+k");
       const dialog = page.getByRole("dialog");
       await dialog.locator('a[href="' + path + '"]').click();
+      await expect(page).toHaveURL((url) => url.pathname === path);
       await expect(page.locator("main h1").first()).toBeVisible();
       await page.waitForLoadState("networkidle");
       expect(apiErrors, path + " at " + width).toEqual([]);
@@ -132,6 +133,18 @@ test("workspace navigation, agent handoff and responsive screens", async ({
         await expect(
           page.getByRole("link", { name: "Canvas weekender", exact: true }),
         ).toBeVisible();
+      if (path === "/members")
+        await expect(page.locator("main tbody tr").first()).toBeVisible();
+      if (path === "/security")
+        await expect(
+          page.locator("main .session-list .session").first(),
+        ).toBeVisible();
+      if (path === "/usage")
+        await expect(page.locator("main .usage-card").first()).toBeVisible();
+      if (path === "/ai")
+        await expect(
+          page.locator(".account-provider form").first(),
+        ).toBeVisible();
       const overflowing = await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
       );
@@ -148,5 +161,6 @@ test("workspace navigation, agent handoff and responsive screens", async ({
       }
     }
   }
+  expect(apiErrors).toEqual([]);
   expect(errors).toEqual([]);
 });

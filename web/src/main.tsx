@@ -554,7 +554,7 @@ function Overview({ org }: { org: OrganizationResource }) {
   const { me } = useContext(Auth);
   return (
     <>
-      <Notice error={org.error} />
+      {org.error ? <Loading error={org.error} retry={org.reload} /> : null}
       <MissionOverview
         key={me.organizationId}
         locale={locale}
