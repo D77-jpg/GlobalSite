@@ -9,14 +9,14 @@ import {
   TriangleAlert,
   X,
   RotateCcw,
-  ChevronRight,
-  ListChecks,
   FileText,
 } from "lucide-react";
 import { api, ApiError } from "./api";
 import { st, siteMessages } from "./sites-i18n";
 import type { Locale } from "./i18n";
 import "./agent-tasks.css";
+import { AgentControls } from "./agent-controls";
+import { AgentResults } from "./agent-results";
 type Row = Record<string, any>;
 const copy = {
   zh: {
@@ -197,59 +197,61 @@ function target(run: Row, siteId: string, unit?: Row) {
     }[run.step as string] ?? "guide")
   );
 }
+
 export function RunList({
   runs,
   locale,
   canEdit,
   refresh,
   siteId,
+  site,
   page = 1,
   hasMore = false,
   onNext,
   onPrevious,
+  onCreated,
 }: {
   runs?: Row[];
   locale: Locale;
   canEdit: boolean;
   refresh: () => void;
   siteId: string;
+  site?: Row;
   page?: number;
   hasMore?: boolean;
   onNext?: () => void;
   onPrevious?: () => void;
+  onCreated?: () => void;
 }) {
   const c = copy[locale],
     t = st(locale),
+    zh = locale === "zh",
     [filter, setFilter] = useState("all"),
     [selected, setSelected] = useState(""),
     [busy, setBusy] = useState(""),
     [error, setError] = useState<{ id: string; message: string }>(),
+    [mobilePanel, setMobilePanel] = useState("result"),
+    [view, setView] = useState("result"),
     posting = useRef(false);
   const list = runs ?? [],
     attention = (r: Row) => ["paused", "failed"].includes(r.status),
     running = (r: Row) => r.active && !attention(r),
     ended = (r: Row) => ["succeeded", "cancelled"].includes(r.status);
-  const filtered = list.filter(
-    (r) =>
-      filter === "all" ||
-      (filter === "attention"
-        ? attention(r)
-        : filter === "active"
-          ? running(r)
-          : ended(r)),
-  );
+  const matches = (r: Row, k: string) =>
+    k === "all" ||
+    (k === "attention" ? attention(r) : k === "active" ? running(r) : ended(r));
+  const filtered = list.filter((r) => matches(r, filter));
   const run =
     filtered.find((r) => r.id === selected) ??
     filtered.find(attention) ??
     filtered.find(running) ??
     filtered[0];
-  const title = (r: Row) =>
-    names[r.step]?.[locale === "zh" ? 0 : 1] ?? c.unknownTask;
-  const date = (value: unknown) => {
-    const d = new Date(String(value ?? ""));
+  const title = (r: Row) => names[r.step]?.[zh ? 0 : 1] ?? c.unknownTask;
+  const date = (v: unknown) => {
+    const d = new Date(String(v ?? ""));
     return Number.isNaN(d.getTime())
       ? "—"
-      : new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-GB", {
+      : new Intl.DateTimeFormat(zh ? "zh-CN" : "en-GB", {
           month: "short",
           day: "numeric",
           hour: "2-digit",
@@ -308,43 +310,33 @@ export function RunList({
         review: c.reviewAction,
       }[run.step as string] ?? c.contentAction)
     : "";
-  const knownFindings =
-    run?.step === "review" &&
-    steps.length > 0 &&
-    steps.every((s) => Array.isArray(s.output?.findings));
-  const findingCount = knownFindings
-    ? steps.reduce((n, s) => n + s.output.findings.length, 0)
-    : 0;
   return (
-    <section className="task-center">
-      <header className="task-center-heading">
-        <div>
-          <h2>{c.title}</h2>
-          <p>{c.sub}</p>
-        </div>
-        <Link to={"/sites/" + siteId + "?tab=guide"}>
-          {c.workspace}
-          <ArrowUpRight size={15} />
-        </Link>
-      </header>
-      {!runs ? (
-        <p className="task-feedback" role="status">
-          {c.loading}
-        </p>
-      ) : !runs.length ? (
-        <div className="task-empty">
-          <ListChecks size={29} />
-          <h3>{c.empty}</h3>
-          <p>{c.emptySub}</p>
-          <Link
-            className="button primary"
-            to={"/sites/" + siteId + "?tab=guide"}
+    <section className="task-center agent-studio" data-panel={mobilePanel}>
+      <nav
+        className="task-mobile-switch"
+        aria-label={zh ? "工作区域" : "Work areas"}
+      >
+        {[
+          { k: "tasks", v: zh ? "任务" : "Tasks" },
+          { k: "result", v: zh ? "成果" : "Results" },
+          { k: "controls", v: zh ? "操作" : "Actions" },
+        ].map((x) => (
+          <button
+            key={x.k}
+            type="button"
+            aria-pressed={mobilePanel === x.k}
+            onClick={() => setMobilePanel(x.k)}
           >
-            {c.workspace}
-          </Link>
-        </div>
-      ) : (
-        <>
+            {x.v}
+          </button>
+        ))}
+      </nav>
+      <div className="task-split">
+        <aside className="task-navigation">
+          <header className="task-center-heading">
+            <h2>{zh ? "任务与工作流" : "Tasks & workflow"}</h2>
+            <span>{list.length}</span>
+          </header>
           <div className="task-toolbar">
             <div role="group" aria-label={c.history}>
               {(["all", "attention", "active", "ended"] as const).map((k) => (
@@ -355,339 +347,383 @@ export function RunList({
                   onClick={() => setFilter(k)}
                 >
                   {c[k]}
-                  <span>
-                    {
-                      list.filter(
-                        (r) =>
-                          k === "all" ||
-                          (k === "attention"
-                            ? attention(r)
-                            : k === "active"
-                              ? running(r)
-                              : ended(r)),
-                      ).length
-                    }
-                  </span>
+                  <span>{list.filter((r) => matches(r, k)).length}</span>
                 </button>
               ))}
             </div>
-            <span>{c.scope}</span>
           </div>
-          <div className="task-split">
-            <div className="task-index" aria-label={c.history}>
-              {filtered.length ? (
-                filtered.map((r) => {
-                  const Icon = stateIcon(r.status);
-                  return (
-                    <button
-                      type="button"
-                      key={r.id}
-                      className="task-index-item"
-                      aria-pressed={run?.id === r.id}
-                      onClick={() => {
-                        setSelected(r.id);
-                        setError(undefined);
-                      }}
-                    >
-                      <span className={"task-index-icon state-" + r.status}>
-                        <Icon size={18} />
-                      </span>
-                      <span className="task-index-copy">
-                        <strong>{title(r)}</strong>
-                        <small>{date(r.updatedAt ?? r.createdAt)}</small>
-                      </span>
-                      <span className={"task-state state-" + r.status}>
+          <div className="task-index" aria-label={c.history}>
+            {!runs ? (
+              <p role="status" className="task-feedback">
+                {c.loading}
+              </p>
+            ) : filtered.length ? (
+              filtered.map((r) => {
+                const Icon = stateIcon(r.status);
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className="task-index-item"
+                    aria-pressed={r.id === run?.id}
+                    onClick={() => {
+                      setSelected(r.id);
+                      setError(undefined);
+                      setMobilePanel("result");
+                    }}
+                  >
+                    <span className={"task-index-icon state-" + r.status}>
+                      <Icon size={16} />
+                    </span>
+                    <span className="task-index-copy">
+                      <strong>{title(r)}</strong>
+                      <small>
+                        {date(r.updatedAt ?? r.createdAt)} ·{" "}
                         {r.cancelRequested && r.active
                           ? c.stopping
                           : t(r.status)}
-                      </span>
-                    </button>
-                  );
-                })
-              ) : (
-                <p className="task-feedback">{c.noMatch}</p>
+                      </small>
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <p className="task-feedback">
+                {runs.length ? c.noMatch : c.empty}
+              </p>
+            )}
+          </div>
+          <footer className="task-history-footer">
+            <span>
+              {c.scope} · {page}
+            </span>
+            {(page > 1 || hasMore) && (
+              <nav className="task-pagination" aria-label={c.history}>
+                <button
+                  className="secondary"
+                  disabled={page === 1}
+                  onClick={onPrevious}
+                >
+                  {c.first}
+                </button>
+                <button
+                  className="secondary"
+                  disabled={!hasMore}
+                  onClick={onNext}
+                >
+                  {c.next}
+                </button>
+              </nav>
+            )}
+            <Link to={"/sites/" + siteId + "?tab=guide"}>
+              {c.workspace}
+              <ArrowUpRight size={13} />
+            </Link>
+          </footer>
+        </aside>
+        {run ? (
+          <article className="task-detail studio-run" key={"detail-" + run.id}>
+            <header>
+              <div>
+                <h3>{title(run)}</h3>
+                <p>
+                  {c.updated} {date(run.updatedAt ?? run.createdAt)}
+                </p>
+              </div>
+              <span role="status" className={"task-state state-" + run.status}>
+                {run.cancelRequested && run.active ? c.stopping : t(run.status)}
+              </span>
+            </header>
+            <div
+              className="task-result-tabs"
+              role="group"
+              aria-label={zh ? "任务视图" : "Task view"}
+            >
+              <button
+                type="button"
+                aria-pressed={view === "result"}
+                onClick={() => setView("result")}
+              >
+                {zh ? "成果与检查" : "Results & review"}
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "process"}
+                onClick={() => setView("process")}
+              >
+                {zh ? "执行过程" : "Execution"}
+                <span>
+                  {done}/{steps.length}
+                </span>
+              </button>
+              {(run.status === "succeeded" || done > 0) && (
+                <Link to={target(run, siteId)}>
+                  {actionLabel}
+                  <ArrowUpRight size={13} />
+                </Link>
               )}
             </div>
-            {run ? (
-              <article className="task-detail studio-run" key={run.id}>
-                <header>
-                  <span
-                    role="status"
-                    className={"task-state state-" + run.status}
-                  >
-                    {run.cancelRequested && run.active
-                      ? c.stopping
-                      : t(run.status)}
-                  </span>
-                  <h3>{title(run)}</h3>
-                  <p>
-                    {c.updated} {date(run.updatedAt ?? run.createdAt)}
-                  </p>
-                </header>
-                <section className={"task-outcome state-" + run.status}>
-                  <h4>{c.result}</h4>
-                  <p>{resultText}</p>
-                  {knownFindings && (
-                    <p className="task-findings">
-                      {c.recorded} <strong>{findingCount}</strong> {c.findings}
-                    </p>
+            {run.active && steps.length > 0 && (
+              <div className="task-live-progress">
+                <span>
+                  {c.completed} {done}/{steps.length}
+                </span>
+                <progress
+                  value={done}
+                  max={steps.length}
+                  aria-label={c.progress}
+                />
+              </div>
+            )}
+            <div className="task-canvas">
+              {view === "result" ? (
+                <>
+                  {run.status !== "succeeded" && (
+                    <p className="task-result-intro">{resultText}</p>
                   )}
-                  {run.errorCode && (
-                    <p
-                      className="task-problem"
-                      role={attention(run) ? "status" : undefined}
-                    >
-                      {humanError(run.errorCode)}
-                    </p>
-                  )}
-                  <div className="task-actions" aria-busy={busy === run.id}>
-                    {(run.status === "succeeded" || done > 0) && (
-                      <Link className="button primary" to={target(run, siteId)}>
-                        {actionLabel}
-                        <ArrowUpRight size={15} />
-                      </Link>
-                    )}
-                    {attention(run) && run.errorCode === "AI_UNCONFIGURED" && (
-                      <Link className="button secondary" to="/ai">
-                        {c.ai}
-                        <ArrowUpRight size={15} />
-                      </Link>
-                    )}
-                    {attention(run) &&
-                      ["QUOTA_EXCEEDED", "AI_USAGE_UNKNOWN"].includes(
-                        run.errorCode,
-                      ) && (
-                        <Link className="button secondary" to="/usage">
-                          {c.usage}
-                          <ArrowUpRight size={15} />
-                        </Link>
-                      )}
-                    {attention(run) &&
-                      ["SOURCE_CHANGED", "SOURCE_WITHDRAWN"].includes(
-                        run.errorCode,
-                      ) && (
-                        <Link
-                          className="button secondary"
-                          to={"/sites/" + siteId + "?tab=guide"}
-                        >
-                          {c.factsAction}
-                          <ArrowUpRight size={15} />
-                        </Link>
-                      )}
-                    {canEdit && attention(run) && (
-                      <button
-                        type="button"
-                        disabled={!!busy}
-                        onClick={() => void act(run, "retry")}
-                      >
-                        <RotateCcw size={15} />
-                        {t("retry")}
-                      </button>
-                    )}
-                    {canEdit && run.active && (
-                      <button
-                        type="button"
-                        className="secondary"
-                        disabled={!!busy || run.cancelRequested}
-                        onClick={() => void act(run, "cancel")}
-                      >
-                        {t("cancel")}
-                      </button>
-                    )}
-                  </div>
-                  {busy === run.id && <p role="status">{c.saving}</p>}
-                  {error && error.id === run.id && (
-                    <p className="notice error" role="alert">
-                      {error.message}
-                    </p>
-                  )}
-                </section>
-                {steps.length > 0 && (
-                  <section className="task-items">
-                    <div className="task-section-title">
-                      <h4>
-                        {run.active && !attention(run) ? c.progress : c.pages}
-                      </h4>
-                      <span>
-                        {c.completed} {done}
-                        {c.of}
-                        {steps.length}
-                      </span>
-                    </div>
-                    {run.active && (
-                      <progress
-                        value={done}
-                        max={steps.length}
-                        aria-label={c.progress}
-                      />
-                    )}
-                    <ul>
-                      {steps.map((s, i) => {
-                        const Icon = stateIcon(s.status),
-                          output = s.status === "succeeded" && s.output;
-                        return (
-                          <li key={s.key ?? i}>
-                            <span
-                              className={"task-item-icon state-" + s.status}
-                            >
-                              <Icon size={15} />
-                            </span>
-                            <span className="task-item-title">
+                  <AgentResults
+                    key={"detail-" + run.id}
+                    run={run}
+                    siteId={siteId}
+                    locale={locale}
+                  />
+                </>
+              ) : (
+                <section className="task-items">
+                  <h4>{c.progress}</h4>
+                  <ol>
+                    {steps.map((s, i) => {
+                      const Icon = stateIcon(s.status);
+                      return (
+                        <li key={s.key ?? i}>
+                          <Icon size={15} />
+                          <div>
+                            <strong>
                               {s.inputSummary?.pageTitle ??
                                 c.step + " " + (i + 1)}
-                            </span>
-                            <span
-                              className={"task-item-status state-" + s.status}
-                            >
+                            </strong>
+                            <span>
                               {run.status === "cancelled" &&
                               s.status !== "succeeded"
                                 ? c.notProcessed
                                 : t(s.status)}
                             </span>
-                            {output?.pageId && (
-                              <Link to={target(run, siteId, s)}>
-                                {c.openPage}
-                                <ChevronRight size={14} />
-                              </Link>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </section>
+                          </div>
+                          {s.output?.pageId && (
+                            <Link to={target(run, siteId, s)}>
+                              {c.openPage}
+                              <ArrowUpRight size={12} />
+                            </Link>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </section>
+              )}
+              <details className="task-diagnostics">
+                <summary>{c.diagnostics}</summary>
+                <dl>
+                  <div>
+                    <dt>{c.tokens}</dt>
+                    <dd>
+                      {new Intl.NumberFormat(locale).format(run.tokens ?? 0)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{c.duration}</dt>
+                    <dd>
+                      {((run.elapsedMs ?? 0) / 1000).toFixed(1)} {c.seconds}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{c.products}</dt>
+                    <dd>{run.inputSummary?.products ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>{c.facts}</dt>
+                    <dd>{run.inputSummary?.confirmedFacts ?? "—"}</dd>
+                  </div>
+                </dl>
+                {run.errorCode && (
+                  <p>
+                    {c.technicalError} <code>{run.errorCode}</code>
+                  </p>
                 )}
-                <details className="task-diagnostics">
-                  <summary>{c.diagnostics}</summary>
-                  <dl>
-                    <div>
-                      <dt>{c.tokens}</dt>
-                      <dd>
-                        {new Intl.NumberFormat(locale).format(run.tokens ?? 0)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>{c.duration}</dt>
-                      <dd>
-                        {((run.elapsedMs ?? 0) / 1000).toFixed(1)} {c.seconds}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>{c.products}</dt>
-                      <dd>{run.inputSummary?.products ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt>{c.facts}</dt>
-                      <dd>{run.inputSummary?.confirmedFacts ?? "—"}</dd>
-                    </div>
-                  </dl>
-                  {run.errorCode && (
+                {steps.map((s, i) => (
+                  <details key={s.key ?? i}>
+                    <summary>
+                      {s.inputSummary?.pageTitle ?? c.step + " " + (i + 1)} ·{" "}
+                      {c.attempts} {s.attempts ?? 0}
+                    </summary>
                     <p>
-                      {c.technicalError} <code>{run.errorCode}</code>
+                      {c.tokens}{" "}
+                      {new Intl.NumberFormat(locale).format(s.tokens ?? 0)} ·{" "}
+                      {c.duration} {((s.elapsedMs ?? 0) / 1000).toFixed(1)}{" "}
+                      {c.seconds}
                     </p>
-                  )}
-                  {steps.map((s, i) => (
-                    <details key={s.key ?? i}>
-                      <summary>
-                        {s.inputSummary?.pageTitle ?? c.step + " " + (i + 1)} ·{" "}
-                        {c.attempts} {s.attempts ?? 0}
-                      </summary>
+                    {s.inputSummary && (
                       <p>
-                        {c.tokens}{" "}
-                        {new Intl.NumberFormat(locale).format(s.tokens ?? 0)} ·{" "}
-                        {c.duration} {((s.elapsedMs ?? 0) / 1000).toFixed(1)}{" "}
-                        {c.seconds}
+                        {c.products} {s.inputSummary.products ?? "—"} ·{" "}
+                        {c.facts} {s.inputSummary.confirmedFacts ?? "—"}
                       </p>
-                      {s.inputSummary && (
-                        <p>
-                          {c.products} {s.inputSummary.products ?? "—"} ·{" "}
-                          {c.facts} {s.inputSummary.confirmedFacts ?? "—"}
-                        </p>
-                      )}
-                      {s.errorCode && (
-                        <p>
-                          {c.technicalError} <code>{s.errorCode}</code>
-                        </p>
-                      )}
-                      {s.output?.reviewMode && (
-                        <p>
-                          {t("reviewMethod")} ·{" "}
-                          {t("reviewMethod_" + s.output.reviewMode)}
-                        </p>
-                      )}
-                      {s.output?.metrics?.length > 0 && (
-                        <ul>
-                          {s.output.metrics.map((m: Row) => (
-                            <li key={m.width}>
-                              {m.width}px ·{" "}
-                              {t(
-                                m.overflow ? "overflowDetected" : "noOverflow",
-                              )}{" "}
-                              · {t("brokenImages")} {m.brokenImages}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {s.output?.screenshots?.length > 0 && (
-                        <Link to={target({ ...run, step: "review" }, siteId)}>
-                          {t("openReport")} · {s.output.screenshots.length}{" "}
-                          {t("screenCaptures")}
-                        </Link>
-                      )}
-                      {s.output?.nodes && (
-                        <ul>
-                          {s.output.nodes.map((n: Row) => (
-                            <li key={n.key}>
-                              {n.title} · {n.path}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {s.output?.questions && (
-                        <ul>
-                          {s.output.questions.map((q: Row) => (
-                            <li key={q.id}>{q.question}</li>
-                          ))}
-                        </ul>
-                      )}
-                      {(s.history ?? []).map((h: Row, j: number) => (
-                        <p key={j}>
-                          {c.attempts} {h.attempt} · {t(h.status)} ·{" "}
-                          {new Intl.NumberFormat(locale).format(h.tokens ?? 0)}{" "}
-                          Token · {((h.elapsedMs ?? 0) / 1000).toFixed(1)}{" "}
-                          {c.seconds}
-                          {h.errorCode ? " · " + humanError(h.errorCode) : ""}
-                        </p>
-                      ))}
-                    </details>
-                  ))}
-                </details>
-              </article>
-            ) : (
-              <div className="task-empty task-no-selection">
-                <FileText size={28} />
-                <p>{c.select}</p>
-              </div>
-            )}
+                    )}
+                    {s.errorCode && (
+                      <p>
+                        {c.technicalError} <code>{s.errorCode}</code>
+                      </p>
+                    )}
+                    {s.output?.reviewMode && (
+                      <p>
+                        {t("reviewMethod")} ·{" "}
+                        {t("reviewMethod_" + s.output.reviewMode)}
+                      </p>
+                    )}
+                    {s.output?.metrics?.length > 0 && (
+                      <ul>
+                        {s.output.metrics.map((m: Row) => (
+                          <li key={m.width}>
+                            {m.width}px ·{" "}
+                            {t(m.overflow ? "overflowDetected" : "noOverflow")}{" "}
+                            · {t("brokenImages")} {m.brokenImages}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.output?.screenshots?.length > 0 && (
+                      <Link to={target({ ...run, step: "review" }, siteId)}>
+                        {t("openReport")} · {s.output.screenshots.length}{" "}
+                        {t("screenCaptures")}
+                      </Link>
+                    )}
+                    {s.output?.nodes && (
+                      <ul>
+                        {s.output.nodes.map((n: Row) => (
+                          <li key={n.key}>
+                            {n.title} · {n.path}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.output?.questions && (
+                      <ul>
+                        {s.output.questions.map((q: Row) => (
+                          <li key={q.id}>{q.question}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {(s.history ?? []).map((h: Row, j: number) => (
+                      <p key={j}>
+                        {c.attempts} {h.attempt} · {t(h.status)} ·{" "}
+                        {new Intl.NumberFormat(locale).format(h.tokens ?? 0)}{" "}
+                        Token · {((h.elapsedMs ?? 0) / 1000).toFixed(1)}{" "}
+                        {c.seconds}
+                        {h.errorCode ? " · " + humanError(h.errorCode) : ""}
+                      </p>
+                    ))}
+                  </details>
+                ))}
+              </details>
+            </div>
+          </article>
+        ) : (
+          <div className="task-no-selection">
+            <FileText size={26} />
+            <h3>{runs?.length ? c.select : c.empty}</h3>
+            <p>{runs?.length ? c.noMatch : c.emptySub}</p>
+            <Link to={"/sites/" + siteId + "?tab=guide"}>
+              {c.workspace}
+              <ArrowUpRight size={13} />
+            </Link>
           </div>
-        </>
-      )}
-      {(page > 1 || hasMore) && (
-        <nav className="task-pagination" aria-label={c.history}>
-          <button
-            className="secondary"
-            disabled={page === 1}
-            onClick={onPrevious}
-          >
-            {c.first}
-          </button>
-          <span>
-            {c.page} {page} {c.pageEnd}
-          </span>
-          <button className="secondary" disabled={!hasMore} onClick={onNext}>
-            {c.next}
-          </button>
-        </nav>
-      )}
+        )}
+        <AgentControls
+          key={"controls-" + (run?.id ?? siteId)}
+          siteId={siteId}
+          site={site}
+          run={run}
+          locale={locale}
+          canEdit={canEdit}
+          onCreated={(r) => {
+            setSelected(r.id);
+            setFilter("all");
+            setMobilePanel("result");
+            setView("result");
+            onCreated?.();
+            refresh();
+          }}
+        >
+          {run ? (
+            <>
+              <h3>{title(run)}</h3>
+              <p>{resultText}</p>
+              {run.errorCode && (
+                <p
+                  className="task-problem"
+                  role={attention(run) ? "status" : undefined}
+                >
+                  {humanError(run.errorCode)}
+                </p>
+              )}
+              <div className="task-actions" aria-busy={busy === run.id}>
+                {attention(run) && run.errorCode === "AI_UNCONFIGURED" && (
+                  <Link className="button secondary" to="/ai">
+                    {c.ai}
+                    <ArrowUpRight size={13} />
+                  </Link>
+                )}
+                {attention(run) &&
+                  ["QUOTA_EXCEEDED", "AI_USAGE_UNKNOWN"].includes(
+                    run.errorCode,
+                  ) && (
+                    <Link className="button secondary" to="/usage">
+                      {c.usage}
+                    </Link>
+                  )}
+                {attention(run) &&
+                  ["SOURCE_CHANGED", "SOURCE_WITHDRAWN"].includes(
+                    run.errorCode,
+                  ) && (
+                    <Link
+                      className="button secondary"
+                      to={"/sites/" + siteId + "?tab=guide"}
+                    >
+                      {c.factsAction}
+                    </Link>
+                  )}
+                {canEdit && attention(run) && (
+                  <button
+                    type="button"
+                    disabled={!!busy}
+                    onClick={() => void act(run, "retry")}
+                  >
+                    <RotateCcw size={13} />
+                    {t("retry")}
+                  </button>
+                )}
+                {canEdit && run.active && (
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={!!busy || run.cancelRequested}
+                    onClick={() => void act(run, "cancel")}
+                  >
+                    {t("cancel")}
+                  </button>
+                )}
+              </div>
+              {busy === run.id && <p role="status">{c.saving}</p>}
+              {error?.id === run.id && error && (
+                <p className="notice error" role="alert">
+                  {error.message}
+                </p>
+              )}
+            </>
+          ) : (
+            <p>{c.emptySub}</p>
+          )}
+        </AgentControls>
+      </div>
     </section>
   );
 }

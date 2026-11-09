@@ -1,0 +1,849 @@
+/* S20 foundations: navigation and neutral work surfaces. */
+:root {
+  --ink: #24272d;
+  --primary: #303640;
+  --muted: #717780;
+  --line: #e7e9ed;
+  --card: #fff;
+  --ws-bg: #fff;
+  --ws-tint: #eef0f3;
+  --ws-border: #d8dce1;
+  --ws-focus: #6a829b;
+  --ws-radius: 5px;
+  --ws-nav: 208px;
+}
+.product-shell {
+  --ws-nav: 208px;
+  background: #fff;
+  font-size: 13px;
+}
+.product-shell[data-nav-collapsed="true"] {
+  --ws-nav: 56px;
+}
+.product-shell .main-shell {
+  margin-left: var(--ws-nav);
+}
+.product-shell > .sidebar {
+  width: var(--ws-nav);
+  background: #f8f9fa;
+  padding: 16px 10px 10px;
+  border-color: var(--line);
+}
+.product-shell .sidebar > .brand {
+  font-size: 20px;
+  margin: 0 8px 20px;
+  gap: 8px;
+  letter-spacing: -0.8px;
+}
+.product-shell .brand-icon {
+  width: 27px;
+  height: 27px;
+  border: 0;
+  border-radius: 6px;
+}
+.product-shell .brand-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.product-shell .workspace-label {
+  border: 0;
+  box-shadow: none;
+  border-radius: 4px;
+  padding: 7px;
+  background: none;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+.product-shell .workspace-avatar {
+  width: 27px;
+  height: 27px;
+  background: #e9eced;
+  color: #737b83;
+  border-radius: 5px;
+}
+.product-shell .workspace-label small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.product-shell .workspace-label strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+.product-shell .nav-heading {
+  font-size: 10px;
+  font-weight: 450;
+  color: #8a8e96;
+  margin: 0 0 5px;
+  padding: 0 10px;
+}
+.product-shell .ws-group + .ws-group {
+  margin-top: 18px;
+}
+.product-shell .sidebar nav a {
+  padding: 7px 9px;
+  min-height: 32px;
+  border-radius: 4px;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 450;
+  color: #616670;
+  border: 0;
+}
+.product-shell .sidebar nav a:hover {
+  background: #eeeff2;
+  text-decoration: none;
+}
+.product-shell .sidebar nav a.active {
+  background: #e9ebee;
+  color: #24272d;
+  box-shadow: none;
+}
+.product-shell .sidebar nav a > svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.6;
+  color: #717780;
+}
+.product-shell .account-box {
+  border-color: var(--line);
+  padding: 14px 3px 0;
+  margin-top: auto;
+  gap: 7px;
+}
+.product-shell .account-box .avatar {
+  width: 27px;
+  height: 27px;
+  font-size: 11px;
+  background: #e9ebee;
+  color: #525b64;
+}
+.product-shell .account-box strong {
+  font-size: 11px;
+  font-weight: 550;
+}
+.product-shell .account-box small {
+  font-size: 10px;
+}
+.product-shell .topbar {
+  height: 49px;
+  min-height: 49px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  padding: 0 24px;
+  gap: 12px;
+}
+.product-shell .topbar .breadcrumb {
+  font-size: 12px;
+  color: var(--muted);
+}
+.product-shell .topbar .breadcrumb strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+.product-shell .topbar .ws-search {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  font-size: 11px;
+  color: #7b8088;
+  padding: 4px;
+  gap: 7px;
+}
+.product-shell .ws-search kbd {
+  background: #f7f7f8;
+  border-color: var(--line);
+  font-size: 10px;
+}
+.product-shell .nav-collapse {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: none;
+  color: #888e96;
+  border-radius: 4px;
+  padding: 0;
+}
+.product-shell .nav-collapse:hover {
+  background: #f2f3f4;
+}
+.product-shell .content {
+  padding: 26px 32px 40px;
+  min-width: 0;
+}
+.product-shell h1 {
+  font-size: 23px;
+  letter-spacing: -0.65px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.product-shell h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.product-shell h3 {
+  font-size: 14px;
+  font-weight: 550;
+}
+.product-shell :is(.catalog, .account-page, .mission) {
+  gap: 20px;
+  max-width: none;
+}
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  ) {
+  position: static;
+  isolation: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 0 0 20px;
+  margin: 0;
+  min-height: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  color: var(--ink);
+  overflow: visible;
+}
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  )
+  :is(h1, h2) {
+  color: var(--ink);
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.65px;
+}
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  )
+  p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 750px;
+  margin: 6px 0 0;
+}
+.product-shell :is(.ops-header, .page-heading, .mission-hero)::before,
+.product-shell :is(.ops-header, .page-heading, .mission-hero)::after {
+  display: none;
+  content: none;
+}
+.product-shell :is(button, .button) {
+  border-radius: 5px;
+  box-shadow: none;
+  font-weight: 500;
+  transition:
+    background-color 120ms,
+    border-color 120ms;
+}
+.product-shell :is(.catalog button, .catalog .button, .button.primary) {
+  background: #303640;
+  border: 1px solid #303640;
+  color: #fff;
+  min-height: 34px;
+  padding: 7px 12px;
+  line-height: 1.5;
+  font-size: 12px;
+  gap: 6px;
+}
+.product-shell :is(.catalog button, .catalog .button, .button.primary):hover {
+  background: #404650;
+  filter: none;
+}
+.product-shell :is(.catalog .secondary, .button.secondary) {
+  background: #fff;
+  color: #454b55;
+  border: 1px solid #dadddf;
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+.product-shell :is(.catalog .secondary, .button.secondary):hover {
+  background: #f6f7f8;
+  filter: none;
+}
+.product-shell :is(button, .button):disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.product-shell
+  :is(
+    .catalog input:not([type="checkbox"]):not([type="radio"]),
+    .catalog textarea,
+    .catalog select,
+    .field input,
+    .field select
+  ) {
+  background: #fff;
+  border: 1px solid #dadddf;
+  border-radius: 5px;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 13px;
+  min-height: 35px;
+  padding: 8px 10px;
+}
+.product-shell :is(input, textarea, select):focus-visible {
+  outline: 2px solid #6c879f;
+  outline-offset: 1px;
+}
+.product-shell label,
+.product-shell .field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #515761;
+}
+.product-shell input::placeholder,
+.product-shell textarea::placeholder {
+  color: #a2a6ad;
+}
+.product-shell :is(.catalog-panel, .catalog-fact, .catalog-subpanel, .panel) {
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  border: 0;
+  padding: 18px 0;
+  gap: 16px;
+}
+.product-shell .catalog-panel + .catalog-panel {
+  border-top: 1px solid var(--line);
+}
+.product-shell
+  :is(.catalog-panel, .panel)
+  > :is(h2, .panel-title h2, .studio-section-heading h2) {
+  font-size: 14px;
+}
+.product-shell .catalog-panel fieldset {
+  gap: 18px;
+}
+.product-shell .catalog-grid {
+  gap: 18px 24px;
+}
+.product-shell .catalog-actions {
+  gap: 8px;
+}
+.product-shell :is(.notice, .mission-feedback) {
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.product-shell .notice:not(.error):not(.success) {
+  background: #f6f7f8;
+  border-color: var(--line);
+  color: #606773;
+}
+.product-shell .notice.success {
+  background: #f1f8f3;
+  border-color: #dfebe2;
+  color: #37684b;
+}
+.product-shell .notice.error {
+  background: #fdf4f3;
+  border-color: #f0deda;
+  color: #9c514a;
+}
+.product-shell :is(.badge, .catalog-badge, .mission-state) {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #eff0f2;
+  color: #626a73;
+}
+.product-shell
+  :is(
+    .badge.active,
+    .catalog-badge.confirmed,
+    .catalog-badge.approved,
+    .mission-state.state-succeeded
+  ) {
+  background: #edf6ef;
+  color: #427751;
+}
+.product-shell :is(.ops-panel-title, .studio-section-heading) {
+  padding: 0 0 12px;
+  margin: 0;
+  border: 0;
+  gap: 8px;
+}
+.product-shell .ops-panel-title h2 {
+  font-size: 13px;
+}
+.product-shell .ops-panel-title span {
+  font-size: 11px;
+}
+.product-shell .ops-section-nav {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 0 12px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  border-radius: 0;
+  flex-wrap: wrap;
+}
+.product-shell .ops-section-nav a {
+  font-size: 12px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.product-shell :is(.catalog-toolbar, .asset-toolbar, .ops-fact-tools) {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  gap: 12px;
+}
+.product-shell :is(table, .ops-table-panel) {
+  width: 100%;
+  border-collapse: collapse;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.product-shell :is(th, .ops-colheads) {
+  background: #fafafb;
+  color: #7c828a;
+  font-size: 11px;
+  font-weight: 450;
+  text-align: left;
+  border-block: 1px solid var(--line);
+}
+.product-shell td {
+  font-size: 12px;
+  color: #464d58;
+  border-bottom: 1px solid var(--line);
+  padding: 13px 14px;
+  vertical-align: top;
+}
+.product-shell th {
+  padding: 9px 14px;
+}
+.product-shell tbody tr:hover {
+  background: #fcfcfd;
+}
+/* Overview: working queues, compact summary and supporting build route. */
+.product-shell .mission-hero-action {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: none;
+}
+.product-shell .mission-context {
+  padding: 0;
+  gap: 16px;
+}
+.product-shell .mission-context h2 {
+  font-size: 13px;
+}
+.product-shell .mission-metrics {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex-wrap: wrap;
+  border-block: 1px solid var(--line);
+}
+.product-shell .mission-metrics > a {
+  display: flex;
+  flex: 1;
+  min-width: 160px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+.product-shell .mission-metrics > a > div {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.product-shell .mission-metrics strong {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+}
+.product-shell .mission-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+  gap: 26px 32px;
+}
+.product-shell .mission-body .mission-panel {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+.product-shell .mission-body .mission-panel:first-child {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
+}
+.product-shell .mission-body .mission-panel:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.product-shell .mission-body .mission-panel:nth-child(3) {
+  grid-column: 1;
+  grid-row: 1;
+}
+.product-shell .mission-panel > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.product-shell .mission-panel h3 {
+  font-size: 13px;
+  gap: 7px;
+}
+.product-shell .mission-panel header > a {
+  font-size: 11px;
+}
+.product-shell .mission-stages {
+  gap: 0;
+}
+.product-shell .mission-stages li {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+.product-shell .mission-stages a {
+  padding: 15px 0;
+  gap: 10px;
+}
+.product-shell .mission-stages strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.product-shell .mission-stages small {
+  font-size: 11px;
+}
+.product-shell .mission-jobs li {
+  border-color: var(--line);
+}
+.product-shell .mission-jobs a {
+  padding: 14px 0;
+  gap: 12px;
+}
+.product-shell .mission-jobs strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.product-shell .mission-jobs small {
+  font-size: 11px;
+  color: #90959d;
+}
+.product-shell .mission-placeholder {
+  background: none;
+  padding: 25px 0;
+  font-size: 12px;
+  text-align: left;
+}
+.product-shell .mission-empty {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 42px 0;
+  text-align: left;
+  align-items: start;
+}
+/* Agent focus: leave space for task navigation, artifacts and execution. */
+.product-shell[data-page="agent"] .content {
+  padding: 0 20px 16px;
+}
+.product-shell .agent-workbench.catalog {
+  gap: 0;
+}
+.product-shell .agent-mast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 73px;
+  padding: 14px 0;
+  background: none;
+  color: var(--ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.product-shell .agent-mast > div {
+  margin-right: auto;
+}
+.product-shell .agent-mast h1 {
+  font-size: 18px;
+  margin: 0;
+}
+.product-shell .agent-mast .agent-picker {
+  margin: 0;
+}
+.product-shell .agent-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  width: auto;
+}
+.product-shell .agent-picker select {
+  width: auto;
+  max-width: 230px;
+  min-width: 120px;
+  font-size: 12px;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px 26px 5px 8px;
+  border-color: var(--line);
+}
+.product-shell .agent-preview-link {
+  font-size: 11px;
+  min-height: 32px;
+}
+.product-shell .agent-columns {
+  display: block;
+}
+.product-shell .agent-history {
+  border: 0;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+.product-shell[data-nav-collapsed="true"] > .sidebar {
+  padding-inline: 8px;
+}
+.product-shell[data-nav-collapsed="true"] > .sidebar > .brand {
+  margin: 0 0 20px;
+  justify-content: center;
+}
+.product-shell[data-nav-collapsed="true"]
+  > .sidebar
+  :is(
+    .brand-name,
+    .workspace-label > div,
+    .workspace-label > svg,
+    .nav-heading,
+    .account-box > div
+  ) {
+  display: none;
+}
+.product-shell[data-nav-collapsed="true"] > .sidebar .workspace-label {
+  padding: 3px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+.product-shell[data-nav-collapsed="true"] > .sidebar nav a {
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px;
+}
+.product-shell[data-nav-collapsed="true"] > .sidebar .nav-item-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.product-shell[data-nav-collapsed="true"] > .sidebar .account-box {
+  flex-direction: column;
+  gap: 9px;
+}
+/* Focused authentication. */
+.auth-page {
+  background: #fafbfc;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+}
+.auth-page .auth-story {
+  display: none;
+}
+.auth-page .auth-main {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  background: #fafbfc;
+}
+.auth-page .auth-form {
+  max-width: 370px;
+  width: 100%;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.auth-page .auth-form h1 {
+  font-size: 26px;
+  letter-spacing: -0.7px;
+}
+.auth-page .auth-form p {
+  font-size: 13px;
+}
+.auth-page .auth-form input {
+  border-radius: 5px;
+  box-shadow: none;
+  min-height: 42px;
+  border-color: #dadddf;
+}
+.auth-page .auth-form button.primary {
+  background: #303640;
+  border-color: #303640;
+  border-radius: 5px;
+}
+@media (max-width: 760px) {
+  .product-shell .main-shell {
+    margin-left: 0;
+  }
+  .product-shell .topbar {
+    padding: 0 14px;
+    gap: 8px;
+    height: 49px;
+  }
+  .product-shell .topbar .nav-collapse {
+    display: none;
+  }
+  .product-shell .topbar .breadcrumb {
+    font-size: 11px;
+    min-width: 0;
+  }
+  .product-shell .content {
+    padding: 20px 16px 32px;
+  }
+  .product-shell[data-page="agent"] .content {
+    padding: 0 12px 16px;
+  }
+  .product-shell :is(.catalog-heading, .page-heading, .mission-hero) {
+    gap: 12px;
+    padding-bottom: 18px;
+  }
+  .product-shell :is(.catalog-heading, .page-heading, .mission-hero) h1 {
+    font-size: 21px;
+  }
+  .product-shell :is(.catalog, .account-page, .mission) {
+    gap: 18px;
+  }
+  .product-shell .agent-mast {
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 0;
+    min-height: 80px;
+  }
+  .product-shell .agent-mast > div {
+    flex-basis: 100%;
+  }
+  .product-shell .agent-mast h1 {
+    font-size: 19px;
+  }
+  .product-shell .agent-preview-link {
+    margin-left: auto;
+  }
+  .product-shell .agent-picker select {
+    max-width: 150px;
+    min-height: 38px;
+  }
+  .product-shell :is(button, .button, .catalog button, .catalog .button) {
+    min-height: 40px;
+  }
+  .product-shell
+    :is(
+      .catalog input:not([type="checkbox"]):not([type="radio"]),
+      .catalog select,
+      .field input,
+      .field select
+    ) {
+    min-height: 40px;
+  }
+  .product-shell .mission-metrics > a {
+    flex-basis: 50%;
+    min-width: 0;
+    padding: 13px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .product-shell .mission-metrics > a > div svg {
+    display: none;
+  }
+  .product-shell .mission-metrics > a > div {
+    font-size: 10px;
+  }
+  .product-shell .mission-metrics strong {
+    font-size: 18px;
+  }
+  .product-shell .mission-body {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .product-shell .mission-body .mission-panel:first-child {
+    order: 3;
+    border-left: 0;
+    padding-left: 0;
+  }
+  .product-shell .mission-body .mission-panel:nth-child(3) {
+    order: 0;
+  }
+  .product-shell .mission-body .mission-panel:nth-child(2) {
+    order: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-shell * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.auth-page .auth-main .auth-mark {
+  margin: 0 auto 28px;
+  font-size: 22px;
+  justify-content: center;
+}
+.auth-page .auth-main .auth-mark .brand-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.product-shell .topbar {
+  justify-content: flex-start;
+}
+.product-shell .topbar .breadcrumb {
+  margin-right: auto;
+}
+.product-shell .topbar-right {
+  margin-left: auto;
+}

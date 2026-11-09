@@ -1,14 +1,6 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  Activity,
-  ArrowRight,
-  ChevronRight,
-  ClipboardList,
-  Layers3,
-  Route,
-  ScanEye,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { RunList, useLoad } from "./sites";
 import type { Locale } from "./i18n";
 const labels = {
@@ -62,9 +54,10 @@ export function AgentWorkbench({
   locale: Locale;
   role: "admin" | "editor" | "viewer";
 }) {
+  const [query] = useSearchParams();
   const c = labels[locale],
     [cursor, setCursor] = useState(""),
-    [selected, setSelected] = useState(""),
+    [selected, setSelected] = useState(query.get("site") ?? ""),
     [history, setHistory] = useState<{ siteId: string; cursors: string[] }>({
       siteId: "",
       cursors: [""],
@@ -85,13 +78,19 @@ export function AgentWorkbench({
       : null,
     true,
   );
+  const context = useLoad(site ? base : null);
+  const taskState = runs.data?.items
+    .map((r: { id: string; status: string }) => r.id + ":" + r.status)
+    .join("|");
+  useEffect(() => {
+    context.reload();
+  }, [taskState]);
+
   return (
     <div className="agent-workbench catalog">
       <header className="agent-mast">
         <div>
-          <Activity aria-hidden="true" size={23} />
           <h1>{c.title}</h1>
-          <p>{c.sub}</p>
         </div>
         <section className="agent-picker">
           <label>
@@ -122,6 +121,15 @@ export function AgentWorkbench({
             </button>
           )}
         </section>
+        {site && (
+          <Link
+            className="button secondary agent-preview-link"
+            to={base + "/preview"}
+          >
+            {locale === "zh" ? "预览网站" : "Preview site"}
+            <ArrowUpRight size={14} />
+          </Link>
+        )}
       </header>
       {sites.error ? (
         <div className="notice error" role="alert">
@@ -140,10 +148,17 @@ export function AgentWorkbench({
       ) : (
         <div className="agent-columns">
           <div className="agent-history">
-            {runs.error && (
+            {(runs.error || context.error) && (
               <div className="notice error" role="alert">
                 {c.error}
-                <button onClick={runs.reload}>{c.retry}</button>
+                <button
+                  onClick={() => {
+                    runs.reload();
+                    context.reload();
+                  }}
+                >
+                  {c.retry}
+                </button>
               </div>
             )}
             {(!runs.error || runs.data) && (
@@ -152,6 +167,8 @@ export function AgentWorkbench({
                 runs={runs.data?.items}
                 locale={locale}
                 siteId={site.id}
+                site={context.data}
+                onCreated={() => setHistory({ siteId: site.id, cursors: [""] })}
                 refresh={runs.reload}
                 page={trail.length}
                 hasMore={!!runs.data?.hasMore}
@@ -169,44 +186,6 @@ export function AgentWorkbench({
               />
             )}
           </div>
-          <aside className="agent-handoffs">
-            <h2>{c.flow}</h2>
-            {[
-              {
-                to: base + "?tab=planning",
-                title: c.plan,
-                sub: c.planSub,
-                Icon: Route,
-              },
-              {
-                to: base + "?tab=pages",
-                title: c.content,
-                sub: c.contentSub,
-                Icon: ClipboardList,
-              },
-              {
-                to: base + "?tab=quality",
-                title: c.review,
-                sub: c.reviewSub,
-                Icon: ScanEye,
-              },
-              {
-                to: base + "/publishing",
-                title: c.output,
-                sub: c.outputSub,
-                Icon: Layers3,
-              },
-            ].map(({ to, title, sub, Icon }) => (
-              <Link key={to} to={to}>
-                <Icon size={19} />
-                <span>
-                  <strong>{title}</strong>
-                  <small>{sub}</small>
-                </span>
-                <ChevronRight size={15} />
-              </Link>
-            ))}
-          </aside>
         </div>
       )}
     </div>

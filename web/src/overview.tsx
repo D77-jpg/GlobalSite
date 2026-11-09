@@ -118,10 +118,6 @@ export function MissionOverview({
     <div className="mission">
       <header className="mission-hero">
         <div>
-          <span className="mission-kicker">
-            <Workflow size={15} />
-            {t.agentWorkspace}
-          </span>
           <h1>{organization ?? t.workspace}</h1>
           <p>{t.agentWorkspaceSub}</p>
         </div>
@@ -348,7 +344,7 @@ function SiteActivity({
               <Activity size={17} />
               {t.agentActivity}
             </h3>
-            <Link to={base + "?tab=runs"}>
+            <Link to={"/agent?site=" + site.id}>
               {t.openTasks}
               <ArrowUpRight size={14} />
             </Link>
@@ -359,7 +355,7 @@ function SiteActivity({
             <ul className="mission-jobs">
               {runs.data.items.map((run) => (
                 <li key={run.id}>
-                  <Link to={base + "?tab=runs"}>
+                  <Link to={"/agent?site=" + site.id}>
                     <div>
                       <strong>
                         {siteText(

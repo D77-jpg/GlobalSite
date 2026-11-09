@@ -149,76 +149,80 @@ export function CrmConnectionPage({
           !connection.error && <p role="status">{t("loading")}</p>
         )}
         {c?.lastErrorCode ? <p>{t(c.lastErrorCode)}</p> : null}
-        <p>{t("disconnectedHint")}</p>
+        {!c?.active && <p>{t("disconnectedHint")}</p>}
         <p>{t("privacyHint")}</p>
       </section>
-      <form
-        id="crm-connection"
-        className="catalog-panel"
-        onSubmit={form.handleSubmit((data) =>
-          action(() =>
-            api("/crm/connection", "POST", {
-              ...data,
-              revision:
-                !c?.active &&
-                (c?.baseUrl !== data.baseUrl || c?.projectId !== data.projectId)
-                  ? 0
-                  : data.revision,
-            }),
-          ),
-        )}
-      >
-        <fieldset disabled={busy || !state}>
-          <div className="catalog-grid">
+      <details className="crm-connection-editor" open={!c?.active}>
+        <summary>{t("connection")}</summary>
+        <form
+          id="crm-connection"
+          className="catalog-panel"
+          onSubmit={form.handleSubmit((data) =>
+            action(() =>
+              api("/crm/connection", "POST", {
+                ...data,
+                revision:
+                  !c?.active &&
+                  (c?.baseUrl !== data.baseUrl ||
+                    c?.projectId !== data.projectId)
+                    ? 0
+                    : data.revision,
+              }),
+            ),
+          )}
+        >
+          <fieldset disabled={busy || !state}>
+            <div className="catalog-grid">
+              <label>
+                {t("baseUrl")}
+                <input
+                  type="url"
+                  readOnly={!!c?.active}
+                  autoComplete="off"
+                  placeholder="https://crm.example.com"
+                  aria-invalid={!!form.formState.errors.baseUrl}
+                  {...form.register("baseUrl", {
+                    required: true,
+                    maxLength: 500,
+                  })}
+                />
+              </label>
+              <label>
+                {t("projectId")}
+                <input
+                  readOnly={!!c?.active}
+                  autoComplete="off"
+                  aria-invalid={!!form.formState.errors.projectId}
+                  {...form.register("projectId", {
+                    required: true,
+                    pattern: /^[a-f0-9]{24}$/,
+                  })}
+                />
+              </label>
+            </div>
             <label>
-              {t("baseUrl")}
+              {t("credential")}
               <input
-                type="url"
-                readOnly={!!c?.active}
-                autoComplete="off"
-                placeholder="https://crm.example.com"
-                aria-invalid={!!form.formState.errors.baseUrl}
-                {...form.register("baseUrl", {
+                type="password"
+                autoComplete="new-password"
+                aria-describedby="crm-credential-help"
+                {...form.register("credential", {
                   required: true,
-                  maxLength: 500,
+                  minLength: 20,
+                  maxLength: 512,
                 })}
               />
             </label>
-            <label>
-              {t("projectId")}
-              <input
-                readOnly={!!c?.active}
-                autoComplete="off"
-                aria-invalid={!!form.formState.errors.projectId}
-                {...form.register("projectId", {
-                  required: true,
-                  pattern: /^[a-f0-9]{24}$/,
-                })}
-              />
-            </label>
-          </div>
-          <label>
-            {t("credential")}
-            <input
-              type="password"
-              autoComplete="new-password"
-              aria-describedby="crm-credential-help"
-              {...form.register("credential", {
-                required: true,
-                minLength: 20,
-                maxLength: 512,
-              })}
-            />
-          </label>
-          <p id="crm-credential-help">{t("credentialHint")}</p>
-          {Object.keys(form.formState.errors).length ? (
-            <p role="alert">{t("invalid")}</p>
-          ) : null}
-          <button className="primary" type="submit">
-            {t(c?.active ? "rotate" : "save")}
-          </button>
-        </fieldset>
-      </form>
+            <p id="crm-credential-help">{t("credentialHint")}</p>
+            {Object.keys(form.formState.errors).length ? (
+              <p role="alert">{t("invalid")}</p>
+            ) : null}
+            <button className="primary" type="submit">
+              {t(c?.active ? "rotate" : "save")}
+            </button>
+          </fieldset>
+        </form>
+      </details>
       {c?.active ? (
         <section className="catalog-panel">
           <div className="catalog-actions">

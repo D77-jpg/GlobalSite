@@ -140,7 +140,7 @@ test("workspace navigation, agent handoff and responsive screens", async ({
           page.locator("main .session-list .session").first(),
         ).toBeVisible();
       if (path === "/usage")
-        await expect(page.locator("main .usage-card").first()).toBeVisible();
+        await expect(page.locator("main .usage-line").first()).toBeVisible();
       if (path === "/ai")
         await expect(
           page.locator(".account-provider form").first(),
@@ -149,10 +149,27 @@ test("workspace navigation, agent handoff and responsive screens", async ({
         () => document.documentElement.scrollWidth > innerWidth,
       );
       expect(overflowing, path + " at " + width).toBe(false);
-      if (["/", "/agent", "/products", "/inquiries"].includes(path)) {
+      if (
+        [
+          "/",
+          "/agent",
+          "/products",
+          "/inquiries",
+          "/organization",
+          "/members",
+          "/security",
+          "/usage",
+          "/ai",
+          "/crm",
+          "/assets",
+          "/facts",
+          "/website-reads",
+          "/sites",
+        ].includes(path)
+      ) {
         await page.screenshot({
           path:
-            "test-results/s15-" +
+            "test-results/s20-" +
             (path.slice(1) || "overview") +
             "-" +
             width +

@@ -1,5 +1,9 @@
 import type { Locale } from "./i18n";
 export const catalogMessages = {
+  websiteResultEmpty: [
+    "读取结果与迁移清单将在这里显示。选择左侧记录查看详情。",
+    "Read results and migration lists appear here. Select a record on the left to inspect it.",
+  ],
   assetLibrarySub: [
     "管理网站图片、产品资料和证书。",
     "Manage website imagery, product documents and certificates.",
