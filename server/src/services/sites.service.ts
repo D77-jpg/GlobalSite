@@ -751,6 +751,21 @@ export async function preview(
       type: draft.node.type,
       productId: null,
     });
+    // Planned routes provide navigation and product discovery in the private concept.
+    // They are render-only metadata and never create or approve pages.
+    for (const node of site.plan.nodes) {
+      if (!views.some((p) => p.path === node.path))
+        views.push({
+          id: "planned:" + node.key,
+          path: node.path,
+          type: node.type,
+          productId: node.productId,
+          title: node.title,
+          metaDescription: "",
+          refs: [],
+          blocks: [],
+        });
+    }
   }
   const ids = [
     ...new Set(

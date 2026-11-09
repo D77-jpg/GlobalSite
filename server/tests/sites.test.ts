@@ -1889,6 +1889,8 @@ test("design proposals run once in Worker, stay private, select atomically and e
   assert.equal(preview.status, 200, JSON.stringify(preview.body));
   assert.match(preview.body.data.html, /noindex/);
   assert.match(preview.body.data.html, /Products for thoughtful buyers/);
+  assert.match(preview.body.data.html, /href="\/contact"/);
+  assert.equal(preview.headers["cache-control"], "private, no-store");
   assert.equal((await b.client.request("GET", url)).status, 404);
   const select = "/sites/" + site.id + "/design-direction",
     input = { revision: site.revision, runId, key: "primary" };

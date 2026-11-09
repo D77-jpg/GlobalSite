@@ -126,7 +126,7 @@ test("design proposal interface compares, retries previews, expands and selects 
               key +
               " collection</h1><p>Isolated UI preview fixture</p></body></html>",
             hash: "fixture",
-            issues: [],
+            issues: key === "primary" ? [{ code: "CONTENT_TOO_SHORT" }] : [],
           },
         },
       });
@@ -169,6 +169,9 @@ test("design proposal interface compares, retries previews, expands and selects 
   ).toBeVisible();
   await page.getByRole("button", { name: "重试预览", exact: true }).click();
   await expect(page.locator(".proposal iframe")).toHaveCount(2);
+  await expect(page.locator(".proposal-issues")).toContainText(
+    "1 项内容检查待处理",
+  );
   await page
     .getByRole("button", { name: "放大预览", exact: true })
     .first()
