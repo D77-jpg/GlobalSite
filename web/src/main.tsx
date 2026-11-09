@@ -546,10 +546,12 @@ function Loading({ error, retry }: { error?: unknown; retry?: () => void }) {
     </p>
   );
 }
-function Overview() {
+type OrganizationSummary = { id: string; name: string; plan: Key };
+type OrganizationResource = ReturnType<typeof useData<OrganizationSummary>>;
+
+function Overview({ org }: { org: OrganizationResource }) {
   const { locale } = useI18n();
   const { me } = useContext(Auth);
-  const org = useData("/organization");
   return (
     <>
       <Notice error={org.error} />
@@ -562,10 +564,10 @@ function Overview() {
     </>
   );
 }
-function OrganizationPage() {
+function OrganizationPage({ org }: { org: OrganizationResource }) {
   const { t } = useI18n();
   const { me } = useContext(Auth);
-  const { data, error, reload } = useData("/organization");
+  const { data, error, reload } = org;
   const { data: orgs } = useData<any[]>("/organizations", true);
   const [success, setSuccess] = useState("");
   const [switchError, setSwitchError] = useState<unknown>();
@@ -1158,7 +1160,7 @@ function AcceptInvite() {
   );
 }
 function Workspace() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const [me, setMe] = useState<Me>();
@@ -1186,93 +1188,100 @@ function Workspace() {
     );
   return (
     <Auth.Provider value={{ me, reload }}>
-      <WorkspaceFrame
-        locale={locale}
-        userName={me.user.name}
-        role={me.role}
-        organizationId={me.organizationId}
-        languageButton={<LocaleButton />}
-      >
-        <Routes>
-          <Route index element={<Overview />} />
-          <Route
-            path="agent"
-            element={<AgentWorkbench locale={locale} role={me.role} />}
-          />
-          <Route
-            path="crm"
-            element={<CrmConnectionPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="inquiries"
-            element={<InquiriesPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="inquiries/:id"
-            element={<InquiryDetailPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="sites/:id/inquiry-settings"
-            element={<InquirySettingsPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="sites"
-            element={<SitesPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="sites/:id"
-            element={<SiteWorkspace locale={locale} role={me.role} />}
-          />
-          <Route
-            path="sites/:id/preview"
-            element={<LatestSitePreview locale={locale} />}
-          />
-          <Route
-            path="sites/:id/publishing"
-            element={<PublishPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="pages/:id"
-            element={<PageReview locale={locale} role={me.role} />}
-          />
-          <Route
-            path="products"
-            element={<ProductsPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="products/new"
-            element={<ProductEditor locale={locale} role={me.role} />}
-          />
-          <Route
-            path="products/imports"
-            element={<ImportPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="products/:id"
-            element={<ProductEditor locale={locale} role={me.role} />}
-          />
-          <Route
-            path="assets"
-            element={<AssetsPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="facts"
-            element={<FactsPage locale={locale} role={me.role} />}
-          />
-          <Route
-            path="website-reads"
-            element={<WebsitePage locale={locale} role={me.role} />}
-          />
-          <Route path="organization" element={<OrganizationPage />} />
-          <Route path="members" element={<MembersPage />} />
-          <Route path="security" element={<SecurityPage />} />
-          <Route path="usage" element={<UsagePage />} />
-          <Route path="ai" element={<AiPage />} />
-          <Route path="accept-invitation" element={<AcceptInvite />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </WorkspaceFrame>
+      <WorkspaceRoutes key={me.organizationId} me={me} />
     </Auth.Provider>
+  );
+}
+function WorkspaceRoutes({ me }: { me: Me }) {
+  const { locale } = useI18n();
+  const org = useData<OrganizationSummary>("/organization");
+  return (
+    <WorkspaceFrame
+      locale={locale}
+      userName={me.user.name}
+      role={me.role}
+      organizationName={org.data?.name}
+      languageButton={<LocaleButton />}
+    >
+      <Routes>
+        <Route index element={<Overview org={org} />} />
+        <Route
+          path="agent"
+          element={<AgentWorkbench locale={locale} role={me.role} />}
+        />
+        <Route
+          path="crm"
+          element={<CrmConnectionPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="inquiries"
+          element={<InquiriesPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="inquiries/:id"
+          element={<InquiryDetailPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="sites/:id/inquiry-settings"
+          element={<InquirySettingsPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="sites"
+          element={<SitesPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="sites/:id"
+          element={<SiteWorkspace locale={locale} role={me.role} />}
+        />
+        <Route
+          path="sites/:id/preview"
+          element={<LatestSitePreview locale={locale} />}
+        />
+        <Route
+          path="sites/:id/publishing"
+          element={<PublishPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="pages/:id"
+          element={<PageReview locale={locale} role={me.role} />}
+        />
+        <Route
+          path="products"
+          element={<ProductsPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="products/new"
+          element={<ProductEditor locale={locale} role={me.role} />}
+        />
+        <Route
+          path="products/imports"
+          element={<ImportPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="products/:id"
+          element={<ProductEditor locale={locale} role={me.role} />}
+        />
+        <Route
+          path="assets"
+          element={<AssetsPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="facts"
+          element={<FactsPage locale={locale} role={me.role} />}
+        />
+        <Route
+          path="website-reads"
+          element={<WebsitePage locale={locale} role={me.role} />}
+        />
+        <Route path="organization" element={<OrganizationPage org={org} />} />
+        <Route path="members" element={<MembersPage />} />
+        <Route path="security" element={<SecurityPage />} />
+        <Route path="usage" element={<UsagePage />} />
+        <Route path="ai" element={<AiPage />} />
+        <Route path="accept-invitation" element={<AcceptInvite />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </WorkspaceFrame>
   );
 }
 function App() {
