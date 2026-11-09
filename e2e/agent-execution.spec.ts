@@ -33,7 +33,21 @@ test("agent work panel queues, pauses and cancels a real Worker task with explic
   });
   expect(s.status()).toBe(201);
   const siteId = (await s.json()).data.id;
+  let contextAttempts = 0;
+  await page.route("**/api/v1/sites/" + siteId, (route) => {
+    if (++contextAttempts === 1)
+      return route.fulfill({
+        status: 503,
+        json: { success: false, error: { code: "INTERNAL_ERROR" } },
+      });
+    return route.continue();
+  });
   await page.goto("/agent?site=" + siteId);
+  await page
+    .locator(".agent-history")
+    .getByRole("button", { name: "重试", exact: true })
+    .click();
+
   const controls = page.locator(".task-control"),
     detail = page.locator(".task-detail");
   await expect(controls).toBeVisible();

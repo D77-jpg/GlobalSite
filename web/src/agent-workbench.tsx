@@ -151,7 +151,14 @@ export function AgentWorkbench({
             {(runs.error || context.error) && (
               <div className="notice error" role="alert">
                 {c.error}
-                <button onClick={runs.reload}>{c.retry}</button>
+                <button
+                  onClick={() => {
+                    runs.reload();
+                    context.reload();
+                  }}
+                >
+                  {c.retry}
+                </button>
               </div>
             )}
             {(!runs.error || runs.data) && (
