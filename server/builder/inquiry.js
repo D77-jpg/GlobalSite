@@ -403,3 +403,23 @@
     }
   });
 })();
+
+// Native disclosures work without scripts. Dismiss them when a shopper leaves the menu.
+function closeStoreMenus(event) {
+  const menus = Array.from(
+    document.querySelectorAll(".site-header details[open]"),
+  ).reverse();
+  for (const menu of menus) {
+    if (event.type === "keydown") {
+      if (event.key === "Escape" && menu.contains(document.activeElement)) {
+        menu.open = false;
+        menu.querySelector("summary").focus();
+        return;
+      }
+    } else if (!menu.contains(event.target) || event.target.closest("a")) {
+      menu.open = false;
+    }
+  }
+}
+document.addEventListener("click", closeStoreMenus);
+document.addEventListener("keydown", closeStoreMenus);

@@ -220,6 +220,7 @@ test("S8-S11 buyer brief, B2B catalogue, cross-page shortlist and real worker sc
     .first()
     .click();
   await expect(page.locator("[data-quote-count]")).toHaveText("1");
+  await page.locator(".desktop-nav .range-menu > summary").click();
   await page
     .locator(".desktop-nav")
     .getByRole("link", { name: "Play collection", exact: true })
