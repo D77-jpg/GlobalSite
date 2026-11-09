@@ -1285,3 +1285,27 @@
 .product-shell .catalog-badge {
   justify-self: start;
 }
+
+@media (max-width: 760px) {
+  .product-shell :is(button, .button, .catalog button, .catalog .button) {
+    min-height: 44px;
+  }
+  .product-shell
+    :is(
+      .catalog input:not([type="checkbox"]):not([type="radio"]),
+      .catalog select,
+      .field input,
+      .field select
+    ) {
+    min-height: 44px;
+  }
+  .product-shell .ws-drawer .sidebar nav a {
+    min-height: 44px;
+  }
+  .product-shell
+    .agent-studio
+    :is(.task-toolbar, .task-actions)
+    :is(button, .button) {
+    min-height: 44px;
+  }
+}
