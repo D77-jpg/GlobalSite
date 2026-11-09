@@ -33,9 +33,9 @@ test("agent work panel queues, pauses and cancels a real Worker task with explic
   });
   expect(s.status()).toBe(201);
   const siteId = (await s.json()).data.id;
-  let contextAttempts = 0;
+  let contextAvailable = false;
   await page.route("**/api/v1/sites/" + siteId, (route) => {
-    if (++contextAttempts === 1)
+    if (!contextAvailable)
       return route.fulfill({
         status: 503,
         json: { success: false, error: { code: "INTERNAL_ERROR" } },
@@ -43,10 +43,12 @@ test("agent work panel queues, pauses and cancels a real Worker task with explic
     return route.continue();
   });
   await page.goto("/agent?site=" + siteId);
-  await page
+  const retryContext = page
     .locator(".agent-history")
-    .getByRole("button", { name: "重试", exact: true })
-    .click();
+    .getByRole("button", { name: "重试", exact: true });
+  await expect(retryContext).toBeVisible();
+  contextAvailable = true;
+  await retryContext.click();
 
   const controls = page.locator(".task-control"),
     detail = page.locator(".task-detail");
