@@ -132,3 +132,12 @@
     height: 650px;
   }
 }
+
+.proposal-issues {
+  margin: 0;
+  padding: 12px 18px;
+  background: #fff8eb;
+  color: #7b551e;
+  font-size: 12px;
+  line-height: 1.7;
+}

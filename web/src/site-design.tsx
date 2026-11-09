@@ -33,6 +33,7 @@ const text = {
     plan: "查看网站结构",
     confirm: "确认后会保存首页草稿，并撤回受影响内容的旧审核结果。",
     generateHint: "此操作使用 AI 额度，生成两种真实首页草稿。",
+    issues: "项内容检查待处理，采用后仍需审核。",
   },
   en: {
     title: "Choose your website's design direction",
@@ -63,9 +64,19 @@ const text = {
     confirm:
       "Selecting a direction saves a homepage draft and resets affected content approvals.",
     generateHint: "This uses AI credits to generate two homepage drafts.",
+    issues:
+      "content checks need attention. Review them after selecting this draft.",
   },
 };
-function MiniPreview({ html, expanded }: { html: string; expanded: boolean }) {
+function MiniPreview({
+  html,
+  expanded,
+  title,
+}: {
+  html: string;
+  expanded: boolean;
+  title: string;
+}) {
   const ref = useRef<HTMLDivElement>(null),
     [width, setWidth] = useState(0);
   useEffect(() => {
@@ -80,7 +91,7 @@ function MiniPreview({ html, expanded }: { html: string; expanded: boolean }) {
       style={expanded ? undefined : { height: (width * 900) / 1280 }}
     >
       <iframe
-        title="Homepage proposal"
+        title={title}
         sandbox="allow-same-origin"
         srcDoc={html}
         style={
@@ -118,6 +129,7 @@ export function SiteDesign({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [html, setHtml] = useState<Record<string, string>>({}),
+    [issues, setIssues] = useState<Record<string, number>>({}),
     [previewErrors, setPreviewErrors] = useState<Record<string, string>>({}),
     [expanded, setExpanded] = useState("");
   const posting = useRef(false);
@@ -141,11 +153,13 @@ export function SiteDesign({
     const epoch = previewEpoch.current;
     setPreviewErrors((v) => ({ ...v, [key]: "" }));
     try {
-      const d = await api<{ html: string }>(
+      const d = await api<{ html: string; issues: unknown[] }>(
         base + "/design-proposals/" + runId + "/" + key + "/preview",
       );
-      if (epoch === previewEpoch.current)
+      if (epoch === previewEpoch.current) {
         setHtml((v) => ({ ...v, [key]: d.html }));
+        setIssues((v) => ({ ...v, [key]: d.issues.length }));
+      }
     } catch (e) {
       if (epoch === previewEpoch.current)
         setPreviewErrors((v) => ({ ...v, [key]: failed(e) }));
@@ -154,16 +168,20 @@ export function SiteDesign({
   useEffect(() => {
     previewEpoch.current += 1;
     setHtml({});
+    setIssues({});
     setPreviewErrors({});
     setExpanded("");
     let live = true;
     if (run?.status === "succeeded" && !selected)
       for (const d of run.steps[0]?.output?.directions ?? []) {
-        void api<{ html: string }>(
+        void api<{ html: string; issues: unknown[] }>(
           base + "/design-proposals/" + run.id + "/" + d.key + "/preview",
         )
           .then((p) => {
-            if (live) setHtml((v) => ({ ...v, [d.key]: p.html }));
+            if (live) {
+              setHtml((v) => ({ ...v, [d.key]: p.html }));
+              setIssues((v) => ({ ...v, [d.key]: p.issues.length }));
+            }
           })
           .catch((e) => {
             if (live) setPreviewErrors((v) => ({ ...v, [d.key]: failed(e) }));
@@ -267,7 +285,11 @@ export function SiteDesign({
               <p>{d.rationale}</p>
             </header>
             {html[d.key] ? (
-              <MiniPreview html={html[d.key]} expanded={expanded === d.key} />
+              <MiniPreview
+                html={html[d.key]}
+                title={d.label}
+                expanded={expanded === d.key}
+              />
             ) : previewErrors[d.key] ? (
               <p role="alert">
                 {c.stale}{" "}
@@ -277,6 +299,11 @@ export function SiteDesign({
               </p>
             ) : (
               <p role="status">{c.loading}</p>
+            )}
+            {issues[d.key] > 0 && (
+              <p className="proposal-issues" role="status">
+                {issues[d.key]} {c.issues}
+              </p>
             )}
             <footer>
               <button
