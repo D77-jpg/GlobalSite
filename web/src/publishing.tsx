@@ -135,306 +135,331 @@ export function PublishPage({
           {t("saved")}
         </p>
       )}
-      <section className="catalog-panel">
-        <div className="studio-section-heading">
-          <ClipboardCheck size={20} />
-          <h2>{t("check")}</h2>
-        </div>
-        <p
-          role="status"
-          className={
-            report
-              ? "studio-preflight " + (report.ready ? "is-ready" : "is-blocked")
-              : ""
-          }
-        >
-          {t(report ? (report.ready ? "ready" : "blocked") : "loading")}
-        </p>
-        <ul>
-          {report?.issues?.map((i: Row, n: number) => (
-            <li key={n}>
-              {i.pageId ? (
-                <Link to={"/pages/" + i.pageId}>{i.path}</Link>
-              ) : null}{" "}
-              {t(i.code)}
-            </li>
-          ))}
-        </ul>
-        <div className="catalog-actions">
-          <button
-            disabled={busy}
-            onClick={() =>
-              void action(async () => setReport(await api(base + "/preflight")))
-            }
-          >
-            {t("check")}
-          </button>
-          {edit && (
-            <>
-              <button
-                disabled={busy || !report?.issues?.some((i: Row) => i.fixable)}
-                onClick={() =>
-                  void action(async () =>
-                    setReport(
-                      await api(base + "/preflight/repair", "POST", {}),
-                    ),
-                  )
-                }
-              >
-                {t("repair")}
-              </button>
-              <button
-                className="primary"
-                disabled={busy || !report?.ready}
-                onClick={() =>
-                  void action(() =>
-                    api(
-                      base + "/builds",
-                      "POST",
-                      {},
-                      { "Idempotency-Key": crypto.randomUUID() },
-                    ),
-                  )
-                }
-              >
-                {t("build")}
-              </button>
-            </>
-          )}
-        </div>
-        <p>{t("repairHint")}</p>
-      </section>
-      <section className="catalog-panel">
-        <div className="studio-section-heading">
-          <PackageCheck size={20} />
-          <h2>{t("versions")}</h2>
-        </div>
-        <p>{t("previewHint")}</p>
-        <p>{t("formHint")}</p>
-        <div className="publish-table">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>{t("created")}</th>
-                <th>{t("state")}</th>
-                <th>{t("label")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!versions.length && (
-                <tr>
-                  <td colSpan={4} className="studio-empty-line">
-                    {t(historyLoaded ? "noVersions" : "loading")}
-                  </td>
-                </tr>
-              )}
-              {versions.map((v) => (
-                <tr key={v.id}>
-                  <td>{v.number}</td>
-                  <td>
-                    {new Date(v.createdAt).toLocaleString(
-                      locale === "zh" ? "zh-CN" : "en",
-                    )}
-                  </td>
-                  <td>
-                    {t(v.status === "ready" ? "versionReady" : v.status)}
-                    {v.errorCode && <p role="status">{t(v.errorCode)}</p>}
-                  </td>
-                  <td>
-                    <div className="catalog-actions">
-                      {v.status === "ready" && (
-                        <>
-                          <a
-                            href={"/api/v1/site-versions/" + v.id + "/preview/"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {t("preview")}
-                          </a>
-                          <a href={"/api/v1/site-versions/" + v.id + "/export"}>
-                            {t("download")}
-                          </a>
-                          {admin && cfg?.configured && (
+      <nav className="release-nav" aria-label={t("title")}>
+        <a href="#release-versions">{t("versions")}</a>
+        <a href="#release-preflight">{t("check")}</a>
+        <a href="#release-settings">{t("settings")}</a>
+        <a href="#release-deployments">{t("deployments")}</a>
+      </nav>
+      <div className="release-layout">
+        <div className="release-main">
+          <section className="catalog-panel" id="release-versions">
+            <div className="studio-section-heading">
+              <PackageCheck size={20} />
+              <h2>{t("versions")}</h2>
+            </div>
+            <p>{t("previewHint")}</p>
+            <p>{t("formHint")}</p>
+            <div className="publish-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>{t("created")}</th>
+                    <th>{t("state")}</th>
+                    <th>{t("label")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!versions.length && (
+                    <tr>
+                      <td colSpan={4} className="studio-empty-line">
+                        {t(historyLoaded ? "noVersions" : "loading")}
+                      </td>
+                    </tr>
+                  )}
+                  {versions.map((v) => (
+                    <tr key={v.id}>
+                      <td>{v.number}</td>
+                      <td>
+                        {new Date(v.createdAt).toLocaleString(
+                          locale === "zh" ? "zh-CN" : "en",
+                        )}
+                      </td>
+                      <td>
+                        {t(v.status === "ready" ? "versionReady" : v.status)}
+                        {v.errorCode && <p role="status">{t(v.errorCode)}</p>}
+                      </td>
+                      <td>
+                        <div className="catalog-actions">
+                          {v.status === "ready" && (
                             <>
-                              <button
-                                disabled={
-                                  busy ||
-                                  deployments.some((d) =>
-                                    [
-                                      "queued",
-                                      "uploading",
-                                      "verifying",
-                                      "unknown",
-                                    ].includes(d.status),
-                                  )
+                              <a
+                                href={
+                                  "/api/v1/site-versions/" + v.id + "/preview/"
                                 }
-                                onClick={() => void deploy(v)}
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
-                                {t("publish")}
-                              </button>
-                              {deployments.some(
-                                (d) =>
-                                  d.versionId === v.id && d.status === "live",
-                              ) && (
-                                <button
-                                  disabled={
-                                    busy ||
-                                    deployments.some((d) =>
-                                      [
-                                        "queued",
-                                        "uploading",
-                                        "verifying",
-                                        "unknown",
-                                      ].includes(d.status),
-                                    )
-                                  }
-                                  onClick={() => void deploy(v, true)}
-                                >
-                                  {t("rollback")}
-                                </button>
+                                {t("preview")}
+                              </a>
+                              <a
+                                href={
+                                  "/api/v1/site-versions/" + v.id + "/export"
+                                }
+                              >
+                                {t("download")}
+                              </a>
+                              {admin && cfg?.configured && (
+                                <>
+                                  <button
+                                    disabled={
+                                      busy ||
+                                      deployments.some((d) =>
+                                        [
+                                          "queued",
+                                          "uploading",
+                                          "verifying",
+                                          "unknown",
+                                        ].includes(d.status),
+                                      )
+                                    }
+                                    onClick={() => void deploy(v)}
+                                  >
+                                    {t("publish")}
+                                  </button>
+                                  {deployments.some(
+                                    (d) =>
+                                      d.versionId === v.id &&
+                                      d.status === "live",
+                                  ) && (
+                                    <button
+                                      disabled={
+                                        busy ||
+                                        deployments.some((d) =>
+                                          [
+                                            "queued",
+                                            "uploading",
+                                            "verifying",
+                                            "unknown",
+                                          ].includes(d.status),
+                                        )
+                                      }
+                                      onClick={() => void deploy(v, true)}
+                                    >
+                                      {t("rollback")}
+                                    </button>
+                                  )}
+                                </>
                               )}
                             </>
                           )}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section className="catalog-panel" id="release-deployments">
+            <div className="studio-section-heading">
+              <UploadCloud size={20} />
+              <h2>{t("deployments")}</h2>
+            </div>
+            {!deployments.length && (
+              <p className="studio-empty-line">
+                {t(historyLoaded ? "noDeployments" : "loading")}
+              </p>
+            )}
+            <ul>
+              {deployments.map((d) => (
+                <li key={d.id}>
+                  {new Date(d.createdAt).toLocaleString()} · {t(d.status)}
+                  {d.errorCode && <p>{t(d.errorCode)}</p>}
+                  {admin && ["unknown", "verifying"].includes(d.status) && (
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        void action(() =>
+                          api(
+                            "/site-deployments/" + d.id + "/reconcile",
+                            "POST",
+                            {},
+                          ),
+                        )
+                      }
+                    >
+                      {t("reconcile")}
+                    </button>
+                  )}
+                  {d.url && (
+                    <a href={d.url} target="_blank" rel="noopener noreferrer">
+                      {d.url}
+                    </a>
+                  )}
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          </section>
         </div>
-      </section>
-      <details
-        className="catalog-panel studio-settings"
-        open={cfg && !cfg.canonicalBaseUrl ? true : undefined}
-      >
-        <summary>
-          <Settings2 size={18} />
-          {t("settings")}
-        </summary>
-        <p>{t(cfg?.configured ? "configured" : "offline")}</p>
-        <form
-          onSubmit={form.handleSubmit((d) =>
-            action(async () => {
-              const next = await api(base + "/publishing-settings", "PUT", {
-                revision: cfg?.revision ?? 0,
-                canonicalBaseUrl: d.canonicalBaseUrl || null,
-                accountId: d.accountId || null,
-                projectName: d.projectName || null,
-                productionBranch: d.productionBranch || "main",
-                domain: d.domain || null,
-                ...(clear
-                  ? { token: null }
-                  : d.token
-                    ? { token: d.token }
-                    : {}),
-              });
-              setCfg(next);
-              form.reset({ ...next, token: "" });
-              setClear(false);
-            }),
-          )}
-        >
-          <fieldset disabled={!admin || busy || !cfg}>
-            <div className="catalog-grid">
-              {[
-                "canonicalBaseUrl",
-                "accountId",
-                "projectName",
-                "productionBranch",
-                "domain",
-              ].map((k, i) => (
-                <label key={k}>
-                  {t(["base", "account", "project", "branch", "domain"][i])}
+        <aside className="release-rail">
+          <section className="catalog-panel" id="release-preflight">
+            <div className="studio-section-heading">
+              <ClipboardCheck size={20} />
+              <h2>{t("check")}</h2>
+            </div>
+            <p
+              role="status"
+              className={
+                report
+                  ? "studio-preflight " +
+                    (report.ready ? "is-ready" : "is-blocked")
+                  : ""
+              }
+            >
+              {t(report ? (report.ready ? "ready" : "blocked") : "loading")}
+            </p>
+            <ul>
+              {report?.issues?.map((i: Row, n: number) => (
+                <li key={n}>
+                  {i.pageId ? (
+                    <Link to={"/pages/" + i.pageId}>{i.path}</Link>
+                  ) : null}{" "}
+                  {t(i.code)}
+                </li>
+              ))}
+            </ul>
+            <div className="catalog-actions">
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void action(async () =>
+                    setReport(await api(base + "/preflight")),
+                  )
+                }
+              >
+                {t("check")}
+              </button>
+              {edit && (
+                <>
+                  <button
+                    disabled={
+                      busy || !report?.issues?.some((i: Row) => i.fixable)
+                    }
+                    onClick={() =>
+                      void action(async () =>
+                        setReport(
+                          await api(base + "/preflight/repair", "POST", {}),
+                        ),
+                      )
+                    }
+                  >
+                    {t("repair")}
+                  </button>
+                  <button
+                    className="primary"
+                    disabled={busy || !report?.ready}
+                    onClick={() =>
+                      void action(() =>
+                        api(
+                          base + "/builds",
+                          "POST",
+                          {},
+                          { "Idempotency-Key": crypto.randomUUID() },
+                        ),
+                      )
+                    }
+                  >
+                    {t("build")}
+                  </button>
+                </>
+              )}
+            </div>
+            <p>{t("repairHint")}</p>
+          </section>
+          <details
+            className="catalog-panel studio-settings"
+            id="release-settings"
+            open={cfg && !cfg.canonicalBaseUrl ? true : undefined}
+          >
+            <summary>
+              <Settings2 size={18} />
+              {t("settings")}
+            </summary>
+            <p>{t(cfg?.configured ? "configured" : "offline")}</p>
+            <form
+              onSubmit={form.handleSubmit((d) =>
+                action(async () => {
+                  const next = await api(base + "/publishing-settings", "PUT", {
+                    revision: cfg?.revision ?? 0,
+                    canonicalBaseUrl: d.canonicalBaseUrl || null,
+                    accountId: d.accountId || null,
+                    projectName: d.projectName || null,
+                    productionBranch: d.productionBranch || "main",
+                    domain: d.domain || null,
+                    ...(clear
+                      ? { token: null }
+                      : d.token
+                        ? { token: d.token }
+                        : {}),
+                  });
+                  setCfg(next);
+                  form.reset({ ...next, token: "" });
+                  setClear(false);
+                }),
+              )}
+            >
+              <fieldset disabled={!admin || busy || !cfg}>
+                <div className="catalog-grid">
+                  {[
+                    "canonicalBaseUrl",
+                    "accountId",
+                    "projectName",
+                    "productionBranch",
+                    "domain",
+                  ].map((k, i) => (
+                    <label key={k}>
+                      {t(["base", "account", "project", "branch", "domain"][i])}
+                      <input
+                        aria-label={t(
+                          ["base", "account", "project", "branch", "domain"][i],
+                        )}
+                        {...form.register(k)}
+                        autoComplete="off"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label>
+                  {t("token")}
                   <input
-                    aria-label={t(
-                      ["base", "account", "project", "branch", "domain"][i],
-                    )}
-                    {...form.register(k)}
-                    autoComplete="off"
+                    type="password"
+                    aria-label={t("token")}
+                    {...form.register("token")}
+                    autoComplete="new-password"
                   />
                 </label>
-              ))}
-            </div>
-            <label>
-              {t("token")}
-              <input
-                type="password"
-                aria-label={t("token")}
-                {...form.register("token")}
-                autoComplete="new-password"
-              />
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={clear}
-                onChange={(e) => setClear(e.target.checked)}
-              />
-              {t("clear")}
-            </label>
-            <button className="primary" disabled={busy || !cfg}>
-              {t("save")}
-            </button>
-          </fieldset>
-        </form>
-        <p>{t("domainHint")}</p>
-        {admin && (
-          <button
-            disabled={busy}
-            onClick={() =>
-              void action(async () =>
-                setDomain(await api(base + "/domain-check", "POST", {})),
-              )
-            }
-          >
-            {t("domainCheck")}
-          </button>
-        )}
-        {domain && <p role="status">{t(domain.status)}</p>}
-      </details>
-      <section className="catalog-panel">
-        <div className="studio-section-heading">
-          <UploadCloud size={20} />
-          <h2>{t("deployments")}</h2>
-        </div>
-        {!deployments.length && (
-          <p className="studio-empty-line">
-            {t(historyLoaded ? "noDeployments" : "loading")}
-          </p>
-        )}
-        <ul>
-          {deployments.map((d) => (
-            <li key={d.id}>
-              {new Date(d.createdAt).toLocaleString()} · {t(d.status)}
-              {d.errorCode && <p>{t(d.errorCode)}</p>}
-              {admin && ["unknown", "verifying"].includes(d.status) && (
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void action(() =>
-                      api(
-                        "/site-deployments/" + d.id + "/reconcile",
-                        "POST",
-                        {},
-                      ),
-                    )
-                  }
-                >
-                  {t("reconcile")}
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={clear}
+                    onChange={(e) => setClear(e.target.checked)}
+                  />
+                  {t("clear")}
+                </label>
+                <button className="primary" disabled={busy || !cfg}>
+                  {t("save")}
                 </button>
-              )}
-              {d.url && (
-                <a href={d.url} target="_blank" rel="noopener noreferrer">
-                  {d.url}
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+              </fieldset>
+            </form>
+            <p>{t("domainHint")}</p>
+            {admin && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void action(async () =>
+                    setDomain(await api(base + "/domain-check", "POST", {})),
+                  )
+                }
+              >
+                {t("domainCheck")}
+              </button>
+            )}
+            {domain && <p role="status">{t(domain.status)}</p>}
+          </details>
+        </aside>
+      </div>
     </div>
   );
 }

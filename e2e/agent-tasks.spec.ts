@@ -66,8 +66,18 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
       tokens: 19629,
       inputSummary: { pageTitle },
       output: {
-        reviewMode: "browser",
-        findings: i === 0 ? [{ message: "Check mobile image crop" }] : [],
+        reviewMode: "structural",
+        findings:
+          i === 0
+            ? [
+                {
+                  code: "imagery",
+                  severity: "warning",
+                  blockKey: "hero",
+                  recommendation: "Check mobile image crop",
+                },
+              ]
+            : [],
         metrics: [{ width: 390, overflow: false, brokenImages: 0 }],
       },
     })),
@@ -130,22 +140,25 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
     },
   );
   await page.goto("/agent");
-  const detail = page.locator(".task-detail");
+  const detail = page.locator(".task-detail"),
+    controls = page.locator(".task-control");
   await expect(
     detail.getByRole("heading", { name: "生成首页设计方案", exact: true }),
   ).toBeVisible();
   await expect(
-    detail.getByText("请先由管理员配置 AI 服务商，再恢复任务", { exact: true }),
+    controls.getByText("请先由管理员配置 AI 服务商，再恢复任务", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
-    detail.getByRole("link", { name: "配置 AI 服务", exact: true }),
+    controls.getByRole("link", { name: "配置 AI 服务", exact: true }),
   ).toHaveAttribute("href", "/ai");
   await expect(detail.getByText("117,774", { exact: true })).not.toBeVisible();
-  await detail
+  await controls
     .getByRole("button", { name: "重试 / 恢复", exact: true })
     .click();
-  await expect(detail.getByRole("alert")).toHaveText("操作未完成，请重试。");
-  await detail
+  await expect(controls.getByRole("alert")).toHaveText("操作未完成，请重试。");
+  await controls
     .getByRole("button", { name: "重试 / 恢复", exact: true })
     .click();
   await expect(
@@ -158,11 +171,12 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
   await expect(
     detail.getByRole("link", { name: "查看审查报告", exact: true }).first(),
   ).toHaveAttribute("href", "/sites/" + siteId + "?tab=quality");
-  await expect(detail.locator(".task-findings")).toContainText("1");
-  await expect(detail.locator(".task-items li")).toHaveCount(6);
+  await expect(detail.locator(".review-totals")).toContainText("1");
+  await expect(detail.locator(".result-unit-picker option")).toHaveCount(6);
   await page.screenshot({
-    path: "test-results/s19-tasks-desktop.png",
+    path: "test-results/s20-tasks-desktop.png",
     fullPage: true,
+    animations: "disabled",
   });
   await detail.getByText("执行详情与用量", { exact: true }).click();
   await expect(detail.getByText("117,774", { exact: true })).toBeVisible();
@@ -181,17 +195,23 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
   await expect(detail.getByText("117,774", { exact: true })).not.toBeVisible();
   await expect(detail.locator("progress")).toHaveAttribute("value", "3");
   await expect(detail.locator("progress")).toHaveAttribute("max", "6");
-  await detail.getByRole("button", { name: "取消任务", exact: true }).click();
+  await controls.getByRole("button", { name: "取消任务", exact: true }).click();
   await expect(
     detail.locator("header").getByText("已取消", { exact: true }),
   ).toBeVisible();
-  await expect(detail.getByText("未继续处理", { exact: true })).toHaveCount(3);
+  await expect(
+    detail
+      .locator(".result-unit-picker option")
+      .filter({ hasText: "未继续处理" }),
+  ).toHaveCount(3);
   await page
     .locator(".task-toolbar")
     .getByRole("button", { name: /需处理/ })
     .click();
   await expect(
-    page.getByText("当前页没有这类任务", { exact: true }),
+    page
+      .locator(".task-index")
+      .getByText("当前页没有这类任务", { exact: true }),
   ).toBeVisible();
   await page
     .locator(".task-toolbar")
@@ -224,8 +244,9 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
       detail.getByRole("heading", { name: "检查网站质量", exact: true }),
     ).toBeVisible();
     await page.screenshot({
-      path: "test-results/s19-tasks-" + width + ".png",
+      path: "test-results/s20-tasks-" + width + ".png",
       fullPage: true,
+      animations: "disabled",
     });
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -239,7 +260,7 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
   await expect(
     page
       .locator(".task-center")
-      .getByRole("heading", { name: "Task center", exact: true }),
+      .getByRole("heading", { name: "Tasks & workflow", exact: true }),
   ).toBeVisible();
   await expect(
     page.locator(".task-detail").getByRole("heading", {

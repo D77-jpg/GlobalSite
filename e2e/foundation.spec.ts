@@ -122,6 +122,7 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
     .getByRole("navigation")
     .getByRole("link", { name: "成员管理" })
     .click();
+  await page.locator(".member-invite > summary").click();
   await page
     .getByLabel("工作邮箱", { exact: true })
     .fill("invite-" + randomBytes(6).toString("hex") + "@example.invalid");

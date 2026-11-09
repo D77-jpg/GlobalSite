@@ -306,4 +306,36 @@ test("S8-S11 buyer brief, B2B catalogue, cross-page shortlist and real worker sc
     path: "test-results/s10-worker-review-desktop.png",
     fullPage: false,
   });
+  await page.goto("/agent?site=" + site.id);
+  await page
+    .locator(".task-index-item")
+    .filter({ hasText: "检查网站质量" })
+    .click();
+  await expect(page.locator(".result-screenshots img")).toHaveCount(3);
+  await expect
+    .poll(() =>
+      page
+        .locator(".result-screenshots img")
+        .evaluateAll((imgs) =>
+          imgs.every((n) => (n as HTMLImageElement).naturalWidth > 0),
+        ),
+    )
+    .toBe(true);
+  await expect(page.locator(".result-evidence")).not.toContainText(
+    "reviewMethod_",
+  );
+  await page.screenshot({
+    path: "test-results/s20-agent-real-review-desktop.png",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".result-screenshots img").first()).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/s20-agent-real-review-mobile.png",
+    fullPage: true,
+  });
 });

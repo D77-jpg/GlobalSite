@@ -55,6 +55,8 @@ import { messages, errors, type Locale, type Key } from "./i18n";
 import "./style.css";
 import "./workspace.css";
 import "./account-workspace.css";
+import "./product-ui.css";
+import "./workspace-layouts.css";
 import { MissionOverview } from "./overview";
 type Me = {
   user: { id: string; name: string; email: string; twoFactorEnabled: boolean };
@@ -282,6 +284,12 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
         </div>
       </section>
       <main className="auth-main">
+        <Link to="/login" className="brand auth-mark">
+          <span className="brand-icon">
+            <Globe2 size={21} />
+          </span>
+          GlobalSite
+        </Link>
         <LocaleButton />
         <div className="auth-form">{children}</div>
         <footer>© {new Date().getFullYear()} GlobalSite</footer>
@@ -565,6 +573,21 @@ function Overview({ org }: { org: OrganizationResource }) {
     </>
   );
 }
+function SettingsSection({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const [heading, ...body] = React.Children.toArray(children);
+  return (
+    <section className={"panel settings-section " + className}>
+      <div className="settings-section-heading">{heading}</div>
+      <div className="settings-section-body">{body}</div>
+    </section>
+  );
+}
 function OrganizationPage({ org }: { org: OrganizationResource }) {
   const { t } = useI18n();
   const { me } = useContext(Auth);
@@ -579,7 +602,7 @@ function OrganizationPage({ org }: { org: OrganizationResource }) {
         <Loading error={error} retry={reload} />
       ) : (
         <>
-          <section className="panel">
+          <SettingsSection>
             <div className="panel-title">
               <Building2 size={20} />
               <h2>{t("organization")}</h2>
@@ -624,8 +647,8 @@ function OrganizationPage({ org }: { org: OrganizationResource }) {
                 </select>
               </div>
             )}
-          </section>
-          <section className="panel org-access">
+          </SettingsSection>
+          <SettingsSection className="org-access">
             <div className="panel-title">
               <Building2 size={20} />
               <h2>{t("workspaceAccess")}</h2>
@@ -652,7 +675,7 @@ function OrganizationPage({ org }: { org: OrganizationResource }) {
                 <ArrowUpRight size={14} />
               </Link>
             </div>
-          </section>
+          </SettingsSection>
         </>
       )}
     </div>
@@ -789,7 +812,8 @@ function MembersPage() {
         )}
       </section>
       {me.role === "admin" && (
-        <section className="panel">
+        <details className="member-invite panel">
+          <summary>{t("invite")}</summary>
           <div className="panel-title">
             <Mail size={20} />
             <h2>{t("invite")}</h2>
@@ -817,7 +841,7 @@ function MembersPage() {
             }}
           />
           <DevMail receipt={receipt} />
-        </section>
+        </details>
       )}
     </div>
   );
@@ -833,7 +857,7 @@ function SecurityPage() {
     <div className="account-page account-security">
       <PageHeader title="security" sub="safe" />
       <Notice success={success} error={actionError} />
-      <section className="panel">
+      <SettingsSection>
         <div className="panel-title">
           <KeyRound size={20} />
           <h2>{t("twoFactor")}</h2>
@@ -873,7 +897,7 @@ function SecurityPage() {
             }
           />
         )}
-      </section>
+      </SettingsSection>
       <section className="panel wide">
         <div className="panel-title">
           <Monitor size={20} />
@@ -961,7 +985,7 @@ function UsagePage() {
             </h2>
             <p>{t("quotaNotice")}</p>
           </div>
-          <div className="usage-grid">
+          <div className="usage-ledger">
             {(
               [
                 "ai_tokens",
@@ -983,7 +1007,7 @@ function UsagePage() {
                   : (100 * (row.consumed + row.reserved)) / data.limits[key],
               );
               return (
-                <section className="panel usage-card" key={key}>
+                <section className="usage-line" key={key}>
                   <span className="eyebrow">{t(key)}</span>
                   <h2>{fmt(row.consumed, key)}</h2>
                   <p>
@@ -1034,7 +1058,7 @@ function AiPage() {
       ) : !data ? (
         <Loading error={error} retry={reload} />
       ) : (
-        <section className="panel">
+        <SettingsSection>
           <div className="panel-title">
             <Sparkles size={20} />
             <h2>{t("providerTitle")}</h2>
@@ -1103,10 +1127,10 @@ function AiPage() {
           >
             {t(busy ? "saving" : "testConnection")}
           </button>
-        </section>
+        </SettingsSection>
       )}
       {me.role === "admin" && (
-        <section className="panel provider-imagery">
+        <SettingsSection className="panel provider-imagery">
           <div className="panel-title">
             <Sparkles size={20} />
             <h2>{t("imageProviderTool")}</h2>
@@ -1116,7 +1140,7 @@ function AiPage() {
             {t("openAssetLibrary")}
             <ArrowUpRight size={15} />
           </Link>
-        </section>
+        </SettingsSection>
       )}
     </div>
   );

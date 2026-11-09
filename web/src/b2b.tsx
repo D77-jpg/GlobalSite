@@ -233,6 +233,7 @@ export function SiteQuality({
 }) {
   const t = st(locale),
     [instructions, setInstructions] = useState(""),
+    [selectedReport, setSelectedReport] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const reviews = runs.filter((r) => r.step === "review"),
@@ -307,107 +308,131 @@ export function SiteQuality({
           {refinement.errorCode && <p>{t(refinement.errorCode)}</p>}
         </div>
       )}
+      {reviews.length > 0 && (
+        <label>
+          {locale === "zh" ? "审查记录" : "Review history"}
+          <select
+            aria-label={locale === "zh" ? "审查记录" : "Review history"}
+            value={
+              (reviews.find((r) => r.id === selectedReport) ?? reviews[0]).id
+            }
+            onChange={(e) => setSelectedReport(e.target.value)}
+          >
+            {reviews.map((r) => (
+              <option key={r.id} value={r.id}>
+                {new Date(r.createdAt).toLocaleString(locale)} · {t(r.status)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {!reviews.length ? (
         <p>{t("noQualityReview")}</p>
       ) : (
-        reviews.map((r) => (
-          <article className="b2b-review" key={r.id}>
-            <h3>
-              {new Date(r.createdAt).toLocaleString()} · {t(r.status)}
-            </h3>
-            {r.qualityAcceptedAt ? (
-              <p role="status">{t("qualityAccepted")}</p>
-            ) : (
-              r.status === "succeeded" &&
-              canApprove && (
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    setBusy(true);
-                    setError("");
-                    void api(
-                      "/agent-runs/" + r.id + "/accept-review",
-                      "POST",
-                      {},
-                    )
-                      .then(() => {
-                        r.qualityAcceptedAt = new Date().toISOString();
-                      })
-                      .catch((e) =>
-                        setError(
-                          t(e instanceof ApiError ? e.code : "failedGeneric"),
-                        ),
+        reviews
+          .filter(
+            (r) =>
+              r.id ===
+              (reviews.find((x) => x.id === selectedReport) ?? reviews[0])?.id,
+          )
+          .map((r) => (
+            <article className="b2b-review" key={r.id}>
+              <h3>
+                {new Date(r.createdAt).toLocaleString()} · {t(r.status)}
+              </h3>
+              {r.qualityAcceptedAt ? (
+                <p role="status">{t("qualityAccepted")}</p>
+              ) : (
+                r.status === "succeeded" &&
+                canApprove && (
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true);
+                      setError("");
+                      void api(
+                        "/agent-runs/" + r.id + "/accept-review",
+                        "POST",
+                        {},
                       )
-                      .finally(() => setBusy(false));
-                  }}
-                >
-                  {t("acceptQuality")}
-                </button>
-              )
-            )}
-            {r.errorCode && <p role="alert">{t(r.errorCode)}</p>}
-            {r.steps.map((u: Row, i: number) => (
-              <details key={u.key} open={r.id === latest?.id && i === 0}>
-                <summary>
-                  {site.plan.nodes.find((n: Row) => n.key === u.key)?.title ??
-                    u.key}{" "}
-                  · {t(u.status)}
-                </summary>
-                {u.output && (
-                  <>
-                    <p>
-                      {u.output.reviewMode === "structural"
-                        ? t("structuralReviewSummary")
-                        : u.output.summary}
-                    </p>
-                    {u.output.reviewMode === "structural" && (
-                      <p className="notice">{t("structuralReview")}</p>
-                    )}
-                    {u.output.requiresHumanVisualReview && (
-                      <p className="notice">{t("humanVisualReview")}</p>
-                    )}
-                    <ul>
-                      {u.output.findings?.map((f: Row, i: number) => (
-                        <li key={i}>
-                          <strong>{t(f.severity)}</strong> ·{" "}
-                          {u.output.reviewMode === "structural"
-                            ? t("structuralFinding_" + f.code)
-                            : f.recommendation}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="b2b-screen-grid">
-                      {u.output.screenshots?.map((s: Row) => (
-                        <a
-                          key={s.width}
-                          href={s.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <span>{s.width}px</span>
-                          <img
-                            src={s.url}
-                            alt={t("reviewScreenshot") + " " + s.width + "px"}
-                            loading="lazy"
-                          />
-                        </a>
-                      ))}
-                    </div>
-                    <ul>
-                      {u.output.metrics?.map((m: Row) => (
-                        <li key={m.width}>
-                          {m.width}px ·{" "}
-                          {t(m.overflow ? "overflowDetected" : "noOverflow")} ·{" "}
-                          {t("brokenImages")}: {m.brokenImages}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </details>
-            ))}
-          </article>
-        ))
+                        .then(() => {
+                          r.qualityAcceptedAt = new Date().toISOString();
+                        })
+                        .catch((e) =>
+                          setError(
+                            t(e instanceof ApiError ? e.code : "failedGeneric"),
+                          ),
+                        )
+                        .finally(() => setBusy(false));
+                    }}
+                  >
+                    {t("acceptQuality")}
+                  </button>
+                )
+              )}
+              {r.errorCode && <p role="alert">{t(r.errorCode)}</p>}
+              {r.steps.map((u: Row, i: number) => (
+                <details key={u.key} open={r.id === latest?.id && i === 0}>
+                  <summary>
+                    {site.plan.nodes.find((n: Row) => n.key === u.key)?.title ??
+                      u.key}{" "}
+                    · {t(u.status)}
+                  </summary>
+                  {u.output && (
+                    <>
+                      <p>
+                        {u.output.reviewMode === "structural"
+                          ? t("structuralReviewSummary")
+                          : u.output.summary}
+                      </p>
+                      {u.output.reviewMode === "structural" && (
+                        <p className="notice">{t("structuralReview")}</p>
+                      )}
+                      {u.output.requiresHumanVisualReview && (
+                        <p className="notice">{t("humanVisualReview")}</p>
+                      )}
+                      <ul>
+                        {u.output.findings?.map((f: Row, i: number) => (
+                          <li key={i}>
+                            <strong>{t(f.severity)}</strong> ·{" "}
+                            {u.output.reviewMode === "structural"
+                              ? t("structuralFinding_" + f.code)
+                              : f.recommendation}
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="b2b-screen-grid">
+                        {u.output.screenshots?.map((s: Row) => (
+                          <a
+                            key={s.width}
+                            href={s.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <span>{s.width}px</span>
+                            <img
+                              src={s.url}
+                              alt={t("reviewScreenshot") + " " + s.width + "px"}
+                              loading="lazy"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                      <ul>
+                        {u.output.metrics?.map((m: Row) => (
+                          <li key={m.width}>
+                            {m.width}px ·{" "}
+                            {t(m.overflow ? "overflowDetected" : "noOverflow")}{" "}
+                            · {t("brokenImages")}: {m.brokenImages}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </details>
+              ))}
+            </article>
+          ))
       )}
     </section>
   );

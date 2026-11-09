@@ -16,6 +16,8 @@ import {
   Mail,
   Menu,
   PanelsTopLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plug,
   Search,
   ShieldCheck,
@@ -50,6 +52,8 @@ const copy = {
     skip: "跳到主要内容",
     menu: "打开导航",
     logoutError: "退出失败，请重试。",
+    expandNav: "展开主导航",
+    collapseNav: "收起主导航",
   },
   en: {
     work: "Workspace",
@@ -63,6 +67,8 @@ const copy = {
     skip: "Skip to content",
     menu: "Open navigation",
     logoutError: "Could not sign out. Please retry.",
+    expandNav: "Expand navigation",
+    collapseNav: "Collapse navigation",
   },
 };
 function Modal({
@@ -113,7 +119,9 @@ export function WorkspaceFrame({
     navigate = useNavigate(),
     [popup, setPopup] = useState<"menu" | "search" | null>(null),
     [query, setQuery] = useState(""),
-    [logoutError, setLogoutError] = useState(false);
+    [logoutError, setLogoutError] = useState(false),
+    [navPreference, setNavPreference] = useState<boolean | null>(null);
+  const collapsed = navPreference ?? location.pathname === "/agent";
   const groups = useMemo<Group[]>(() => {
     const item = (path: string, key: Key, icon: LucideIcon): Item => ({
       path,
@@ -199,11 +207,13 @@ export function WorkspaceFrame({
         <span className="brand-icon">
           <Globe2 size={21} />
         </span>
-        GlobalSite
+        <span className="brand-name">GlobalSite</span>
       </Link>
       <Link
         to="/organization"
         className="workspace-label"
+        aria-label={t("workspace") + " " + (organizationName || userName)}
+        title={organizationName || userName}
         onClick={() => setPopup(null)}
       >
         <span className="workspace-avatar">
@@ -223,6 +233,7 @@ export function WorkspaceFrame({
               <NavLink
                 key={path}
                 to={path}
+                title={label}
                 end={path === "/"}
                 className={({ isActive }) =>
                   isActive || current?.path === path ? "active" : ""
@@ -230,7 +241,7 @@ export function WorkspaceFrame({
                 onClick={() => setPopup(null)}
               >
                 <Icon size={17} aria-hidden="true" />
-                {label}
+                <span className="nav-item-label">{label}</span>
               </NavLink>
             ))}
           </div>
@@ -257,13 +268,29 @@ export function WorkspaceFrame({
     </>
   );
   return (
-    <div className="workspace ws-shell">
+    <div
+      className="workspace ws-shell product-shell"
+      data-page={location.pathname.split("/")[1] || "overview"}
+      data-nav-collapsed={collapsed}
+    >
       <a className="skip-link" href="#main">
         {c.skip}
       </a>
       <aside className="sidebar">{sidebar}</aside>
       <div className="main-shell">
         <header className="topbar">
+          <button
+            className="nav-collapse"
+            aria-label={collapsed ? c.expandNav : c.collapseNav}
+            aria-expanded={!collapsed}
+            onClick={() => setNavPreference(!collapsed)}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={17} />
+            ) : (
+              <PanelLeftClose size={17} />
+            )}
+          </button>
           <button
             className="mobile-menu"
             aria-expanded={popup === "menu"}

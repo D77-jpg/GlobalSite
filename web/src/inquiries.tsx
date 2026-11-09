@@ -403,209 +403,218 @@ function InquiryDetailPageBody({ locale, role, id }: Props & { id: string }) {
             <a href="#inquiry-notes">{t("followUp")}</a>
             <a href="#inquiry-delivery">{t("delivery")}</a>
           </nav>
-          <div id="inquiry-contact" className="catalog-panel">
-            <h2>{d.contact.name}</h2>
-            <p>
-              {fmt(d.receivedAt, locale)} · <Status value={d.status} t={t} />
-            </p>
-            <dl className="inquiry-details">
-              {["company", "email", "country", "phone"].map((k) => (
-                <div key={k}>
-                  <dt>{t(k)}</dt>
-                  <dd>{d.contact[k] || t("notAvailable")}</dd>
-                </div>
-              ))}
-              <div>
-                <dt>{t("quantity")}</dt>
-                <dd>{d.quantity ?? t("notAvailable")}</dd>
-              </div>
-            </dl>
-            <p>
-              {t("score")}: {d.spamScore} ·{" "}
-              {t(d.classification === "ai" ? "aiState" : d.classification)}
-            </p>
-            {d.classification === "pending" && <p>{t("processingHint")}</p>}
-            {edit ? (
-              <label>
-                {t("status")}
-                <select
-                  aria-label={t("status")}
-                  value={d.status}
-                  disabled={busy}
-                  onChange={(e) =>
-                    void action(() =>
-                      api("/inquiries/" + id, "PATCH", {
-                        revision: d.revision,
-                        status: e.target.value,
-                      }),
-                    )
-                  }
-                >
-                  {["new", "following", "resolved", "spam"].map((s) => (
-                    <option key={s} value={s}>
-                      {t(s)}
-                    </option>
+          <div className="inquiry-reading-layout">
+            <div className="inquiry-letter">
+              <section id="inquiry-message" className="catalog-panel">
+                <h2>{t("message")}</h2>
+                <p className="inquiry-message">{d.message}</p>
+                {d.productIds.length > 0 && (
+                  <>
+                    <h3>{t("products")}</h3>
+                    <ul>
+                      {d.products.map((p: Row) => (
+                        <li key={p.id}>
+                          <Link to={"/products/" + p.id}>{p.name}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {d.duplicateOf && (
+                  <p>
+                    {t("duplicateOf")}{" "}
+                    <Link to={"/inquiries/" + d.duplicateOf}>{t("open")}</Link>
+                  </p>
+                )}
+                {d.duplicates.length > 0 && (
+                  <>
+                    <h3>{t("duplicates")}</h3>
+                    {d.duplicates.map((r: Row) => (
+                      <article key={r.id}>
+                        <p>
+                          {fmt(r.receivedAt, locale)} ·{" "}
+                          <Link to={"/inquiries/" + r.id}>{t("open")}</Link>
+                        </p>
+                        <p className="inquiry-message">{r.message}</p>
+                      </article>
+                    ))}
+                  </>
+                )}
+              </section>
+              <section className="catalog-panel">
+                <h2>{t("attachments")}</h2>
+                {d.attachments.length ? (
+                  <ul>
+                    {d.attachments.map((a: Row) => (
+                      <li key={a.id}>
+                        <a href={a.url}>{a.fileName}</a> ·{" "}
+                        {(a.bytes / 1024).toFixed(1)} KB
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{t("notAvailable")}</p>
+                )}
+              </section>
+              <section className="catalog-panel">
+                <h2>{t("source")}</h2>
+                <p>{t("sourceHint")}</p>
+                <dl className="inquiry-details">
+                  {[
+                    ["page", d.source.pageUrl],
+                    ["referrer", d.source.referrer],
+                    ["country", d.source.country],
+                    [
+                      "device",
+                      t(
+                        d.source.device === "unknown"
+                          ? "deviceUnknown"
+                          : d.source.device,
+                      ),
+                    ],
+                    ["firstVisit", fmt(d.source.firstVisitAt, locale)],
+                  ].map(([k, v]) => (
+                    <div key={k}>
+                      <dt>{t(k)}</dt>
+                      <dd>{v || t("notAvailable")}</dd>
+                    </div>
                   ))}
-                </select>
-              </label>
-            ) : (
-              <p>{t("readonly")}</p>
-            )}
-          </div>
-          <section id="inquiry-message" className="catalog-panel">
-            <h2>{t("message")}</h2>
-            <p className="inquiry-message">{d.message}</p>
-            {d.productIds.length > 0 && (
-              <>
-                <h3>{t("products")}</h3>
-                <ul>
-                  {d.products.map((p: Row) => (
-                    <li key={p.id}>
-                      <Link to={"/products/" + p.id}>{p.name}</Link>
-                    </li>
+                  {Object.entries(d.source.utm).map(([k, v]) => (
+                    <div key={k}>
+                      <dt>{t("utm_" + k)}</dt>
+                      <dd>{String(v ?? t("notAvailable"))}</dd>
+                    </div>
                   ))}
-                </ul>
-              </>
-            )}
-            {d.duplicateOf && (
-              <p>
-                {t("duplicateOf")}{" "}
-                <Link to={"/inquiries/" + d.duplicateOf}>{t("open")}</Link>
-              </p>
-            )}
-            {d.duplicates.length > 0 && (
-              <>
-                <h3>{t("duplicates")}</h3>
-                {d.duplicates.map((r: Row) => (
-                  <article key={r.id}>
-                    <p>
-                      {fmt(r.receivedAt, locale)} ·{" "}
-                      <Link to={"/inquiries/" + r.id}>{t("open")}</Link>
-                    </p>
-                    <p className="inquiry-message">{r.message}</p>
+                </dl>
+                {d.source.preview && <p>{t("preview")}</p>}
+              </section>
+              <section id="inquiry-notes" className="catalog-panel">
+                <h2>{t("notes")}</h2>
+                {d.notes.map((n: Row) => (
+                  <article key={n.id}>
+                    <p>{fmt(n.createdAt, locale)}</p>
+                    <p className="inquiry-message">{n.text}</p>
                   </article>
                 ))}
-              </>
-            )}
-          </section>
-          <section className="catalog-panel">
-            <h2>{t("attachments")}</h2>
-            {d.attachments.length ? (
-              <ul>
-                {d.attachments.map((a: Row) => (
-                  <li key={a.id}>
-                    <a href={a.url}>{a.fileName}</a> ·{" "}
-                    {(a.bytes / 1024).toFixed(1)} KB
-                  </li>
+                {edit && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void action(async () => {
+                        await api("/inquiries/" + id + "/notes", "POST", {
+                          revision: d.revision,
+                          text: note,
+                        });
+                        setNote("");
+                      });
+                    }}
+                  >
+                    <label>
+                      {t("noteText")}
+                      <textarea
+                        aria-label={t("noteText")}
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        maxLength={4000}
+                        required
+                      />
+                    </label>
+                    <button disabled={busy || !note.trim()}>
+                      {t("addNote")}
+                    </button>
+                  </form>
+                )}
+              </section>
+            </div>
+            <aside className="inquiry-followup">
+              <div id="inquiry-contact" className="catalog-panel">
+                <h2>{d.contact.name}</h2>
+                <p>
+                  {fmt(d.receivedAt, locale)} ·{" "}
+                  <Status value={d.status} t={t} />
+                </p>
+                <dl className="inquiry-details">
+                  {["company", "email", "country", "phone"].map((k) => (
+                    <div key={k}>
+                      <dt>{t(k)}</dt>
+                      <dd>{d.contact[k] || t("notAvailable")}</dd>
+                    </div>
+                  ))}
+                  <div>
+                    <dt>{t("quantity")}</dt>
+                    <dd>{d.quantity ?? t("notAvailable")}</dd>
+                  </div>
+                </dl>
+                <p>
+                  {t("score")}: {d.spamScore} ·{" "}
+                  {t(d.classification === "ai" ? "aiState" : d.classification)}
+                </p>
+                {d.classification === "pending" && <p>{t("processingHint")}</p>}
+                {edit ? (
+                  <label>
+                    {t("status")}
+                    <select
+                      aria-label={t("status")}
+                      value={d.status}
+                      disabled={busy}
+                      onChange={(e) =>
+                        void action(() =>
+                          api("/inquiries/" + id, "PATCH", {
+                            revision: d.revision,
+                            status: e.target.value,
+                          }),
+                        )
+                      }
+                    >
+                      {["new", "following", "resolved", "spam"].map((s) => (
+                        <option key={s} value={s}>
+                          {t(s)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <p>{t("readonly")}</p>
+                )}
+              </div>
+              <CrmInquiryPanel
+                crm={d.crm}
+                locale={locale}
+                role={role}
+                inquiryId={d.id}
+                onChange={load.reload}
+              />
+              <section id="inquiry-delivery" className="catalog-panel">
+                <h2>{t("notification")}</h2>
+                <p>{t(d.notificationStatus)}</p>
+                {d.deliveries.map((r: Row) => (
+                  <p key={r.id}>
+                    {t(r.status)}
+                    {r.errorCode ? " · " + t(r.errorCode) : ""}
+                  </p>
                 ))}
-              </ul>
-            ) : (
-              <p>{t("notAvailable")}</p>
-            )}
-          </section>
-          <section className="catalog-panel">
-            <h2>{t("source")}</h2>
-            <p>{t("sourceHint")}</p>
-            <dl className="inquiry-details">
-              {[
-                ["page", d.source.pageUrl],
-                ["referrer", d.source.referrer],
-                ["country", d.source.country],
-                [
-                  "device",
-                  t(
-                    d.source.device === "unknown"
-                      ? "deviceUnknown"
-                      : d.source.device,
-                  ),
-                ],
-                ["firstVisit", fmt(d.source.firstVisitAt, locale)],
-              ].map(([k, v]) => (
-                <div key={k}>
-                  <dt>{t(k)}</dt>
-                  <dd>{v || t("notAvailable")}</dd>
-                </div>
-              ))}
-              {Object.entries(d.source.utm).map(([k, v]) => (
-                <div key={k}>
-                  <dt>{t("utm_" + k)}</dt>
-                  <dd>{String(v ?? t("notAvailable"))}</dd>
-                </div>
-              ))}
-            </dl>
-            {d.source.preview && <p>{t("preview")}</p>}
-          </section>
-          <section id="inquiry-notes" className="catalog-panel">
-            <h2>{t("notes")}</h2>
-            {d.notes.map((n: Row) => (
-              <article key={n.id}>
-                <p>{fmt(n.createdAt, locale)}</p>
-                <p className="inquiry-message">{n.text}</p>
-              </article>
-            ))}
-            {edit && (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void action(async () => {
-                    await api("/inquiries/" + id + "/notes", "POST", {
-                      revision: d.revision,
-                      text: note,
-                    });
-                    setNote("");
-                  });
-                }}
-              >
-                <label>
-                  {t("noteText")}
-                  <textarea
-                    aria-label={t("noteText")}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    maxLength={4000}
-                    required
-                  />
-                </label>
-                <button disabled={busy || !note.trim()}>{t("addNote")}</button>
-              </form>
-            )}
-          </section>
-          <CrmInquiryPanel
-            crm={d.crm}
-            locale={locale}
-            role={role}
-            inquiryId={d.id}
-            onChange={load.reload}
-          />
-          <section id="inquiry-delivery" className="catalog-panel">
-            <h2>{t("notification")}</h2>
-            <p>{t(d.notificationStatus)}</p>
-            {d.deliveries.map((r: Row) => (
-              <p key={r.id}>
-                {t(r.status)}
-                {r.errorCode ? " · " + t(r.errorCode) : ""}
-              </p>
-            ))}
-            {edit &&
-              ["failed", "blocked", "development"].includes(
-                d.notificationStatus,
-              ) && (
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void action(() =>
-                      api(
-                        "/inquiries/" + id + "/notifications/retry",
-                        "POST",
-                        {},
-                      ),
-                    )
-                  }
-                >
-                  {t("retry")}
-                </button>
-              )}
-          </section>
+                {edit &&
+                  ["failed", "blocked", "development"].includes(
+                    d.notificationStatus,
+                  ) && (
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        void action(() =>
+                          api(
+                            "/inquiries/" + id + "/notifications/retry",
+                            "POST",
+                            {},
+                          ),
+                        )
+                      }
+                    >
+                      {t("retry")}
+                    </button>
+                  )}
+              </section>
+            </aside>
+          </div>
         </>
       )}
     </div>

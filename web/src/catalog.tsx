@@ -12,7 +12,6 @@ import { api, ApiError } from "./api";
 import {
   ArrowUpRight,
   Box,
-  ClipboardList,
   FileCheck2,
   UploadCloud,
   LayoutGrid,
@@ -292,7 +291,30 @@ export function ProductsPage({ locale, role }: Props) {
         </select>
         <button className="secondary">{t("search")}</button>
       </form>
-      <div className="ops-columns">
+      <aside className="catalog-summary-strip">
+        <span>{t("catalogReview")}</span>
+        {data && (
+          <>
+            <div className="ops-counts">
+              <div>
+                <strong>{drafts.length}</strong>
+                <span>{t("draft")}</span>
+              </div>
+              <div>
+                <strong>{needsSpecs.length}</strong>
+                <span>{t("missingSpecs")}</span>
+              </div>
+            </div>
+            <p className="ops-caption">{t("pageScope")}</p>
+          </>
+        )}
+        <Link className="ops-task ops-facts-link" to="/facts?status=candidate">
+          <FileCheck2 size={16} aria-hidden="true" />
+          <span>{t("viewFacts")}</span>
+          <ArrowUpRight size={15} aria-hidden="true" />
+        </Link>
+      </aside>
+      <div className="catalog-register">
         <section className="ops-table-panel" aria-label={t("products")}>
           <div className="ops-panel-title">
             <h2>{t("productList")}</h2>
@@ -308,6 +330,7 @@ export function ProductsPage({ locale, role }: Props) {
               <span>{t("category")}</span>
               <span>{t("source")}</span>
               <span>{t("status")}</span>
+              <span>{t("updated")}</span>
             </div>
           )}
           {!error && (
@@ -348,48 +371,6 @@ export function ProductsPage({ locale, role }: Props) {
           )}
           <Pager list={data} pages={pages} t={t} />
         </section>
-        <aside className="ops-rail">
-          <div className="ops-rail-title">
-            <ClipboardList size={18} aria-hidden="true" />
-            <h2>{t("catalogReview")}</h2>
-          </div>
-          {data && (
-            <>
-              <div className="ops-counts">
-                <div>
-                  <strong>{drafts.length}</strong>
-                  <span>{t("draft")}</span>
-                </div>
-                <div>
-                  <strong>{needsSpecs.length}</strong>
-                  <span>{t("missingSpecs")}</span>
-                </div>
-              </div>
-              <p className="ops-caption">{t("pageScope")}</p>
-              {needsSpecs.slice(0, 3).map((row) => (
-                <Link
-                  key={row.id}
-                  className="ops-task"
-                  to={"/products/" + row.id}
-                >
-                  <span>
-                    {row.name}
-                    <small>{t("inspectSpecs")}</small>
-                  </span>
-                  <ArrowUpRight size={15} aria-hidden="true" />
-                </Link>
-              ))}
-            </>
-          )}
-          <Link
-            className="ops-task ops-facts-link"
-            to="/facts?status=candidate"
-          >
-            <FileCheck2 size={16} aria-hidden="true" />
-            <span>{t("viewFacts")}</span>
-            <ArrowUpRight size={15} aria-hidden="true" />
-          </Link>
-        </aside>
       </div>
     </Frame>
   );
@@ -557,251 +538,262 @@ function ProductForm({
         </Link>
       }
     >
-      <nav className="ops-section-nav" aria-label={t("productSections")}>
-        <a href="#product-basics">{t("productBasics")}</a>
-        <a href="#product-specs">{t("specs")}</a>
-        <a href="#product-images">{t("images")}</a>
-      </nav>
-      {readOnly && <p className="notice">{t("viewOnly")}</p>}
-      <form
-        className="catalog-panel"
-        onSubmit={handleSubmit((values) =>
-          a.run(async () => {
-            const data = Object.fromEntries(
-              fieldNames
-                .filter((k) => !["certifications", "specTable"].includes(k))
-                .map((k) => [k, values[k]]),
-            );
-            Object.assign(data, {
-              sku: values.sku?.trim() || undefined,
-              status: values.status,
-              certifications: String(values.certifications ?? "")
-                .split(/\r?\n/)
-                .map((s) => s.trim())
-                .filter(Boolean),
-              assetIds: selected,
-              specTable: columns.length ? { columns, rows } : null,
-            });
-            const p = await api(
-              product ? "/products/" + product.id : "/products",
-              product ? "PATCH" : "POST",
-              product ? { revision: product.revision, data } : data,
-            );
-            navigate("/products/" + p.id, { replace: true });
-            onSaved(p);
-            reset({ ...p, certifications: p.certifications.join("\n") });
-          }),
-        )}
-      >
-        <fieldset disabled={readOnly || a.busy}>
-          <h2 id="product-basics">{t("productBasics")}</h2>
-          <div className="catalog-grid">
-            {(
-              [
-                "name",
-                "sku",
-                "category",
-                "moq",
-                "leadTime",
-                "material",
-                "application",
-              ] as const
-            ).map((key) => (
-              <label key={key}>
-                {t(key)}
-                <input
-                  {...register(key, {
-                    required: key === "name",
-                    maxLength:
-                      key === "name"
-                        ? 200
-                        : key === "sku"
-                          ? 80
-                          : key === "category" ||
-                              key === "moq" ||
-                              key === "leadTime"
-                            ? 120
-                            : 2000,
-                  })}
-                />
-              </label>
-            ))}
-            <label>
-              {t("status")}
-              <select aria-label={t("status")} {...register("status")}>
-                {["draft", "active", "archived"].map((s) => (
-                  <option key={s} value={s}>
-                    {t(s)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label>
-            {t("description")}
-            <textarea rows={4} maxLength={4000} {...register("description")} />
-          </label>
-          <label>
-            {t("certifications")}
-            <textarea rows={3} {...register("certifications")} />
-          </label>
-          <h2 id="product-specs">{t("specs")}</h2>
-          <div className="catalog-specs">
-            {specs.fields.map((f, i) => (
-              <div className="catalog-spec-row" key={f.id}>
-                {(["code", "name", "value", "unit"] as const).map((k) => (
-                  <label key={k}>
-                    {t(k === "name" ? "specName" : k)}
+      <div className="record-editor-layout">
+        {" "}
+        <nav className="ops-section-nav" aria-label={t("productSections")}>
+          <a href="#product-basics">{t("productBasics")}</a>
+          <a href="#product-specs">{t("specs")}</a>
+          <a href="#product-images">{t("images")}</a>
+        </nav>
+        <div className="record-editor-body">
+          {readOnly && <p className="notice">{t("viewOnly")}</p>}
+          <form
+            className="catalog-panel"
+            onSubmit={handleSubmit((values) =>
+              a.run(async () => {
+                const data = Object.fromEntries(
+                  fieldNames
+                    .filter((k) => !["certifications", "specTable"].includes(k))
+                    .map((k) => [k, values[k]]),
+                );
+                Object.assign(data, {
+                  sku: values.sku?.trim() || undefined,
+                  status: values.status,
+                  certifications: String(values.certifications ?? "")
+                    .split(/\r?\n/)
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                  assetIds: selected,
+                  specTable: columns.length ? { columns, rows } : null,
+                });
+                const p = await api(
+                  product ? "/products/" + product.id : "/products",
+                  product ? "PATCH" : "POST",
+                  product ? { revision: product.revision, data } : data,
+                );
+                navigate("/products/" + p.id, { replace: true });
+                onSaved(p);
+                reset({ ...p, certifications: p.certifications.join("\n") });
+              }),
+            )}
+          >
+            <fieldset disabled={readOnly || a.busy}>
+              <h2 id="product-basics">{t("productBasics")}</h2>
+              <div className="catalog-grid">
+                {(
+                  [
+                    "name",
+                    "sku",
+                    "category",
+                    "moq",
+                    "leadTime",
+                    "material",
+                    "application",
+                  ] as const
+                ).map((key) => (
+                  <label key={key}>
+                    {t(key)}
                     <input
-                      {...register("specs." + i + "." + k, {
-                        required: k !== "unit",
+                      {...register(key, {
+                        required: key === "name",
+                        maxLength:
+                          key === "name"
+                            ? 200
+                            : key === "sku"
+                              ? 80
+                              : key === "category" ||
+                                  key === "moq" ||
+                                  key === "leadTime"
+                                ? 120
+                                : 2000,
                       })}
                     />
                   </label>
                 ))}
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => specs.remove(i)}
-                >
-                  {t("remove")}
-                </button>
+                <label>
+                  {t("status")}
+                  <select aria-label={t("status")} {...register("status")}>
+                    {["draft", "active", "archived"].map((s) => (
+                      <option key={s} value={s}>
+                        {t(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="secondary"
-            disabled={specs.fields.length >= 100}
-            onClick={() =>
-              specs.append({
-                code: "SPEC_" + (specs.fields.length + 1),
-                name: "",
-                value: "",
-                unit: "",
-              })
-            }
-          >
-            {t("addSpec")}
-          </button>
-          <section className="catalog-subpanel">
-            <h2>{t("specTable")}</h2>
-            <label>
-              {t("columns")}
-              <input
-                value={headings}
-                onChange={(e) => {
-                  setHeadings(e.target.value);
-                  const next = e.target.value
-                    .split(/[,，]/)
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .slice(0, 10);
-                  setColumns(next);
-                  setRows((old) =>
-                    old.map((r) => next.map((_, i) => r[i] ?? "")),
-                  );
-                }}
-              />
-            </label>
-            {columns.length > 0 && (
-              <>
-                <div className="catalog-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        {columns.map((c, i) => (
-                          <th key={i}>{c}</th>
-                        ))}
-                        <th>{t("remove")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((r, i) => (
-                        <tr key={i}>
-                          {columns.map((c, j) => (
-                            <td key={j}>
-                              <input
-                                aria-label={c + " " + (i + 1)}
-                                maxLength={200}
-                                value={r[j] ?? ""}
-                                onChange={(e) =>
-                                  setRows((prev) =>
-                                    prev.map((row, k) =>
-                                      k === i
-                                        ? row.map((v, l) =>
-                                            l === j ? e.target.value : v,
-                                          )
-                                        : row,
-                                    ),
-                                  )
-                                }
-                              />
-                            </td>
-                          ))}
-                          <td>
-                            <button
-                              className="secondary"
-                              type="button"
-                              onClick={() =>
-                                setRows((prev) =>
-                                  prev.filter((_, k) => k !== i),
-                                )
-                              }
-                            >
-                              {t("remove")}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={rows.length >= 50}
-                  onClick={() => setRows((r) => [...r, columns.map(() => "")])}
-                >
-                  {t("addRow")}
-                </button>
-              </>
-            )}
-          </section>
-          <h2 id="product-images">{t("images")}</h2>
-          <p className="muted">
-            {t("imageHint")} <Link to="/assets">{t("assets")}</Link>
-          </p>
-          <div className="catalog-picker">
-            {assets.data?.items.map((file: Item) => (
-              <label className="catalog-pick" key={file.id}>
-                <input
-                  type="checkbox"
-                  checked={selected.includes(file.id)}
-                  onChange={(e) =>
-                    setSelected((old) =>
-                      e.target.checked
-                        ? [...old, file.id]
-                        : old.filter((x) => x !== file.id),
-                    )
-                  }
+              <label>
+                {t("description")}
+                <textarea
+                  rows={4}
+                  maxLength={4000}
+                  {...register("description")}
                 />
-                <img src={file.thumbnailUrl ?? file.url} alt="" />
-                <span>{file.fileName}</span>
               </label>
-            ))}
-          </div>
-          {!readOnly && (
-            <button type="submit" disabled={a.busy}>
-              {a.busy ? t("saving") : t("save")}
-            </button>
+              <label>
+                {t("certifications")}
+                <textarea rows={3} {...register("certifications")} />
+              </label>
+              <h2 id="product-specs">{t("specs")}</h2>
+              <div className="catalog-specs">
+                {specs.fields.map((f, i) => (
+                  <div className="catalog-spec-row" key={f.id}>
+                    {(["code", "name", "value", "unit"] as const).map((k) => (
+                      <label key={k}>
+                        {t(k === "name" ? "specName" : k)}
+                        <input
+                          {...register("specs." + i + "." + k, {
+                            required: k !== "unit",
+                          })}
+                        />
+                      </label>
+                    ))}
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => specs.remove(i)}
+                    >
+                      {t("remove")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="secondary"
+                disabled={specs.fields.length >= 100}
+                onClick={() =>
+                  specs.append({
+                    code: "SPEC_" + (specs.fields.length + 1),
+                    name: "",
+                    value: "",
+                    unit: "",
+                  })
+                }
+              >
+                {t("addSpec")}
+              </button>
+              <section className="catalog-subpanel">
+                <h2>{t("specTable")}</h2>
+                <label>
+                  {t("columns")}
+                  <input
+                    value={headings}
+                    onChange={(e) => {
+                      setHeadings(e.target.value);
+                      const next = e.target.value
+                        .split(/[,，]/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .slice(0, 10);
+                      setColumns(next);
+                      setRows((old) =>
+                        old.map((r) => next.map((_, i) => r[i] ?? "")),
+                      );
+                    }}
+                  />
+                </label>
+                {columns.length > 0 && (
+                  <>
+                    <div className="catalog-table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            {columns.map((c, i) => (
+                              <th key={i}>{c}</th>
+                            ))}
+                            <th>{t("remove")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((r, i) => (
+                            <tr key={i}>
+                              {columns.map((c, j) => (
+                                <td key={j}>
+                                  <input
+                                    aria-label={c + " " + (i + 1)}
+                                    maxLength={200}
+                                    value={r[j] ?? ""}
+                                    onChange={(e) =>
+                                      setRows((prev) =>
+                                        prev.map((row, k) =>
+                                          k === i
+                                            ? row.map((v, l) =>
+                                                l === j ? e.target.value : v,
+                                              )
+                                            : row,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                </td>
+                              ))}
+                              <td>
+                                <button
+                                  className="secondary"
+                                  type="button"
+                                  onClick={() =>
+                                    setRows((prev) =>
+                                      prev.filter((_, k) => k !== i),
+                                    )
+                                  }
+                                >
+                                  {t("remove")}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={rows.length >= 50}
+                      onClick={() =>
+                        setRows((r) => [...r, columns.map(() => "")])
+                      }
+                    >
+                      {t("addRow")}
+                    </button>
+                  </>
+                )}
+              </section>
+              <h2 id="product-images">{t("images")}</h2>
+              <p className="muted">
+                {t("imageHint")} <Link to="/assets">{t("assets")}</Link>
+              </p>
+              <div className="catalog-picker">
+                {assets.data?.items.map((file: Item) => (
+                  <label className="catalog-pick" key={file.id}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(file.id)}
+                      onChange={(e) =>
+                        setSelected((old) =>
+                          e.target.checked
+                            ? [...old, file.id]
+                            : old.filter((x) => x !== file.id),
+                        )
+                      }
+                    />
+                    <img src={file.thumbnailUrl ?? file.url} alt="" />
+                    <span>{file.fileName}</span>
+                  </label>
+                ))}
+              </div>
+              {!readOnly && (
+                <button type="submit" disabled={a.busy}>
+                  {a.busy ? t("saving") : t("save")}
+                </button>
+              )}
+            </fieldset>
+            <Notice error={a.error} saved={a.saved} t={t} />
+          </form>
+          {product && !readOnly && (
+            <Extraction kind="product" id={product.id} t={t} />
           )}
-        </fieldset>
-        <Notice error={a.error} saved={a.saved} t={t} />
-      </form>
-      {product && !readOnly && (
-        <Extraction kind="product" id={product.id} t={t} />
-      )}
+        </div>
+      </div>
     </Frame>
   );
 }
@@ -1576,7 +1568,7 @@ export function FactsPage({ locale, role }: Props) {
           close={() => setEditing(undefined)}
         />
       )}
-      <div className="catalog-list">
+      <div className="catalog-list fact-register">
         <Rows items={load.data?.items} error={load.error} t={t}>
           {(f) => (
             <article key={f.id} className="catalog-fact">
@@ -1592,7 +1584,10 @@ export function FactsPage({ locale, role }: Props) {
                 </div>
                 <Badge value={f.status} t={t} />
               </div>
-              <Source fact={f} t={t} />
+              <details className="fact-evidence">
+                <summary>{t("source")}</summary>
+                <Source fact={f} t={t} />
+              </details>
               <div className="catalog-actions">
                 {role === "admin" && (
                   <>
@@ -1859,7 +1854,7 @@ export function WebsitePage({ locale, role }: Props) {
     >
       {role !== "viewer" && (
         <form
-          className="catalog-panel"
+          className="catalog-panel website-input"
           onSubmit={handleSubmit((values) =>
             a.run(async () => {
               const r = await api("/website-reads", "POST", values);
@@ -1901,84 +1896,92 @@ export function WebsitePage({ locale, role }: Props) {
           <Notice error={a.error} t={t} />
         </form>
       )}
-      <section className="catalog-panel">
-        <h2>{t("history")}</h2>
-        <Rows items={history.data?.items} error={history.error} t={t}>
-          {(r) => (
-            <div key={r.id} className="catalog-row">
-              <button
-                className="secondary catalog-url"
-                onClick={() => setRunId(r.id)}
-              >
-                {r.url}
-              </button>
-              <Badge value={r.status} t={t} />
-            </div>
-          )}
-        </Rows>
-        <Pager list={history.data} pages={pages} t={t} />
-      </section>
-      {run && (
-        <section className="catalog-panel">
-          <div className="catalog-heading">
-            <h2 className="catalog-url">{run.url}</h2>
-            <Badge value={run.status} t={t} />
-          </div>
-          <Notice
-            error={
-              run.errorCode ? new ApiError(run.errorCode, 400) : detail.error
-            }
-            t={t}
-          />
-          <dl className="ops-output-counts">
-            <div>
-              <dt>{t("pages")}</dt>
-              <dd>{run.pages.length}</dd>
-            </div>
-            <div>
-              <dt>{t("newDrafts")}</dt>
-              <dd>{run.resultIds.length}</dd>
-            </div>
-            <div>
-              <dt>{t("newFacts")}</dt>
-              <dd>{run.factIds.length}</dd>
-            </div>
-          </dl>
-          {run.truncated && <p>{t("truncated")}</p>}
-          <div className="catalog-actions">
-            <a
-              className="button secondary"
-              href={"/api/v1/website-reads/" + run.id + "/migration.csv"}
-            >
-              {t("migration")}
-            </a>
-            <Link className="button secondary" to="/facts?status=candidate">
-              {t("viewFacts")}
-            </Link>
-            <Link className="button secondary" to="/products">
-              {t("products")}
-            </Link>
-          </div>
-          <h3>{t("pages")}</h3>
-          {run.pages.map((p: Item) => (
-            <article key={p.url} className="catalog-subpanel">
-              <strong>{p.title || "—"}</strong>
-              <p className="catalog-url">{p.url}</p>
-              <Badge
-                value={p.status === "read" ? "readStatus" : p.status}
+      <div className="website-reader-workspace">
+        <section className="catalog-panel website-history">
+          <h2>{t("history")}</h2>
+          <Rows items={history.data?.items} error={history.error} t={t}>
+            {(r) => (
+              <div key={r.id} className="catalog-row">
+                <button
+                  className="secondary catalog-url"
+                  onClick={() => setRunId(r.id)}
+                >
+                  {r.url}
+                </button>
+                <Badge value={r.status} t={t} />
+              </div>
+            )}
+          </Rows>
+          <Pager list={history.data} pages={pages} t={t} />
+        </section>
+        <div className="website-reader-output">
+          {" "}
+          {run && (
+            <section className="catalog-panel">
+              <div className="catalog-heading">
+                <h2 className="catalog-url">{run.url}</h2>
+                <Badge value={run.status} t={t} />
+              </div>
+              <Notice
+                error={
+                  run.errorCode
+                    ? new ApiError(run.errorCode, 400)
+                    : detail.error
+                }
                 t={t}
               />
-              {p.headings?.length > 0 && (
-                <ul>
-                  {p.headings.map((h: any, i: number) => (
-                    <li key={i}>{typeof h === "string" ? h : h.text}</li>
-                  ))}
-                </ul>
-              )}
-            </article>
-          ))}
-        </section>
-      )}
+              <dl className="ops-output-counts">
+                <div>
+                  <dt>{t("pages")}</dt>
+                  <dd>{run.pages.length}</dd>
+                </div>
+                <div>
+                  <dt>{t("newDrafts")}</dt>
+                  <dd>{run.resultIds.length}</dd>
+                </div>
+                <div>
+                  <dt>{t("newFacts")}</dt>
+                  <dd>{run.factIds.length}</dd>
+                </div>
+              </dl>
+              {run.truncated && <p>{t("truncated")}</p>}
+              <div className="catalog-actions">
+                <a
+                  className="button secondary"
+                  href={"/api/v1/website-reads/" + run.id + "/migration.csv"}
+                >
+                  {t("migration")}
+                </a>
+                <Link className="button secondary" to="/facts?status=candidate">
+                  {t("viewFacts")}
+                </Link>
+                <Link className="button secondary" to="/products">
+                  {t("products")}
+                </Link>
+              </div>
+              <h3>{t("pages")}</h3>
+              {run.pages.map((p: Item) => (
+                <article key={p.url} className="catalog-subpanel">
+                  <strong>{p.title || "—"}</strong>
+                  <p className="catalog-url">{p.url}</p>
+                  <Badge
+                    value={p.status === "read" ? "readStatus" : p.status}
+                    t={t}
+                  />
+                  {p.headings?.length > 0 && (
+                    <ul>
+                      {p.headings.map((h: any, i: number) => (
+                        <li key={i}>{typeof h === "string" ? h : h.text}</li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
+              ))}
+            </section>
+          )}
+          {!run && <p className="website-reader-empty">{t("readHint")}</p>}
+        </div>
+      </div>
     </Frame>
   );
 }

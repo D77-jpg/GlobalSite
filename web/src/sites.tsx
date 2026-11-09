@@ -129,7 +129,9 @@ function Frame({
 }) {
   return (
     <div className="catalog sites-workspace">
-      <header className={"catalog-heading" + (banner ? " studio-banner" : "")}>
+      <header
+        className={"catalog-heading" + (banner ? " project-heading" : "")}
+      >
         <div>
           <h1>{title}</h1>
           {sub && <p className="muted">{sub}</p>}
@@ -513,340 +515,360 @@ export function SiteWorkspace({ locale, role }: Props) {
         </>
       }
     >
-      {!["guide", "runs"].includes(tab) && (
-        <div
-          className="studio-metrics"
-          role="group"
-          aria-label={t("siteProgress")}
-        >
-          {[
-            {
-              label: t("planSize"),
-              count: site.plan?.nodes?.length ?? 0,
-              icon: Network,
-              tab: "planning",
-            },
-            {
-              label: t("draftedPages"),
-              count: pages.data?.items.length,
-              icon: FileText,
-              tab: "pages",
-            },
-            {
-              label: t("approvedPages"),
-              count: pages.data?.items.filter(
-                (p: Row) => p.status === "approved",
-              ).length,
-              icon: CheckCheck,
-              tab: "pages",
-            },
-            {
-              label: t("recentTasks"),
-              count: runs.data?.items.length,
-              icon: Activity,
-              tab: "runs",
-            },
-          ].map(({ label, count, icon: Icon, tab: target }) => (
+      <div className="project-workspace-layout">
+        <nav className="sites-tabs" aria-label={t("sites")}>
+          {workspaceTabs.map((k) => (
             <button
-              className="studio-metric"
-              key={label}
-              onClick={() => setTab(target)}
+              key={k}
+              className={tab === k ? "" : "secondary"}
+              aria-pressed={tab === k}
+              onClick={() => setTab(k)}
             >
-              <span>
-                <Icon size={16} />
-                {label}
-              </span>
-              <strong>{count ?? "—"}</strong>
+              {t(k)}
             </button>
           ))}
-        </div>
-      )}
-      <nav className="sites-tabs" aria-label={t("sites")}>
-        {workspaceTabs.map((k) => (
-          <button
-            key={k}
-            className={tab === k ? "" : "secondary"}
-            aria-pressed={tab === k}
-            onClick={() => setTab(k)}
-          >
-            {t(k)}
-          </button>
-        ))}
-      </nav>
-      {canEdit &&
-        ["planning", "interview", "pages", "quality"].includes(tab) && (
-          <label className="catalog-check sites-consent">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
-            {t("consent")}
-          </label>
-        )}
-      <Notice
-        t={t}
-        error={
-          a.error ?? runs.error ?? pages.error ?? ready.error ?? sources.error
-        }
-        saved={a.saved}
-      />
-      {tab === "guide" && (
-        <SiteGuide
-          site={site}
-          sources={sources.data}
-          pages={pages.data?.items}
-          runs={runs.data?.items}
-          locale={locale}
-          canEdit={canEdit}
-          busy={a.busy}
-          consent={consent}
-          setConsent={setConsent}
-          queue={(step) => a.run(() => queue(step))}
-          setTab={setTab}
-        />
-      )}
-      {tab === "design" && (
-        <SiteDesign
-          site={site}
-          runs={runs.data?.items ?? []}
-          locale={locale}
-          canEdit={canEdit}
-          onSave={() => {
-            load.reload();
-            runs.reload();
-            pages.reload();
-            ready.reload();
-          }}
-        />
-      )}
-      {tab === "business" && (
-        <BuyerWorkspace
-          key={site.revision}
-          site={site}
-          products={sources.data?.products ?? []}
-          locale={locale}
-          canEdit={canEdit}
-          onSave={() => load.reload()}
-        />
-      )}
-      {tab === "quality" && (
-        <SiteQuality
-          site={site}
-          locale={locale}
-          canEdit={canEdit}
-          canApprove={role === "admin"}
-          consent={consent}
-          runs={runs.data?.items ?? []}
-          onRun={(step, instructions) => queue(step, undefined, instructions)}
-        />
-      )}
-      {tab === "planning" && (
-        <div className="studio-planner-layout">
-          <PlanEditor
-            key={site.planRevision}
-            site={site}
-            products={sources.data?.products ?? []}
-            t={t}
-            role={role}
-            done={(r) => {
-              load.set(r);
-              pages.reload();
-              ready.reload();
-            }}
-          />
-          <aside className="studio-planner-rail">
-            <div className="studio-rail-heading">
-              <Workflow size={20} />
-              <h2>{t("planningAgent")}</h2>
-            </div>
-            <section>
-              <h3>{t("sourceMaterial")}</h3>
-              <dl>
-                <div>
-                  <dt>{t("products")}</dt>
-                  <dd>{sources.data?.products.length ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt>{t("confirmedFacts")}</dt>
-                  <dd>{sources.data?.facts.length ?? "—"}</dd>
-                </div>
-              </dl>
-              <Link to="?tab=business">
-                {t("business")} <ChevronRight size={14} />
-              </Link>
-            </section>
-            <section>
-              <h3>{t("research")}</h3>
-              <p>{t("researchHint")}</p>
-              {canEdit && (
-                <button
-                  disabled={!consent || a.busy}
-                  onClick={() => void a.run(() => queue("research"))}
-                >
-                  <Network size={15} />
-                  {t("generateResearch")}
-                </button>
-              )}
-            </section>
-            {runs.data?.items[0] && (
-              <section>
-                <h3>{t("latestActivity")}</h3>
-                <p>
-                  {t(
-                    runs.data.items[0].step === "rewrite"
-                      ? "rewriteStep"
-                      : runs.data.items[0].step,
-                  )}{" "}
-                  · {t(runs.data.items[0].status)}
-                </p>
-                <Link to="?tab=runs">
-                  {t("viewExecution")} <ArrowRight size={14} />
-                </Link>
-              </section>
-            )}
-          </aside>
-        </div>
-      )}
-      {tab === "interview" && (
-        <>
-          <section className="catalog-panel">
-            <h2>{t("interview")}</h2>
-            <p>{t("interviewHint")}</p>
-            <Link to="/facts?status=candidate">{t("facts")}</Link>
-            {canEdit && (
-              <button
-                disabled={!consent || a.busy}
-                onClick={() => void a.run(() => queue("interview"))}
-              >
-                {t("generateInterview")}
-              </button>
-            )}
-          </section>
-          <Interview
-            siteId={id!}
-            runs={runs.data?.items ?? []}
-            t={t}
-            canEdit={canEdit}
-          />
-        </>
-      )}
-      {tab === "pages" && (
-        <>
-          <section className="catalog-panel">
-            <p>{t("contentHint")}</p>
-            {canEdit && (
-              <button
-                disabled={!consent || !site.planConfirmed || a.busy}
-                onClick={() => void a.run(() => queue("content"))}
-              >
-                {t("generateContent")}
-              </button>
-            )}
-            <p className="muted">{t("publishingHint")}</p>
-            <h2>
-              {t(
-                ready.data
-                  ? ready.data.ready
-                    ? "ready"
-                    : "notReady"
-                  : "loading",
-              )}
-            </h2>
-            <IssueList issues={ready.data?.issues ?? []} t={t} />
-            <button
-              className="secondary"
-              onClick={() => {
-                ready.reload();
-                pages.reload();
-              }}
+        </nav>
+        <div className={"project-workspace-content project-tab-" + tab}>
+          {!["guide", "runs"].includes(tab) && (
+            <div
+              className="studio-metrics"
+              role="group"
+              aria-label={t("siteProgress")}
             >
-              {t("readiness")}
-            </button>
-          </section>
-          <div className="sites-cards">
-            {site.plan?.nodes.map((n: Row) => {
-              const p = pages.data?.items.find((p: Row) => p.nodeKey === n.key);
-              return (
-                <article className="catalog-panel" key={n.key}>
-                  <h2>{n.title}</h2>
-                  <p>{n.path}</p>
-                  <Badge status={p?.status ?? "missing"} t={t} />
+              {[
+                {
+                  label: t("planSize"),
+                  count: site.plan?.nodes?.length ?? 0,
+                  icon: Network,
+                  tab: "planning",
+                },
+                {
+                  label: t("draftedPages"),
+                  count: pages.data?.items.length,
+                  icon: FileText,
+                  tab: "pages",
+                },
+                {
+                  label: t("approvedPages"),
+                  count: pages.data?.items.filter(
+                    (p: Row) => p.status === "approved",
+                  ).length,
+                  icon: CheckCheck,
+                  tab: "pages",
+                },
+                {
+                  label: t("recentTasks"),
+                  count: runs.data?.items.length,
+                  icon: Activity,
+                  tab: "runs",
+                },
+              ].map(({ label, count, icon: Icon, tab: target }) => (
+                <button
+                  className="studio-metric"
+                  key={label}
+                  onClick={() => setTab(target)}
+                >
+                  <span>
+                    <Icon size={16} />
+                    {label}
+                  </span>
+                  <strong>{count ?? "—"}</strong>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {canEdit &&
+            ["planning", "interview", "pages", "quality"].includes(tab) && (
+              <label className="catalog-check sites-consent">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                />
+                {t("consent")}
+              </label>
+            )}
+          <Notice
+            t={t}
+            error={
+              a.error ??
+              runs.error ??
+              pages.error ??
+              ready.error ??
+              sources.error
+            }
+            saved={a.saved}
+          />
+          {tab === "guide" && (
+            <SiteGuide
+              site={site}
+              sources={sources.data}
+              pages={pages.data?.items}
+              runs={runs.data?.items}
+              locale={locale}
+              canEdit={canEdit}
+              busy={a.busy}
+              consent={consent}
+              setConsent={setConsent}
+              queue={(step) => a.run(() => queue(step))}
+              setTab={setTab}
+            />
+          )}
+          {tab === "design" && (
+            <SiteDesign
+              site={site}
+              runs={runs.data?.items ?? []}
+              locale={locale}
+              canEdit={canEdit}
+              onSave={() => {
+                load.reload();
+                runs.reload();
+                pages.reload();
+                ready.reload();
+              }}
+            />
+          )}
+          {tab === "business" && (
+            <BuyerWorkspace
+              key={site.revision}
+              site={site}
+              products={sources.data?.products ?? []}
+              locale={locale}
+              canEdit={canEdit}
+              onSave={() => load.reload()}
+            />
+          )}
+          {tab === "quality" && (
+            <SiteQuality
+              site={site}
+              locale={locale}
+              canEdit={canEdit}
+              canApprove={role === "admin"}
+              consent={consent}
+              runs={runs.data?.items ?? []}
+              onRun={(step, instructions) =>
+                queue(step, undefined, instructions)
+              }
+            />
+          )}
+          {tab === "planning" && (
+            <div className="studio-planner-layout">
+              <PlanEditor
+                key={site.planRevision}
+                site={site}
+                products={sources.data?.products ?? []}
+                t={t}
+                role={role}
+                done={(r) => {
+                  load.set(r);
+                  pages.reload();
+                  ready.reload();
+                }}
+              />
+              <aside className="studio-planner-rail">
+                <div className="studio-rail-heading">
+                  <Workflow size={20} />
+                  <h2>{t("planningAgent")}</h2>
+                </div>
+                <section>
+                  <h3>{t("sourceMaterial")}</h3>
+                  <dl>
+                    <div>
+                      <dt>{t("products")}</dt>
+                      <dd>{sources.data?.products.length ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("confirmedFacts")}</dt>
+                      <dd>{sources.data?.facts.length ?? "—"}</dd>
+                    </div>
+                  </dl>
+                  <Link to="?tab=business">
+                    {t("business")} <ChevronRight size={14} />
+                  </Link>
+                </section>
+                <section>
+                  <h3>{t("research")}</h3>
+                  <p>{t("researchHint")}</p>
                   {canEdit && (
                     <button
-                      className="secondary"
-                      disabled={!consent || !site.planConfirmed || a.busy}
-                      aria-label={t("generatePage") + " " + n.title}
-                      onClick={() => void a.run(() => queue("content", n.key))}
+                      disabled={!consent || a.busy}
+                      onClick={() => void a.run(() => queue("research"))}
                     >
-                      {t("generatePage")}
+                      <Network size={15} />
+                      {t("generateResearch")}
                     </button>
                   )}
-                  {p ? (
-                    <>
-                      <IssueList issues={p.issues} t={t} />
-                      <Link className="button secondary" to={"/pages/" + p.id}>
-                        {t("editPage")}
-                      </Link>
-                    </>
-                  ) : (
-                    canEdit && (
-                      <button
-                        disabled={a.busy}
-                        className="secondary"
-                        onClick={() =>
-                          void a.run(async () => {
-                            await api("/sites/" + id + "/pages", "POST", {
-                              nodeKey: n.key,
-                            });
-                            pages.reload();
-                            ready.reload();
-                          })
-                        }
-                      >
-                        {t("newPage")}
-                      </button>
-                    )
+                </section>
+                {runs.data?.items[0] && (
+                  <section>
+                    <h3>{t("latestActivity")}</h3>
+                    <p>
+                      {t(
+                        runs.data.items[0].step === "rewrite"
+                          ? "rewriteStep"
+                          : runs.data.items[0].step,
+                      )}{" "}
+                      · {t(runs.data.items[0].status)}
+                    </p>
+                    <Link to="?tab=runs">
+                      {t("viewExecution")} <ArrowRight size={14} />
+                    </Link>
+                  </section>
+                )}
+              </aside>
+            </div>
+          )}
+          {tab === "interview" && (
+            <>
+              <section className="catalog-panel">
+                <h2>{t("interview")}</h2>
+                <p>{t("interviewHint")}</p>
+                <Link to="/facts?status=candidate">{t("facts")}</Link>
+                {canEdit && (
+                  <button
+                    disabled={!consent || a.busy}
+                    onClick={() => void a.run(() => queue("interview"))}
+                  >
+                    {t("generateInterview")}
+                  </button>
+                )}
+              </section>
+              <Interview
+                siteId={id!}
+                runs={runs.data?.items ?? []}
+                t={t}
+                canEdit={canEdit}
+              />
+            </>
+          )}
+          {tab === "pages" && (
+            <>
+              <section className="catalog-panel">
+                <p>{t("contentHint")}</p>
+                {canEdit && (
+                  <button
+                    disabled={!consent || !site.planConfirmed || a.busy}
+                    onClick={() => void a.run(() => queue("content"))}
+                  >
+                    {t("generateContent")}
+                  </button>
+                )}
+                <p className="muted">{t("publishingHint")}</p>
+                <h2>
+                  {t(
+                    ready.data
+                      ? ready.data.ready
+                        ? "ready"
+                        : "notReady"
+                      : "loading",
                   )}
-                </article>
-              );
-            })}
-          </div>
-        </>
-      )}
-      {tab === "runs" && (
-        <RunList
-          runs={runs.data?.items}
-          locale={locale}
-          siteId={id!}
-          canEdit={canEdit}
-          refresh={runs.reload}
-          page={taskTrail.length}
-          hasMore={!!runs.data?.hasMore}
-          onNext={() => {
-            if (runs.data?.nextCursor)
-              setTaskHistory({
-                siteId: id,
-                cursors: [...taskTrail, runs.data.nextCursor],
-              });
-          }}
-          onPrevious={() =>
-            setTaskHistory({ siteId: id, cursors: taskTrail.slice(0, -1) })
-          }
-        />
-      )}
-      {tab === "settings" &&
-        (canEdit ? (
-          <SiteForm
-            key={site.revision}
-            site={site}
-            t={t}
-            locale={locale}
-            done={load.set}
-          />
-        ) : (
-          <p>{t("readOnly")}</p>
-        ))}
+                </h2>
+                <IssueList issues={ready.data?.issues ?? []} t={t} />
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    ready.reload();
+                    pages.reload();
+                  }}
+                >
+                  {t("readiness")}
+                </button>
+              </section>
+              <div className="sites-cards">
+                {site.plan?.nodes.map((n: Row) => {
+                  const p = pages.data?.items.find(
+                    (p: Row) => p.nodeKey === n.key,
+                  );
+                  return (
+                    <article className="catalog-panel" key={n.key}>
+                      <h2>{n.title}</h2>
+                      <p>{n.path}</p>
+                      <Badge status={p?.status ?? "missing"} t={t} />
+                      {canEdit && (
+                        <button
+                          className="secondary"
+                          disabled={!consent || !site.planConfirmed || a.busy}
+                          aria-label={t("generatePage") + " " + n.title}
+                          onClick={() =>
+                            void a.run(() => queue("content", n.key))
+                          }
+                        >
+                          {t("generatePage")}
+                        </button>
+                      )}
+                      {p ? (
+                        <>
+                          <IssueList issues={p.issues} t={t} />
+                          <Link
+                            className="button secondary"
+                            to={"/pages/" + p.id}
+                          >
+                            {t("editPage")}
+                          </Link>
+                        </>
+                      ) : (
+                        canEdit && (
+                          <button
+                            disabled={a.busy}
+                            className="secondary"
+                            onClick={() =>
+                              void a.run(async () => {
+                                await api("/sites/" + id + "/pages", "POST", {
+                                  nodeKey: n.key,
+                                });
+                                pages.reload();
+                                ready.reload();
+                              })
+                            }
+                          >
+                            {t("newPage")}
+                          </button>
+                        )
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {tab === "runs" && (
+            <RunList
+              runs={runs.data?.items}
+              locale={locale}
+              siteId={id!}
+              site={site}
+              onCreated={() => setTaskHistory({ siteId: id, cursors: [""] })}
+              canEdit={canEdit}
+              refresh={runs.reload}
+              page={taskTrail.length}
+              hasMore={!!runs.data?.hasMore}
+              onNext={() => {
+                if (runs.data?.nextCursor)
+                  setTaskHistory({
+                    siteId: id,
+                    cursors: [...taskTrail, runs.data.nextCursor],
+                  });
+              }}
+              onPrevious={() =>
+                setTaskHistory({ siteId: id, cursors: taskTrail.slice(0, -1) })
+              }
+            />
+          )}
+          {tab === "settings" &&
+            (canEdit ? (
+              <SiteForm
+                key={site.revision}
+                site={site}
+                t={t}
+                locale={locale}
+                done={load.set}
+              />
+            ) : (
+              <p>{t("readOnly")}</p>
+            ))}
+        </div>
+      </div>
     </Frame>
   );
 }
