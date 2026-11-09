@@ -124,7 +124,8 @@
   text-align: left;
   min-height: 20px;
 }
-.asset-name h3 {
+.asset-tile-info h3 {
+  min-width: 0;
   font-size: 13px;
   font-weight: 550;
   line-height: 1.6;
@@ -508,7 +509,8 @@
   .asset-tile-info {
     padding: 12px 38px 12px 10px;
   }
-  .asset-name h3 {
+  .asset-tile-info h3 {
+    min-width: 0;
     font-size: 12px;
   }
   .asset-tile-info p {
@@ -616,4 +618,13 @@
   .asset-tile-info {
     padding-right: 48px;
   }
+}
+
+.catalog .asset-name {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -92,14 +92,16 @@ export function AssetTile({
         <span className="asset-type">{t(asset.kind)}</span>
       </button>
       <div className="asset-tile-info">
-        <button
-          type="button"
-          className="asset-name"
-          onClick={onPreview}
-          title={asset.fileName}
-        >
-          <h3>{asset.fileName}</h3>
-        </button>
+        <h3>
+          <button
+            type="button"
+            className="asset-name"
+            onClick={onPreview}
+            title={asset.fileName}
+          >
+            {asset.fileName}
+          </button>
+        </h3>
         <p>
           {assetSize(asset.bytes)}
           {asset.width ? " · " + asset.width + " × " + asset.height : ""}
