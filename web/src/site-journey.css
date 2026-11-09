@@ -441,3 +441,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.site-guide .guide-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.site-guide .guide-consent input {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin-top: 3px;
+}
+@media (max-width: 760px) {
+  .site-guide .guide-next {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .site-guide .guide-steps {
+    grid-row: 2;
+    grid-column: 1;
+  }
+}

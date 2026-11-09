@@ -465,7 +465,8 @@ export function SiteWorkspace({ locale, role }: Props) {
       { "Idempotency-Key": crypto.randomUUID() },
     );
     runs.reload();
-    if (tab !== "guide") setTab(["review", "refine"].includes(step) ? "quality" : "runs");
+    if (tab !== "guide")
+      setTab(["review", "refine"].includes(step) ? "quality" : "runs");
   }
   return (
     <Frame
@@ -497,51 +498,54 @@ export function SiteWorkspace({ locale, role }: Props) {
         </>
       }
     >
-      <div
-        className="studio-metrics"
-        role="group"
-        aria-label={t("siteProgress")}
-      >
-        {[
-          {
-            label: t("planSize"),
-            count: site.plan?.nodes?.length ?? 0,
-            icon: Network,
-            tab: "planning",
-          },
-          {
-            label: t("draftedPages"),
-            count: pages.data?.items.length,
-            icon: FileText,
-            tab: "pages",
-          },
-          {
-            label: t("approvedPages"),
-            count: pages.data?.items.filter((p: Row) => p.status === "approved")
-              .length,
-            icon: CheckCheck,
-            tab: "pages",
-          },
-          {
-            label: t("recentTasks"),
-            count: runs.data?.items.length,
-            icon: Activity,
-            tab: "runs",
-          },
-        ].map(({ label, count, icon: Icon, tab: target }) => (
-          <button
-            className="studio-metric"
-            key={label}
-            onClick={() => setTab(target)}
-          >
-            <span>
-              <Icon size={16} />
-              {label}
-            </span>
-            <strong>{count ?? "—"}</strong>
-          </button>
-        ))}
-      </div>
+      {tab !== "guide" && (
+        <div
+          className="studio-metrics"
+          role="group"
+          aria-label={t("siteProgress")}
+        >
+          {[
+            {
+              label: t("planSize"),
+              count: site.plan?.nodes?.length ?? 0,
+              icon: Network,
+              tab: "planning",
+            },
+            {
+              label: t("draftedPages"),
+              count: pages.data?.items.length,
+              icon: FileText,
+              tab: "pages",
+            },
+            {
+              label: t("approvedPages"),
+              count: pages.data?.items.filter(
+                (p: Row) => p.status === "approved",
+              ).length,
+              icon: CheckCheck,
+              tab: "pages",
+            },
+            {
+              label: t("recentTasks"),
+              count: runs.data?.items.length,
+              icon: Activity,
+              tab: "runs",
+            },
+          ].map(({ label, count, icon: Icon, tab: target }) => (
+            <button
+              className="studio-metric"
+              key={label}
+              onClick={() => setTab(target)}
+            >
+              <span>
+                <Icon size={16} />
+                {label}
+              </span>
+              <strong>{count ?? "—"}</strong>
+            </button>
+          ))}
+        </div>
+      )}
       <nav className="sites-tabs" aria-label={t("sites")}>
         {workspaceTabs.map((k) => (
           <button
