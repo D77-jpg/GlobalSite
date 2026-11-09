@@ -1,22 +1,35 @@
 import { BuyerWorkspace, SiteQuality } from "./b2b";
 import { orderedNodes, moveNode } from "./site-plan";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import {
+  Activity,
+  ArrowRight,
+  CheckCheck,
+  ChevronRight,
+  FileText,
+  Layers3,
+  Network,
+  Workflow,
+} from "lucide-react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import { st, siteMessages } from "./sites-i18n";
 import type { Locale } from "./i18n";
 import "./sites.css";
+import "./studio.css";
 type Props = { locale: Locale; role: "admin" | "editor" | "viewer" };
 type Row = Record<string, any>;
 type T = ReturnType<typeof st>;
-function useLoad(path: string | null, poll = false) {
+export function useLoad(path: string | null, poll = false) {
   const [state, setState] = useState<{ path: string; value: any }>(),
     [error, setError] = useState<unknown>(),
     [version, setVersion] = useState(0);
   useEffect(() => {
     if (!path) return;
     let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    setError(undefined);
     const load = () =>
       api(path)
         .then((value) => {
@@ -27,12 +40,14 @@ function useLoad(path: string | null, poll = false) {
         })
         .catch((e) => {
           if (live) setError(e);
+        })
+        .finally(() => {
+          if (live && poll) timer = setTimeout(load, 2000);
         });
     void load();
-    const timer = poll ? setInterval(() => void load(), 2000) : undefined;
     return () => {
       live = false;
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [path, poll, version]);
   return {
@@ -98,7 +113,9 @@ function Frame({
   children,
   error,
   actions,
+  banner = false,
 }: {
+  banner?: boolean;
   title: string;
   sub?: string;
   t: T;
@@ -108,7 +125,7 @@ function Frame({
 }) {
   return (
     <div className="catalog sites-workspace">
-      <header className="catalog-heading">
+      <header className={"catalog-heading" + (banner ? " studio-banner" : "")}>
         <div>
           <h1>{title}</h1>
           {sub && <p className="muted">{sub}</p>}
@@ -158,12 +175,14 @@ export function LatestSitePreview({ locale }: { locale: Locale }) {
 }
 export function SitesPage({ locale, role }: Props) {
   const t = st(locale),
-    [cursor, setCursor] = useState(""),
+    [cursorHistory, setCursorHistory] = useState<string[]>([""]),
+    cursor = cursorHistory[cursorHistory.length - 1],
     load = useLoad("/sites" + (cursor ? "?cursor=" + cursor : "")),
     [creating, setCreating] = useState(false);
   return (
     <Frame
       title={t("sites")}
+      banner
       sub={t("sitesSub")}
       t={t}
       error={load.error}
@@ -179,18 +198,23 @@ export function SitesPage({ locale, role }: Props) {
           t={t}
           done={() => {
             setCreating(false);
+            setCursorHistory([""]);
             load.reload();
           }}
         />
       )}
-      <div className="sites-cards">
+      <div className="studio-site-list">
         {!load.data ? (
-          <p>{t("loading")}</p>
+          !load.error && <p role="status">{t("loading")}</p>
         ) : !load.data.items.length ? (
-          <p className="catalog-empty">{t("empty")}</p>
+          <div className="catalog-empty studio-empty">
+            <Network aria-hidden="true" />
+            <strong>{t("noSites")}</strong>
+            <p>{t(role === "viewer" ? "noSitesViewer" : "noSitesAction")}</p>
+          </div>
         ) : (
           load.data.items.map((s: Row) => (
-            <article className="catalog-panel" key={s.id}>
+            <article className="studio-site-row" key={s.id}>
               <div
                 className="sites-brand"
                 style={{ background: s.brandColor }}
@@ -198,13 +222,15 @@ export function SitesPage({ locale, role }: Props) {
               >
                 {s.name.slice(0, 1)}
               </div>
-              <h2>
-                <Link to={"/sites/" + s.id}>{s.name}</Link>
-              </h2>
-              <p>
-                {templateLabels[s.templateId]?.[locale === "zh" ? 0 : 1]} ·{" "}
-                {s.targetMarkets.join(", ")}
-              </p>
+              <div className="studio-site-title">
+                <h2>
+                  <Link to={"/sites/" + s.id}>{s.name}</Link>
+                </h2>
+                <p>
+                  {templateLabels[s.templateId]?.[locale === "zh" ? 0 : 1]} ·{" "}
+                  {s.targetMarkets.join(", ")}
+                </p>
+              </div>
               <div className="catalog-actions">
                 <Badge status={s.status} t={t} />
                 <Badge
@@ -212,26 +238,47 @@ export function SitesPage({ locale, role }: Props) {
                   t={t}
                 />
               </div>
-              <Link
-                className="button primary"
-                to={"/sites/" + s.id + "/preview"}
-              >
-                {t("previewSite")}
-              </Link>{" "}
-              <Link className="button secondary" to={"/sites/" + s.id}>
-                {t("editPage")}
-              </Link>
+              <div className="studio-site-links">
+                <Link to={"/sites/" + s.id + "?tab=runs"}>
+                  <Activity size={15} />
+                  {t("runs")}
+                </Link>
+                <Link to={"/sites/" + s.id + "?tab=pages"}>
+                  <CheckCheck size={15} />
+                  {t("pages")}
+                </Link>
+                <Link
+                  className="button secondary"
+                  to={"/sites/" + s.id + "/preview"}
+                >
+                  {t("previewSite")}
+                  <ArrowRight size={15} />
+                </Link>
+              </div>
             </article>
           ))
         )}
       </div>
-      {load.data?.hasMore && (
-        <button
-          className="secondary"
-          onClick={() => setCursor(load.data.nextCursor)}
-        >
-          {t("more")}
-        </button>
+      {(cursor || load.data?.hasMore) && (
+        <nav className="studio-pagination" aria-label={t("sitePagination")}>
+          <button
+            className="secondary"
+            disabled={!cursor}
+            onClick={() => setCursorHistory((h) => h.slice(0, -1))}
+          >
+            {t("prevPage")}
+          </button>
+          <span>{cursorHistory.length}</span>
+          <button
+            className="secondary"
+            disabled={!load.data?.hasMore}
+            onClick={() =>
+              setCursorHistory((h) => [...h, load.data.nextCursor])
+            }
+          >
+            {t("nextPage")}
+          </button>
+        </nav>
       )}
     </Frame>
   );
@@ -373,6 +420,16 @@ function SiteForm({
     </form>
   );
 }
+const workspaceTabs = [
+  "planning",
+  "interview",
+  "business",
+  "pages",
+  "quality",
+  "runs",
+  "settings",
+];
+
 export function SiteWorkspace({ locale, role }: Props) {
   const { id } = useParams(),
     t = st(locale),
@@ -381,9 +438,18 @@ export function SiteWorkspace({ locale, role }: Props) {
     runs = useLoad("/sites/" + id + "/agent-runs", true),
     pages = useLoad("/sites/" + id + "/pages"),
     ready = useLoad("/sites/" + id + "/readiness"),
-    [tab, setTab] = useState("planning"),
+    [query, setQuery] = useSearchParams(),
+    requestedTab = query.get("tab") ?? "planning",
+    tab = workspaceTabs.includes(requestedTab) ? requestedTab : "planning",
     [consent, setConsent] = useState(false),
     a = useAction();
+  function setTab(next: string) {
+    setQuery((previous) => {
+      const params = new URLSearchParams(previous);
+      params.set("tab", next);
+      return params;
+    });
+  }
   const runFingerprint = runs.data?.items
     .map((r: Row) => r.id + ":" + r.status)
     .join("|");
@@ -396,7 +462,7 @@ export function SiteWorkspace({ locale, role }: Props) {
   if (!load.data)
     return (
       <Frame title={t("sites")} t={t} error={load.error}>
-        <p>{t("loading")}</p>
+        {!load.error && <p role="status">{t("loading")}</p>}
       </Frame>
     );
   const site = load.data,
@@ -419,6 +485,7 @@ export function SiteWorkspace({ locale, role }: Props) {
   return (
     <Frame
       title={site.name}
+      banner
       sub={site.targetMarkets.join(", ") + " · English"}
       t={t}
       error={load.error}
@@ -445,16 +512,53 @@ export function SiteWorkspace({ locale, role }: Props) {
         </>
       }
     >
-      <nav className="sites-tabs" aria-label={t("sites")}>
+      <div
+        className="studio-metrics"
+        role="group"
+        aria-label={t("siteProgress")}
+      >
         {[
-          "business",
-          "planning",
-          "interview",
-          "pages",
-          "quality",
-          "runs",
-          "settings",
-        ].map((k) => (
+          {
+            label: t("planSize"),
+            count: site.plan?.nodes?.length ?? 0,
+            icon: Network,
+            tab: "planning",
+          },
+          {
+            label: t("draftedPages"),
+            count: pages.data?.items.length,
+            icon: FileText,
+            tab: "pages",
+          },
+          {
+            label: t("approvedPages"),
+            count: pages.data?.items.filter((p: Row) => p.status === "approved")
+              .length,
+            icon: CheckCheck,
+            tab: "pages",
+          },
+          {
+            label: t("recentTasks"),
+            count: runs.data?.items.length,
+            icon: Activity,
+            tab: "runs",
+          },
+        ].map(({ label, count, icon: Icon, tab: target }) => (
+          <button
+            className="studio-metric"
+            key={label}
+            onClick={() => setTab(target)}
+          >
+            <span>
+              <Icon size={16} />
+              {label}
+            </span>
+            <strong>{count ?? "—"}</strong>
+          </button>
+        ))}
+      </div>
+      <nav className="sites-tabs" aria-label={t("sites")}>
+        {workspaceTabs.map((k) => (
           <button
             key={k}
             className={tab === k ? "" : "secondary"}
@@ -465,17 +569,24 @@ export function SiteWorkspace({ locale, role }: Props) {
           </button>
         ))}
       </nav>
-      {canEdit && (
-        <label className="catalog-check sites-consent">
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(e) => setConsent(e.target.checked)}
-          />
-          {t("consent")}
-        </label>
-      )}
-      <Notice t={t} error={a.error} saved={a.saved} />
+      {canEdit &&
+        ["planning", "interview", "pages", "quality"].includes(tab) && (
+          <label className="catalog-check sites-consent">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+            />
+            {t("consent")}
+          </label>
+        )}
+      <Notice
+        t={t}
+        error={
+          a.error ?? runs.error ?? pages.error ?? ready.error ?? sources.error
+        }
+        saved={a.saved}
+      />
       {tab === "business" && (
         <BuyerWorkspace
           key={site.revision}
@@ -498,18 +609,7 @@ export function SiteWorkspace({ locale, role }: Props) {
         />
       )}
       {tab === "planning" && (
-        <>
-          <div className="catalog-panel">
-            <p>{t("researchHint")}</p>
-            {canEdit && (
-              <button
-                disabled={!consent || a.busy}
-                onClick={() => void a.run(() => queue("research"))}
-              >
-                {t("generateResearch")}
-              </button>
-            )}
-          </div>
+        <div className="studio-planner-layout">
           <PlanEditor
             key={site.planRevision}
             site={site}
@@ -522,7 +622,58 @@ export function SiteWorkspace({ locale, role }: Props) {
               ready.reload();
             }}
           />
-        </>
+          <aside className="studio-planner-rail">
+            <div className="studio-rail-heading">
+              <Workflow size={20} />
+              <h2>{t("planningAgent")}</h2>
+            </div>
+            <section>
+              <h3>{t("sourceMaterial")}</h3>
+              <dl>
+                <div>
+                  <dt>{t("products")}</dt>
+                  <dd>{sources.data?.products.length ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>{t("confirmedFacts")}</dt>
+                  <dd>{sources.data?.facts.length ?? "—"}</dd>
+                </div>
+              </dl>
+              <Link to="?tab=business">
+                {t("business")} <ChevronRight size={14} />
+              </Link>
+            </section>
+            <section>
+              <h3>{t("research")}</h3>
+              <p>{t("researchHint")}</p>
+              {canEdit && (
+                <button
+                  disabled={!consent || a.busy}
+                  onClick={() => void a.run(() => queue("research"))}
+                >
+                  <Network size={15} />
+                  {t("generateResearch")}
+                </button>
+              )}
+            </section>
+            {runs.data?.items[0] && (
+              <section>
+                <h3>{t("latestActivity")}</h3>
+                <p>
+                  {t(
+                    runs.data.items[0].step === "rewrite"
+                      ? "rewriteStep"
+                      : runs.data.items[0].step,
+                  )}{" "}
+                  · {t(runs.data.items[0].status)}
+                </p>
+                <Link to="?tab=runs">
+                  {t("viewExecution")} <ArrowRight size={14} />
+                </Link>
+              </section>
+            )}
+          </aside>
+        </div>
       )}
       {tab === "interview" && (
         <>
@@ -560,7 +711,15 @@ export function SiteWorkspace({ locale, role }: Props) {
               </button>
             )}
             <p className="muted">{t("publishingHint")}</p>
-            <h2>{t(ready.data?.ready ? "ready" : "notReady")}</h2>
+            <h2>
+              {t(
+                ready.data
+                  ? ready.data.ready
+                    ? "ready"
+                    : "notReady"
+                  : "loading",
+              )}
+            </h2>
             <IssueList issues={ready.data?.issues ?? []} t={t} />
             <button
               className="secondary"
@@ -671,6 +830,7 @@ function PlanEditor({
       },
     ],
     [nodes, setNodes] = useState<Row[]>(defaults),
+    [selectedNode, selectNode] = useState<string>(defaults[0]?.key),
     [dirty, setDirty] = useState(false),
     [drag, setDrag] = useState(""),
     a = useAction(),
@@ -683,6 +843,10 @@ function PlanEditor({
     setDirty(true);
     setNodes((old) => moveNode(old, key, target));
   };
+  const ordered = orderedNodes(nodes);
+  const current = ordered.some((n) => n.key === selectedNode)
+    ? selectedNode
+    : ordered[0]?.key;
   return (
     <section className="catalog-panel">
       <div className="catalog-heading">
@@ -693,304 +857,337 @@ function PlanEditor({
         />
       </div>
       <p className="muted">{t("dragHint")}</p>
-      <div className="sites-keywords">
-        {site.plan?.clusters.map((c: Row) => (
-          <article className="catalog-subpanel" key={c.key}>
-            <strong>{c.label}</strong>
-            <small>{t(c.intent)}</small>
-            <p>{c.keywords.join(" · ")}</p>
-          </article>
-        ))}
-      </div>
-      <div className="sites-tree">
-        {orderedNodes(nodes).map((n) => (
-          <article
-            key={n.key}
-            draggable={canEdit && n.type !== "home"}
-            onDragStart={() => setDrag(n.key)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (canEdit) move(drag, n.key);
-            }}
-            className="sites-tree-node"
-            style={{ marginLeft: Math.min(n.depth, 3) * 16 }}
-          >
-            <div className="catalog-heading">
-              <strong>{n.title}</strong>
-              <div className="catalog-actions">
-                {canEdit && (
-                  <>
-                    <button
-                      type="button"
-                      className="secondary"
-                      aria-label={t("up") + " " + n.title}
-                      onClick={() => {
-                        const list = orderedNodes(nodes).filter(
-                            (x) => x.parentKey === n.parentKey,
-                          ),
-                          i = list.findIndex((x) => x.key === n.key);
-                        if (i > 0) move(n.key, list[i - 1].key);
-                      }}
-                    >
-                      {t("up")}
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      aria-label={t("down") + " " + n.title}
-                      onClick={() => {
-                        const list = orderedNodes(nodes).filter(
-                            (x) => x.parentKey === n.parentKey,
-                          ),
-                          i = list.findIndex((x) => x.key === n.key);
-                        if (i >= 0 && i < list.length - 1)
-                          move(list[i + 1].key, n.key);
-                      }}
-                    >
-                      {t("down")}
-                    </button>
-                    {n.type !== "home" && (
+      {site.plan?.clusters?.length > 0 && (
+        <details className="studio-clusters">
+          <summary>
+            {t("keywordClusters")} <span>{site.plan.clusters.length}</span>
+          </summary>
+          <div className="sites-keywords">
+            {site.plan?.clusters.map((c: Row) => (
+              <article className="catalog-subpanel" key={c.key}>
+                <strong>{c.label}</strong>
+                <small>{t(c.intent)}</small>
+                <p>{c.keywords.join(" · ")}</p>
+              </article>
+            ))}
+          </div>
+        </details>
+      )}
+      <div className="studio-plan-layout">
+        <nav aria-label={t("pageOutline")} className="studio-outline">
+          <h3>
+            <Network size={16} />
+            {t("pageOutline")}
+          </h3>
+          {ordered.map((n) => (
+            <button
+              key={n.key}
+              aria-pressed={n.key === current}
+              onClick={() => selectNode(n.key)}
+              draggable={canEdit && n.type !== "home"}
+              onDragStart={() => setDrag(n.key)}
+              onDragEnd={() => setDrag("")}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (canEdit && drag) move(drag, n.key);
+              }}
+              style={{ paddingInlineStart: 12 + Math.min(n.depth, 3) * 10 }}
+            >
+              <FileText size={14} />
+              <span>
+                <strong>{n.title}</strong>
+                <small>{n.path}</small>
+              </span>
+              <ChevronRight size={14} />
+            </button>
+          ))}
+        </nav>
+        <div className="sites-tree">
+          {ordered.map((n) => (
+            <article
+              key={n.key}
+              hidden={n.key !== current}
+              className="sites-tree-node"
+            >
+              <div className="catalog-heading">
+                <strong>{n.title}</strong>
+                <div className="catalog-actions">
+                  {canEdit && (
+                    <>
                       <button
                         type="button"
                         className="secondary"
+                        aria-label={t("up") + " " + n.title}
                         onClick={() => {
-                          setDirty(true);
-                          setNodes((old) =>
-                            old
-                              .filter((x) => x.key !== n.key)
-                              .map((x) =>
-                                x.parentKey === n.key
-                                  ? { ...x, parentKey: n.parentKey }
-                                  : x,
-                              ),
-                          );
+                          const list = orderedNodes(nodes).filter(
+                              (x) => x.parentKey === n.parentKey,
+                            ),
+                            i = list.findIndex((x) => x.key === n.key);
+                          if (i > 0) move(n.key, list[i - 1].key);
                         }}
                       >
-                        {t("remove")}
+                        {t("up")}
                       </button>
-                    )}
-                  </>
-                )}
+                      <button
+                        type="button"
+                        className="secondary"
+                        aria-label={t("down") + " " + n.title}
+                        onClick={() => {
+                          const list = orderedNodes(nodes).filter(
+                              (x) => x.parentKey === n.parentKey,
+                            ),
+                            i = list.findIndex((x) => x.key === n.key);
+                          if (i >= 0 && i < list.length - 1)
+                            move(list[i + 1].key, n.key);
+                        }}
+                      >
+                        {t("down")}
+                      </button>
+                      {n.type !== "home" && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => {
+                            setDirty(true);
+                            setNodes((old) =>
+                              old
+                                .filter((x) => x.key !== n.key)
+                                .map((x) =>
+                                  x.parentKey === n.key
+                                    ? { ...x, parentKey: n.parentKey }
+                                    : x,
+                                ),
+                            );
+                          }}
+                        >
+                          {t("remove")}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-            <fieldset disabled={!canEdit || a.busy}>
-              <div className="catalog-grid">
-                <label>
-                  {t("pageTitle")}
-                  <input
-                    maxLength={120}
-                    value={n.title}
-                    onChange={(e) => update(n.key, { title: e.target.value })}
-                  />
-                </label>
-                <label>
-                  {t("path")}
-                  <input
-                    maxLength={160}
-                    value={n.path}
-                    onChange={(e) => update(n.key, { path: e.target.value })}
-                  />
-                </label>
-                <label>
-                  {t("type")}
-                  <select
-                    aria-label={t("type") + " " + n.key}
-                    value={n.type}
-                    disabled={n.type === "home"}
-                    onChange={(e) =>
-                      update(n.key, { type: e.target.value, productId: null })
-                    }
-                  >
-                    {[
-                      "home",
-                      "category",
-                      "product",
-                      "about",
-                      "factory",
-                      "certifications",
-                      "faq",
-                      "contact",
-                      "customization",
-                      "resources",
-                      "solution",
-                    ].map((k) => (
-                      <option key={k} value={k}>
-                        {t(k)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  {t("parent")}
-                  <select
-                    aria-label={t("parent") + " " + n.key}
-                    value={n.parentKey ?? ""}
-                    disabled={n.type === "home"}
-                    onChange={(e) =>
-                      update(n.key, { parentKey: e.target.value || null })
-                    }
-                  >
-                    <option value="">{t("none")}</option>
-                    {nodes
-                      .filter((x) => x.key !== n.key)
-                      .map((x) => (
-                        <option value={x.key} key={x.key}>
-                          {x.title}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label>
-                  {t("keywords")}
-                  <input
-                    value={n.keywords.join(", ")}
-                    onChange={(e) =>
-                      update(n.key, { keywords: split(e.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  {t("intent")}
-                  <select
-                    aria-label={t("intent") + " " + n.key}
-                    value={n.intent}
-                    onChange={(e) => update(n.key, { intent: e.target.value })}
-                  >
-                    {["learn", "compare", "specify", "source", "buy"].map(
-                      (k) => (
-                        <option key={k} value={k}>
-                          {t(k)}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </label>
-                {n.type === "product" && (
+              <fieldset disabled={!canEdit || a.busy}>
+                <div className="catalog-grid">
                   <label>
-                    {t("product")}
+                    {t("pageTitle")}
+                    <input
+                      maxLength={120}
+                      value={n.title}
+                      onChange={(e) => update(n.key, { title: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {t("path")}
+                    <input
+                      maxLength={160}
+                      value={n.path}
+                      onChange={(e) => update(n.key, { path: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {t("type")}
                     <select
-                      value={n.productId ?? ""}
-                      aria-label={t("product") + " " + n.key}
+                      aria-label={t("type") + " " + n.key}
+                      value={n.type}
+                      disabled={n.type === "home"}
                       onChange={(e) =>
-                        update(n.key, { productId: e.target.value || null })
+                        update(n.key, { type: e.target.value, productId: null })
                       }
                     >
-                      <option value="">{t("none")}</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
+                      {[
+                        "home",
+                        "category",
+                        "product",
+                        "about",
+                        "factory",
+                        "certifications",
+                        "faq",
+                        "contact",
+                        "customization",
+                        "resources",
+                        "solution",
+                      ].map((k) => (
+                        <option key={k} value={k}>
+                          {t(k)}
                         </option>
                       ))}
                     </select>
                   </label>
+                  <label>
+                    {t("parent")}
+                    <select
+                      aria-label={t("parent") + " " + n.key}
+                      value={n.parentKey ?? ""}
+                      disabled={n.type === "home"}
+                      onChange={(e) =>
+                        update(n.key, { parentKey: e.target.value || null })
+                      }
+                    >
+                      <option value="">{t("none")}</option>
+                      {nodes
+                        .filter((x) => x.key !== n.key)
+                        .map((x) => (
+                          <option value={x.key} key={x.key}>
+                            {x.title}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t("keywords")}
+                    <input
+                      value={n.keywords.join(", ")}
+                      onChange={(e) =>
+                        update(n.key, { keywords: split(e.target.value) })
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t("intent")}
+                    <select
+                      aria-label={t("intent") + " " + n.key}
+                      value={n.intent}
+                      onChange={(e) =>
+                        update(n.key, { intent: e.target.value })
+                      }
+                    >
+                      {["learn", "compare", "specify", "source", "buy"].map(
+                        (k) => (
+                          <option key={k} value={k}>
+                            {t(k)}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                  {n.type === "product" && (
+                    <label>
+                      {t("product")}
+                      <select
+                        value={n.productId ?? ""}
+                        aria-label={t("product") + " " + n.key}
+                        onChange={(e) =>
+                          update(n.key, { productId: e.target.value || null })
+                        }
+                      >
+                        <option value="">{t("none")}</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                {n.brief ? (
+                  <details open>
+                    <summary>{t("pageBriefs")}</summary>
+                    <label>
+                      {t("briefPurpose")}
+                      <textarea
+                        maxLength={240}
+                        value={n.brief.purpose}
+                        onChange={(e) =>
+                          update(n.key, {
+                            brief: { ...n.brief, purpose: e.target.value },
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      {t("briefQuestions")}
+                      <textarea
+                        rows={4}
+                        value={n.brief.buyerQuestions.join("\n")}
+                        onChange={(e) =>
+                          update(n.key, {
+                            brief: {
+                              ...n.brief,
+                              buyerQuestions: e.target.value.split("\n"),
+                            },
+                          })
+                        }
+                        onBlur={() =>
+                          update(n.key, {
+                            brief: {
+                              ...n.brief,
+                              buyerQuestions: n.brief.buyerQuestions
+                                .map((v: string) => v.trim())
+                                .filter(Boolean),
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                    <fieldset>
+                      <legend>{t("briefSections")}</legend>
+                      <div className="catalog-grid">
+                        {[
+                          "text",
+                          "image",
+                          "category-grid",
+                          "product-grid",
+                          "split",
+                          "features",
+                          "specs",
+                          "comparison",
+                          "customization",
+                          "process",
+                          "evidence",
+                          "case-study",
+                          "downloads",
+                          "faq",
+                          "cta",
+                        ].map((k) => (
+                          <label key={k} className="catalog-check">
+                            <input
+                              type="checkbox"
+                              checked={n.brief.sections.includes(k)}
+                              onChange={(e) =>
+                                update(n.key, {
+                                  brief: {
+                                    ...n.brief,
+                                    sections: e.target.checked
+                                      ? [...n.brief.sections, k]
+                                      : n.brief.sections.filter(
+                                          (v: string) => v !== k,
+                                        ),
+                                  },
+                                })
+                              }
+                            />
+                            {t(k)}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  </details>
+                ) : (
+                  canEdit && (
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        update(n.key, {
+                          brief: {
+                            purpose: "",
+                            buyerQuestions: [],
+                            requiredFactTypes: [],
+                            sections: [],
+                          },
+                        })
+                      }
+                    >
+                      {t("addPageBrief")}
+                    </button>
+                  )
                 )}
-              </div>
-              {n.brief ? (
-                <details open>
-                  <summary>{t("pageBriefs")}</summary>
-                  <label>
-                    {t("briefPurpose")}
-                    <textarea
-                      maxLength={240}
-                      value={n.brief.purpose}
-                      onChange={(e) =>
-                        update(n.key, {
-                          brief: { ...n.brief, purpose: e.target.value },
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    {t("briefQuestions")}
-                    <textarea
-                      rows={4}
-                      value={n.brief.buyerQuestions.join("\n")}
-                      onChange={(e) =>
-                        update(n.key, {
-                          brief: {
-                            ...n.brief,
-                            buyerQuestions: e.target.value.split("\n"),
-                          },
-                        })
-                      }
-                      onBlur={() =>
-                        update(n.key, {
-                          brief: {
-                            ...n.brief,
-                            buyerQuestions: n.brief.buyerQuestions
-                              .map((v: string) => v.trim())
-                              .filter(Boolean),
-                          },
-                        })
-                      }
-                    />
-                  </label>
-                  <fieldset>
-                    <legend>{t("briefSections")}</legend>
-                    <div className="catalog-grid">
-                      {[
-                        "text",
-                        "image",
-                        "category-grid",
-                        "product-grid",
-                        "split",
-                        "features",
-                        "specs",
-                        "comparison",
-                        "customization",
-                        "process",
-                        "evidence",
-                        "case-study",
-                        "downloads",
-                        "faq",
-                        "cta",
-                      ].map((k) => (
-                        <label key={k} className="catalog-check">
-                          <input
-                            type="checkbox"
-                            checked={n.brief.sections.includes(k)}
-                            onChange={(e) =>
-                              update(n.key, {
-                                brief: {
-                                  ...n.brief,
-                                  sections: e.target.checked
-                                    ? [...n.brief.sections, k]
-                                    : n.brief.sections.filter(
-                                        (v: string) => v !== k,
-                                      ),
-                                },
-                              })
-                            }
-                          />
-                          {t(k)}
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                </details>
-              ) : (
-                canEdit && (
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      update(n.key, {
-                        brief: {
-                          purpose: "",
-                          buyerQuestions: [],
-                          requiredFactTypes: [],
-                          sections: [],
-                        },
-                      })
-                    }
-                  >
-                    {t("addPageBrief")}
-                  </button>
-                )
-              )}
-            </fieldset>
-          </article>
-        ))}
+              </fieldset>
+            </article>
+          ))}
+        </div>
       </div>
       {canEdit && (
         <div className="catalog-actions">
@@ -999,6 +1196,7 @@ function PlanEditor({
             disabled={nodes.length >= 50}
             onClick={() => {
               const key = "page-" + crypto.randomUUID().slice(0, 8);
+              selectNode(key);
               setDirty(true);
               setNodes((old) => [
                 ...old,
@@ -1132,7 +1330,7 @@ function Interview({
     </section>
   );
 }
-function RunList({
+export function RunList({
   runs,
   t,
   canEdit,
@@ -1145,22 +1343,47 @@ function RunList({
 }) {
   const a = useAction();
   return (
-    <section className="catalog-panel">
-      <h2>{t("runs")}</h2>
+    <section className="catalog-panel studio-runs">
+      <h2>
+        <Workflow size={20} />
+        {t("runs")}
+      </h2>
       <Notice t={t} error={a.error} />
       {!runs ? (
         <p>{t("loading")}</p>
       ) : !runs.length ? (
-        <p>{t("empty")}</p>
+        <div className="studio-empty">
+          <Activity aria-hidden="true" />
+          <strong>{t("noTasks")}</strong>
+          <p>{t("noTasksHint")}</p>
+        </div>
       ) : (
         runs.map((r) => (
-          <article className="catalog-subpanel" key={r.id}>
+          <article className="studio-run" key={r.id}>
             <div className="catalog-heading">
               <h3>{t(r.step === "rewrite" ? "rewriteStep" : r.step)}</h3>
               {r.cancelRequested && r.active && (
                 <p role="status">{t("cancelling")}</p>
               )}
               <Badge status={r.status} t={t} />
+            </div>
+            <div className="studio-run-progress">
+              <span>
+                {t("stepsCompleted")}{" "}
+                <strong>
+                  {r.steps.filter((u: Row) => u.status === "succeeded").length}{" "}
+                  / {r.steps.length}
+                </strong>
+              </span>
+              {r.steps.length > 0 && (
+                <progress
+                  aria-label={t("stepsCompleted")}
+                  value={
+                    r.steps.filter((u: Row) => u.status === "succeeded").length
+                  }
+                  max={r.steps.length}
+                />
+              )}
             </div>
             <p className="muted">
               {t("inputSummary")}: {t("products")} {r.inputSummary.products} ·{" "}
@@ -1179,13 +1402,19 @@ function RunList({
             {r.steps.map((s: Row) => (
               <details key={s.key}>
                 <summary>
-                  {s.key} · {t(s.status)} · {t("attempts")} {s.attempts} ·{" "}
-                  {s.tokens} tokens
+                  {s.inputSummary?.pageTitle || s.key} · {t(s.status)} ·{" "}
+                  {t("attempts")} {s.attempts} · {s.tokens} tokens
                 </summary>
                 <p>
                   {t("elapsed")}: {(s.elapsedMs / 1000).toFixed(1)}{" "}
                   {t("seconds")}
                 </p>
+                {s.output?.screenshots?.length > 0 && (
+                  <Link to={"/sites/" + r.siteId + "?tab=quality"}>
+                    {t("openReport")} · {s.output.screenshots.length}{" "}
+                    {t("screenCaptures")}
+                  </Link>
+                )}
                 {s.output?.pageId && (
                   <Link to={"/pages/" + s.output.pageId}>{t("editPage")}</Link>
                 )}
@@ -1389,6 +1618,9 @@ function PageEditor({
     }),
     [dirty, setDirty] = useState(false),
     [preview, setPreview] = useState(""),
+    [editingBlock, setEditingBlock] = useState<string>(
+      page.blocks[0]?.key ?? "",
+    ),
     [shotBrief, setShotBrief] = useState(
       [
         page.presentation?.headline ?? page.title,
@@ -1430,10 +1662,14 @@ function PageEditor({
         b.key === key ? { ...b, ...patch } : b,
       ),
     });
+  const selectedBlock = data.blocks.some((b: Row) => b.key === editingBlock)
+    ? editingBlock
+    : data.blocks[0]?.key;
   const locked = a.busy || !!(job && run.data?.active);
   return (
     <Frame
-      title={t("editPage") + " · " + page.path}
+      title={page.title}
+      sub={t("editPage") + " · " + page.path}
       t={t}
       error={sources.error}
       actions={
@@ -1447,6 +1683,16 @@ function PageEditor({
     >
       <Notice t={t} error={a.error} saved={a.saved} />
       <IssueList issues={page.issues} t={t} />
+      <nav className="studio-jumps" aria-label={t("editorJump")}>
+        <Layers3 size={15} />
+        <a href="#editor-meta">{t("metaFields")}</a>
+        {data.blocks.length > 0 && (
+          <a href="#editor-blocks">
+            {t("blockEditor")} · {data.blocks.length}
+          </a>
+        )}
+        <a href="#editor-review">{t("pageReview")}</a>
+      </nav>
       {canEdit && (
         <details className="catalog-panel">
           <summary>{t("coverStudio")}</summary>
@@ -1542,7 +1788,11 @@ function PageEditor({
         </details>
       )}
       {dirty && <p className="notice">{t("saveBefore")}</p>}
-      <fieldset disabled={!canEdit || locked} className="catalog-panel">
+      <fieldset
+        id="editor-meta"
+        disabled={!canEdit || locked}
+        className="catalog-panel"
+      >
         <div className="catalog-grid">
           <label>
             {t("seoTitle")}
@@ -1729,493 +1979,548 @@ function PageEditor({
           </button>
         )
       )}
-      {data.blocks.map((b: Row, index: number) => (
-        <section
-          className={
-            "catalog-panel sites-block " +
-            (page.issues.some((i: Row) => i.blockKey === b.key)
-              ? "sites-block-error"
-              : "")
-          }
-          key={b.key}
+      {data.blocks.length > 0 && (
+        <nav
+          id="editor-blocks"
+          className="studio-block-nav"
+          aria-label={t("blockEditor")}
         >
-          <div className="catalog-heading">
-            <h2>
-              {t("jobStep")} {index + 1} · {b.key}
-            </h2>
-            {canEdit && (
-              <button
-                className="secondary"
-                disabled={locked}
-                onClick={() =>
-                  update({
-                    blocks: data.blocks.filter((x: Row) => x.key !== b.key),
-                  })
-                }
-              >
-                {t("remove")}
-              </button>
-            )}
-          </div>
-          <IssueList
-            issues={page.issues.filter((i: Row) => i.blockKey === b.key)}
-            t={t}
-          />
-          <fieldset disabled={!canEdit || locked}>
-            <div className="catalog-grid">
-              <label>
-                {t("heading")}
-                <input
-                  maxLength={160}
-                  value={b.heading}
-                  onChange={(e) =>
-                    blockUpdate(b.key, { heading: e.target.value })
-                  }
-                />
-              </label>
-              <label>
-                {t("type")}
-                <select
-                  aria-label={t("type") + " " + b.key}
-                  value={b.type}
-                  onChange={(e) =>
-                    blockUpdate(b.key, {
-                      type: e.target.value,
-                      ...(["specs", "comparison"].includes(e.target.value) &&
-                      !b.table
-                        ? {
-                            table: {
-                              columns: ["Specification", "Value"],
-                              rows: [],
-                            },
-                          }
-                        : {}),
-                    })
-                  }
-                >
-                  {[
-                    "text",
-                    "specs",
-                    "faq",
-                    "image",
-                    "category-grid",
-                    "product-grid",
-                    "split",
-                    "features",
-                    "process",
-                    "customization",
-                    "evidence",
-                    "case-study",
-                    "downloads",
-                    "cta",
-                    "comparison",
-                  ].map((k) => (
-                    <option key={k} value={k}>
-                      {t(k)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <label>
-              {t("body")}
-              <textarea
-                aria-label={t("body")}
-                rows={5}
-                maxLength={6000}
-                value={b.body}
-                onChange={(e) => blockUpdate(b.key, { body: e.target.value })}
+          {data.blocks.map((b: Row, i: number) => (
+            <button
+              key={b.key}
+              aria-pressed={b.key === selectedBlock}
+              onClick={() => setEditingBlock(b.key)}
+            >
+              <span>{i + 1}</span>
+              {b.heading || b.key}
+              {page.issues.some((v: Row) => v.blockKey === b.key) && (
+                <small>{t("needsEvidence")}</small>
+              )}
+            </button>
+          ))}
+        </nav>
+      )}
+      {data.blocks.map(
+        (b: Row, index: number) =>
+          b.key === selectedBlock && (
+            <section
+              className={
+                "catalog-panel sites-block " +
+                (page.issues.some((i: Row) => i.blockKey === b.key)
+                  ? "sites-block-error"
+                  : "")
+              }
+              key={b.key}
+            >
+              <div className="catalog-heading">
+                <h2>
+                  {t("jobStep")} {index + 1} · {b.key}
+                </h2>
+                {canEdit && (
+                  <button
+                    className="secondary"
+                    disabled={locked}
+                    onClick={() =>
+                      update({
+                        blocks: data.blocks.filter((x: Row) => x.key !== b.key),
+                      })
+                    }
+                  >
+                    {t("remove")}
+                  </button>
+                )}
+              </div>
+              <IssueList
+                issues={page.issues.filter((i: Row) => i.blockKey === b.key)}
+                t={t}
               />
-            </label>
-            {["specs", "comparison"].includes(b.type) && b.table && (
-              <>
+              <fieldset disabled={!canEdit || locked}>
+                <div className="catalog-grid">
+                  <label>
+                    {t("heading")}
+                    <input
+                      maxLength={160}
+                      value={b.heading}
+                      onChange={(e) =>
+                        blockUpdate(b.key, { heading: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t("type")}
+                    <select
+                      aria-label={t("type") + " " + b.key}
+                      value={b.type}
+                      onChange={(e) =>
+                        blockUpdate(b.key, {
+                          type: e.target.value,
+                          ...(["specs", "comparison"].includes(
+                            e.target.value,
+                          ) && !b.table
+                            ? {
+                                table: {
+                                  columns: ["Specification", "Value"],
+                                  rows: [],
+                                },
+                              }
+                            : {}),
+                        })
+                      }
+                    >
+                      {[
+                        "text",
+                        "specs",
+                        "faq",
+                        "image",
+                        "category-grid",
+                        "product-grid",
+                        "split",
+                        "features",
+                        "process",
+                        "customization",
+                        "evidence",
+                        "case-study",
+                        "downloads",
+                        "cta",
+                        "comparison",
+                      ].map((k) => (
+                        <option key={k} value={k}>
+                          {t(k)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <label>
-                  {t("tableColumns")}
-                  <input
-                    value={b.table.columns.join(", ")}
-                    onChange={(e) => {
-                      const columns = split(e.target.value).slice(0, 10);
-                      blockUpdate(b.key, {
-                        table: {
-                          columns,
-                          rows: b.table.rows.map((r: string[]) =>
-                            columns.map((_, i) => r[i] ?? ""),
-                          ),
-                        },
-                      });
-                    }}
+                  {t("body")}
+                  <textarea
+                    aria-label={t("body")}
+                    rows={5}
+                    maxLength={6000}
+                    value={b.body}
+                    onChange={(e) =>
+                      blockUpdate(b.key, { body: e.target.value })
+                    }
                   />
                 </label>
-                <div className="catalog-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        {b.table.columns.map((c: string, i: number) => (
-                          <th key={i}>{c}</th>
-                        ))}
-                        <th>{t("remove")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {b.table.rows.map((r: string[], i: number) => (
-                        <tr key={i}>
-                          {r.map((c: string, j: number) => (
-                            <td key={j}>
-                              <input
-                                aria-label={b.table.columns[j] + " " + (i + 1)}
-                                maxLength={300}
-                                value={c}
-                                onChange={(e) =>
-                                  blockUpdate(b.key, {
-                                    table: {
-                                      ...b.table,
-                                      rows: b.table.rows.map(
-                                        (r: string[], k: number) =>
-                                          k === i
-                                            ? r.map((c: string, l: number) =>
-                                                j === l ? e.target.value : c,
-                                              )
-                                            : r,
-                                      ),
-                                    },
-                                  })
-                                }
-                              />
-                            </td>
+                {["specs", "comparison"].includes(b.type) && b.table && (
+                  <>
+                    <label>
+                      {t("tableColumns")}
+                      <input
+                        value={b.table.columns.join(", ")}
+                        onChange={(e) => {
+                          const columns = split(e.target.value).slice(0, 10);
+                          blockUpdate(b.key, {
+                            table: {
+                              columns,
+                              rows: b.table.rows.map((r: string[]) =>
+                                columns.map((_, i) => r[i] ?? ""),
+                              ),
+                            },
+                          });
+                        }}
+                      />
+                    </label>
+                    <div className="catalog-table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            {b.table.columns.map((c: string, i: number) => (
+                              <th key={i}>{c}</th>
+                            ))}
+                            <th>{t("remove")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {b.table.rows.map((r: string[], i: number) => (
+                            <tr key={i}>
+                              {r.map((c: string, j: number) => (
+                                <td key={j}>
+                                  <input
+                                    aria-label={
+                                      b.table.columns[j] + " " + (i + 1)
+                                    }
+                                    maxLength={300}
+                                    value={c}
+                                    onChange={(e) =>
+                                      blockUpdate(b.key, {
+                                        table: {
+                                          ...b.table,
+                                          rows: b.table.rows.map(
+                                            (r: string[], k: number) =>
+                                              k === i
+                                                ? r.map(
+                                                    (c: string, l: number) =>
+                                                      j === l
+                                                        ? e.target.value
+                                                        : c,
+                                                  )
+                                                : r,
+                                          ),
+                                        },
+                                      })
+                                    }
+                                  />
+                                </td>
+                              ))}
+                              <td>
+                                <button
+                                  className="secondary"
+                                  onClick={() =>
+                                    blockUpdate(b.key, {
+                                      table: {
+                                        ...b.table,
+                                        rows: b.table.rows.filter(
+                                          (_: any, k: number) => i !== k,
+                                        ),
+                                      },
+                                    })
+                                  }
+                                >
+                                  {t("remove")}
+                                </button>
+                              </td>
+                            </tr>
                           ))}
-                          <td>
-                            <button
-                              className="secondary"
-                              onClick={() =>
-                                blockUpdate(b.key, {
-                                  table: {
-                                    ...b.table,
-                                    rows: b.table.rows.filter(
-                                      (_: any, k: number) => i !== k,
-                                    ),
-                                  },
-                                })
+                        </tbody>
+                      </table>
+                    </div>
+                    <button
+                      className="secondary"
+                      disabled={b.table.rows.length >= 50}
+                      onClick={() =>
+                        blockUpdate(b.key, {
+                          table: {
+                            ...b.table,
+                            rows: [
+                              ...b.table.rows,
+                              b.table.columns.map(() => ""),
+                            ],
+                          },
+                        })
+                      }
+                    >
+                      {t("addRow")}
+                    </button>
+                  </>
+                )}
+                {b.type === "faq" && (
+                  <>
+                    {b.faq.map((f: Row, i: number) => {
+                      const patch = (p: Row) =>
+                        blockUpdate(b.key, {
+                          faq: b.faq.map((q: Row, k: number) =>
+                            k === i ? { ...q, ...p } : q,
+                          ),
+                        });
+                      return (
+                        <div className="catalog-subpanel" key={i}>
+                          <label>
+                            {t("question")}
+                            <input
+                              value={f.question}
+                              maxLength={300}
+                              onChange={(e) =>
+                                patch({ question: e.target.value })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("directAnswer")}
+                            <textarea
+                              aria-label={t("directAnswer")}
+                              rows={5}
+                              value={f.answer}
+                              maxLength={1800}
+                              onChange={(e) =>
+                                patch({ answer: e.target.value })
+                              }
+                            />
+                            <small>
+                              {
+                                f.answer.trim().split(/\s+/).filter(Boolean)
+                                  .length
+                              }{" "}
+                              {t("words")}
+                            </small>
+                          </label>
+                          <label>
+                            {t("detail")}
+                            <textarea
+                              aria-label={t("detail")}
+                              value={f.detail}
+                              maxLength={2500}
+                              onChange={(e) =>
+                                patch({ detail: e.target.value })
+                              }
+                            />
+                          </label>
+                          <button
+                            className="secondary"
+                            onClick={() =>
+                              blockUpdate(b.key, {
+                                faq: b.faq.filter(
+                                  (_: any, k: number) => i !== k,
+                                ),
+                              })
+                            }
+                          >
+                            {t("remove")}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <button
+                      className="secondary"
+                      disabled={b.faq.length >= 20}
+                      onClick={() =>
+                        blockUpdate(b.key, {
+                          faq: [
+                            ...b.faq,
+                            { question: "", answer: "", detail: "" },
+                          ],
+                        })
+                      }
+                    >
+                      {t("addFaq")}
+                    </button>
+                  </>
+                )}
+                {["image", "split"].includes(b.type) && (
+                  <div className="catalog-grid">
+                    <label>
+                      {t("image")}
+                      <select
+                        aria-label={t("image") + " " + b.key}
+                        value={b.assetId ?? ""}
+                        onChange={(e) =>
+                          blockUpdate(b.key, {
+                            assetId: e.target.value || null,
+                          })
+                        }
+                      >
+                        <option value="">{t("none")}</option>
+                        {assets.data?.items
+                          .filter((a: Row) => a.mime.startsWith("image/"))
+                          .map((a: Row) => (
+                            <option key={a.id} value={a.id}>
+                              {a.fileName}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t("alt")}
+                      <input
+                        maxLength={200}
+                        value={b.alt}
+                        onChange={(e) =>
+                          blockUpdate(b.key, { alt: e.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+                )}
+                {!["text", "specs", "faq", "image"].includes(b.type) && (
+                  <>
+                    <label>
+                      {t("blockLayout")}
+                      <select
+                        value={b.layout ?? "cards"}
+                        onChange={(e) =>
+                          blockUpdate(b.key, { layout: e.target.value })
+                        }
+                      >
+                        {["cards", "split", "reverse", "band", "compact"].map(
+                          (v) => (
+                            <option key={v} value={v}>
+                              {t(v)}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    <label>
+                      {t("blockTone")}
+                      <select
+                        value={b.tone ?? "light"}
+                        onChange={(e) =>
+                          blockUpdate(b.key, { tone: e.target.value })
+                        }
+                      >
+                        {["light", "sage", "dark"].map((v) => (
+                          <option key={v} value={v}>
+                            {t(v)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {(b.items ?? []).map((item: Row, i: number) => {
+                      const change = (patch: Row) =>
+                        blockUpdate(b.key, {
+                          items: b.items.map((x: Row, j: number) =>
+                            j === i ? { ...x, ...patch } : x,
+                          ),
+                        });
+                      return (
+                        <fieldset className="catalog-panel" key={i}>
+                          <legend>
+                            {t("blockItem")} {i + 1}
+                          </legend>
+                          <label>
+                            {t("heading")}
+                            <input
+                              maxLength={160}
+                              value={item.title}
+                              onChange={(e) =>
+                                change({ title: e.target.value })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("body")}
+                            <textarea
+                              maxLength={1200}
+                              value={item.body}
+                              onChange={(e) => change({ body: e.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t("internalLink")}
+                            <input
+                              value={item.href ?? ""}
+                              onChange={(e) =>
+                                change({ href: e.target.value || null })
+                              }
+                            />
+                          </label>
+                          <label>
+                            {t("image")} / PDF
+                            <select
+                              value={item.assetId ?? ""}
+                              onChange={(e) =>
+                                change({ assetId: e.target.value || null })
                               }
                             >
-                              {t("remove")}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                              <option value="">{t("none")}</option>
+                              {(assets.data?.items ?? [])
+                                .filter((a: Row) =>
+                                  b.type === "downloads"
+                                    ? a.mime === "application/pdf"
+                                    : a.mime.startsWith("image/"),
+                                )
+                                .map((a: Row) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.fileName}
+                                  </option>
+                                ))}
+                            </select>
+                          </label>
+                          <label>
+                            {t("alt")}
+                            <input
+                              maxLength={200}
+                              value={item.alt}
+                              onChange={(e) => change({ alt: e.target.value })}
+                            />
+                          </label>
+                          <RefPicker
+                            refs={item.refs}
+                            facts={sources.data?.facts ?? []}
+                            t={t}
+                            onChange={(refs) => change({ refs })}
+                          />
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() =>
+                              blockUpdate(b.key, {
+                                items: b.items.filter(
+                                  (_: Row, j: number) => j !== i,
+                                ),
+                              })
+                            }
+                          >
+                            {t("remove")}
+                          </button>
+                        </fieldset>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={(b.items ?? []).length >= 12}
+                      onClick={() =>
+                        blockUpdate(b.key, {
+                          items: [
+                            ...(b.items ?? []),
+                            {
+                              title: "",
+                              body: "",
+                              assetId: null,
+                              alt: "",
+                              href: null,
+                              refs: [],
+                            },
+                          ],
+                        })
+                      }
+                    >
+                      {t("addBlockItem")}
+                    </button>
+                  </>
+                )}
+                <RefPicker
+                  refs={b.refs}
+                  facts={sources.data?.facts ?? []}
+                  t={t}
+                  onChange={(refs) => blockUpdate(b.key, { refs })}
+                  disabled={!canEdit || locked}
+                />
+              </fieldset>
+              {canEdit && (
                 <button
                   className="secondary"
-                  disabled={b.table.rows.length >= 50}
+                  disabled={locked || dirty || !consent}
                   onClick={() =>
-                    blockUpdate(b.key, {
-                      table: {
-                        ...b.table,
-                        rows: [...b.table.rows, b.table.columns.map(() => "")],
-                      },
-                    })
-                  }
-                >
-                  {t("addRow")}
-                </button>
-              </>
-            )}
-            {b.type === "faq" && (
-              <>
-                {b.faq.map((f: Row, i: number) => {
-                  const patch = (p: Row) =>
-                    blockUpdate(b.key, {
-                      faq: b.faq.map((q: Row, k: number) =>
-                        k === i ? { ...q, ...p } : q,
-                      ),
-                    });
-                  return (
-                    <div className="catalog-subpanel" key={i}>
-                      <label>
-                        {t("question")}
-                        <input
-                          value={f.question}
-                          maxLength={300}
-                          onChange={(e) => patch({ question: e.target.value })}
-                        />
-                      </label>
-                      <label>
-                        {t("directAnswer")}
-                        <textarea
-                          aria-label={t("directAnswer")}
-                          rows={5}
-                          value={f.answer}
-                          maxLength={1800}
-                          onChange={(e) => patch({ answer: e.target.value })}
-                        />
-                        <small>
-                          {f.answer.trim().split(/\s+/).filter(Boolean).length}{" "}
-                          {t("words")}
-                        </small>
-                      </label>
-                      <label>
-                        {t("detail")}
-                        <textarea
-                          aria-label={t("detail")}
-                          value={f.detail}
-                          maxLength={2500}
-                          onChange={(e) => patch({ detail: e.target.value })}
-                        />
-                      </label>
-                      <button
-                        className="secondary"
-                        onClick={() =>
-                          blockUpdate(b.key, {
-                            faq: b.faq.filter((_: any, k: number) => i !== k),
-                          })
-                        }
-                      >
-                        {t("remove")}
-                      </button>
-                    </div>
-                  );
-                })}
-                <button
-                  className="secondary"
-                  disabled={b.faq.length >= 20}
-                  onClick={() =>
-                    blockUpdate(b.key, {
-                      faq: [...b.faq, { question: "", answer: "", detail: "" }],
-                    })
-                  }
-                >
-                  {t("addFaq")}
-                </button>
-              </>
-            )}
-            {["image", "split"].includes(b.type) && (
-              <div className="catalog-grid">
-                <label>
-                  {t("image")}
-                  <select
-                    aria-label={t("image") + " " + b.key}
-                    value={b.assetId ?? ""}
-                    onChange={(e) =>
-                      blockUpdate(b.key, { assetId: e.target.value || null })
-                    }
-                  >
-                    <option value="">{t("none")}</option>
-                    {assets.data?.items
-                      .filter((a: Row) => a.mime.startsWith("image/"))
-                      .map((a: Row) => (
-                        <option key={a.id} value={a.id}>
-                          {a.fileName}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label>
-                  {t("alt")}
-                  <input
-                    maxLength={200}
-                    value={b.alt}
-                    onChange={(e) =>
-                      blockUpdate(b.key, { alt: e.target.value })
-                    }
-                  />
-                </label>
-              </div>
-            )}
-            {!["text", "specs", "faq", "image"].includes(b.type) && (
-              <>
-                <label>
-                  {t("blockLayout")}
-                  <select
-                    value={b.layout ?? "cards"}
-                    onChange={(e) =>
-                      blockUpdate(b.key, { layout: e.target.value })
-                    }
-                  >
-                    {["cards", "split", "reverse", "band", "compact"].map(
-                      (v) => (
-                        <option key={v} value={v}>
-                          {t(v)}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </label>
-                <label>
-                  {t("blockTone")}
-                  <select
-                    value={b.tone ?? "light"}
-                    onChange={(e) =>
-                      blockUpdate(b.key, { tone: e.target.value })
-                    }
-                  >
-                    {["light", "sage", "dark"].map((v) => (
-                      <option key={v} value={v}>
-                        {t(v)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {(b.items ?? []).map((item: Row, i: number) => {
-                  const change = (patch: Row) =>
-                    blockUpdate(b.key, {
-                      items: b.items.map((x: Row, j: number) =>
-                        j === i ? { ...x, ...patch } : x,
-                      ),
-                    });
-                  return (
-                    <fieldset className="catalog-panel" key={i}>
-                      <legend>
-                        {t("blockItem")} {i + 1}
-                      </legend>
-                      <label>
-                        {t("heading")}
-                        <input
-                          maxLength={160}
-                          value={item.title}
-                          onChange={(e) => change({ title: e.target.value })}
-                        />
-                      </label>
-                      <label>
-                        {t("body")}
-                        <textarea
-                          maxLength={1200}
-                          value={item.body}
-                          onChange={(e) => change({ body: e.target.value })}
-                        />
-                      </label>
-                      <label>
-                        {t("internalLink")}
-                        <input
-                          value={item.href ?? ""}
-                          onChange={(e) =>
-                            change({ href: e.target.value || null })
-                          }
-                        />
-                      </label>
-                      <label>
-                        {t("image")} / PDF
-                        <select
-                          value={item.assetId ?? ""}
-                          onChange={(e) =>
-                            change({ assetId: e.target.value || null })
-                          }
-                        >
-                          <option value="">{t("none")}</option>
-                          {(assets.data?.items ?? [])
-                            .filter((a: Row) =>
-                              b.type === "downloads"
-                                ? a.mime === "application/pdf"
-                                : a.mime.startsWith("image/"),
-                            )
-                            .map((a: Row) => (
-                              <option key={a.id} value={a.id}>
-                                {a.fileName}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                      <label>
-                        {t("alt")}
-                        <input
-                          maxLength={200}
-                          value={item.alt}
-                          onChange={(e) => change({ alt: e.target.value })}
-                        />
-                      </label>
-                      <RefPicker
-                        refs={item.refs}
-                        facts={sources.data?.facts ?? []}
-                        t={t}
-                        onChange={(refs) => change({ refs })}
-                      />
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() =>
-                          blockUpdate(b.key, {
-                            items: b.items.filter(
-                              (_: Row, j: number) => j !== i,
-                            ),
-                          })
-                        }
-                      >
-                        {t("remove")}
-                      </button>
-                    </fieldset>
-                  );
-                })}
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={(b.items ?? []).length >= 12}
-                  onClick={() =>
-                    blockUpdate(b.key, {
-                      items: [
-                        ...(b.items ?? []),
+                    void a.run(async () => {
+                      const r = await api(
+                        "/sites/" + page.siteId + "/agent-runs",
+                        "POST",
                         {
-                          title: "",
-                          body: "",
-                          assetId: null,
-                          alt: "",
-                          href: null,
-                          refs: [],
+                          step: "rewrite",
+                          consent: true,
+                          pageId: page.id,
+                          blockKey: b.key,
+                          instructions,
                         },
-                      ],
+                        { "Idempotency-Key": crypto.randomUUID() },
+                      );
+                      setJob(r.id);
                     })
                   }
                 >
-                  {t("addBlockItem")}
+                  {t("rewrite")}
                 </button>
-              </>
-            )}
-            <RefPicker
-              refs={b.refs}
-              facts={sources.data?.facts ?? []}
-              t={t}
-              onChange={(refs) => blockUpdate(b.key, { refs })}
-              disabled={!canEdit || locked}
-            />
-          </fieldset>
-          {canEdit && (
-            <button
-              className="secondary"
-              disabled={locked || dirty || !consent}
-              onClick={() =>
-                void a.run(async () => {
-                  const r = await api(
-                    "/sites/" + page.siteId + "/agent-runs",
-                    "POST",
-                    {
-                      step: "rewrite",
-                      consent: true,
-                      pageId: page.id,
-                      blockKey: b.key,
-                      instructions,
-                    },
-                    { "Idempotency-Key": crypto.randomUUID() },
-                  );
-                  setJob(r.id);
-                })
-              }
-            >
-              {t("rewrite")}
-            </button>
-          )}
-        </section>
-      ))}
+              )}
+            </section>
+          ),
+      )}
       {canEdit && (
         <section className="catalog-panel">
           <div className="catalog-actions">
             <button
               className="secondary"
               disabled={data.blocks.length >= 20 || locked}
-              onClick={() =>
+              onClick={() => {
+                const key = "section-" + crypto.randomUUID().slice(0, 8);
+                setEditingBlock(key);
                 update({
                   blocks: [
                     ...data.blocks,
                     {
-                      key: "section-" + crypto.randomUUID().slice(0, 8),
+                      key,
                       type: "text",
                       heading: "",
                       body: "",
@@ -2226,8 +2531,8 @@ function PageEditor({
                       refs: [],
                     },
                   ],
-                })
-              }
+                });
+              }}
             >
               {t("addBlock")}
             </button>
@@ -2292,7 +2597,8 @@ function PageEditor({
           )}
         </section>
       )}
-      <section className="catalog-panel">
+      <section className="catalog-panel" id="editor-review">
+        <h2>{t("pageReview")}</h2>
         <div className="catalog-actions">
           <button
             className="secondary"

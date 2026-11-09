@@ -266,10 +266,20 @@ test("S8-S11 buyer brief, B2B catalogue, cross-page shortlist and real worker sc
   await page
     .getByRole("button", { name: "生成截图并审查全站", exact: true })
     .click();
-  await expect(page.getByRole("img", { name: /页面审查截图/ })).toHaveCount(
-    12,
-    { timeout: 120000 },
-  );
+  const latestReview = page.locator("article.b2b-review").first();
+  await expect(
+    latestReview.getByRole("button", {
+      name: "确认已检查截图与采购内容",
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 120000 });
+  for (const details of await latestReview.locator("details").all()) {
+    if (!(await details.evaluate((node) => node.hasAttribute("open"))))
+      await details.locator("summary").click();
+  }
+  await expect(
+    latestReview.getByRole("img", { name: /页面审查截图/ }),
+  ).toHaveCount(12, { timeout: 120000 });
   await expect(
     page
       .getByText("未配置 AI：本报告仅包含浏览器检查，请人工审查内容和截图。", {

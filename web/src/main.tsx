@@ -1,3 +1,5 @@
+import { WorkspaceFrame } from "./workspace-frame";
+import { AgentWorkbench } from "./agent-workbench";
 import { CrmConnectionPage } from "./crm";
 import {
   InquiriesPage,
@@ -28,7 +30,6 @@ import {
   Routes,
   Route,
   Navigate,
-  NavLink,
   Link,
   useNavigate,
   useLocation,
@@ -37,27 +38,23 @@ import {
 import { useForm } from "react-hook-form";
 import {
   Globe2,
-  LayoutDashboard,
   Building2,
   Users,
-  ShieldCheck,
-  ChartNoAxesCombined,
   Sparkles,
   ArrowUpRight,
   ArrowRight,
   Check,
-  LogOut,
   Languages,
   Mail,
-  Plug,
   Monitor,
   KeyRound,
-  Menu,
-  X,
 } from "lucide-react";
 import { api, ApiError } from "./api";
 import { messages, errors, type Locale, type Key } from "./i18n";
 import "./style.css";
+import "./workspace.css";
+import "./account-workspace.css";
+import { MissionOverview } from "./overview";
 type Me = {
   user: { id: string; name: string; email: string; twoFactorEnabled: boolean };
   organizationId: string;
@@ -116,6 +113,7 @@ function Form({
   const { t } = useI18n();
   const {
     register,
+    resetField,
     handleSubmit,
     formState: { errors: formErrors, isSubmitting },
   } = useForm<Record<string, string>>({ defaultValues: initial });
@@ -126,6 +124,9 @@ function Form({
         setError(undefined);
         try {
           await onSubmit(values);
+          for (const field of fields) {
+            if (field.type === "password") resetField(field.key);
+          }
         } catch (e) {
           setError(e);
         }
@@ -164,6 +165,7 @@ function Form({
                     ? field.key + "-help"
                     : undefined
               }
+              inputMode={field.key === "code" ? "numeric" : undefined}
               autoComplete={
                 field.key === "apiKey"
                   ? "off"
@@ -268,15 +270,15 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
         <div className="story-content">
-          <span className="eyebrow">{t("builtForGlobal")}</span>
-          <h1>{t("tagline")}</h1>
-          <p>{t("workspaceSub")}</p>
-          <div className="orbit" aria-hidden="true">
-            <Globe2 />
-            <span className="orbit-label">{t("nextChapter")}</span>
-          </div>
+          <h2>{t("accountWorkflow")}</h2>
+          <ol className="auth-workflow">
+            {(["authCapture", "authPlan", "authReview"] as const).map(
+              (step) => (
+                <li key={step}>{t(step)}</li>
+              ),
+            )}
+          </ol>
         </div>
-        <p className="story-footer">{t("independentSub")}</p>
       </section>
       <main className="auth-main">
         <LocaleButton />
@@ -295,7 +297,6 @@ function Login() {
   const [challenge, setChallenge] = useState<any>();
   return (
     <AuthFrame>
-      <span className="kicker">{t("independent")}</span>
       <h1>{t(challenge ? "challengeTitle" : "welcome")}</h1>
       <p className="sub">{t(challenge ? "challengeSub" : "loginSub")}</p>
       {challenge ? (
@@ -354,7 +355,6 @@ function Register() {
   const [result, setResult] = useState<any>();
   return (
     <AuthFrame>
-      <span className="kicker">{t("independent")}</span>
       <h1>{t("registerTitle")}</h1>
       <p className="sub">{t("registerSub")}</p>
       {result ? (
@@ -505,7 +505,6 @@ function PageHeader({
   return (
     <header className="page-heading">
       <div>
-        <div className="eyebrow">{t("settings")}</div>
         <h1>{t(title)}</h1>
         <p>{t(sub)}</p>
       </div>
@@ -530,10 +529,17 @@ function useData<T = any>(path: string, list = false) {
   }, [path, list]);
   return { data, error, reload };
 }
-function Loading({ error }: { error?: unknown }) {
+function Loading({ error, retry }: { error?: unknown; retry?: () => void }) {
   const { t } = useI18n();
   return error ? (
-    <Notice error={error} />
+    <div className="account-load-error">
+      <Notice error={error} />
+      {retry && (
+        <button className="button secondary" onClick={retry}>
+          {t("retry")}
+        </button>
+      )}
+    </div>
   ) : (
     <p className="loading" role="status">
       {t("loading")}
@@ -541,95 +547,18 @@ function Loading({ error }: { error?: unknown }) {
   );
 }
 function Overview() {
-  const { t } = useI18n();
+  const { locale } = useI18n();
   const { me } = useContext(Auth);
-  const { data: org } = useData("/organization");
-  const { data: members } = useData<any[]>("/members", true);
-  const cards = [
-    {
-      icon: Users,
-      title: "teamReady" as Key,
-      desc: "teamDesc" as Key,
-      to: "/members",
-    },
-    {
-      icon: ShieldCheck,
-      title: "secureReady" as Key,
-      desc: "secureDesc" as Key,
-      to: "/security",
-    },
-    {
-      icon: Sparkles,
-      title: "aiReady" as Key,
-      desc: "aiDesc" as Key,
-      to: "/ai",
-    },
-  ];
+  const org = useData("/organization");
   return (
     <>
-      <PageHeader
-        title="workspace"
-        sub="workspaceSub"
-        tag={
-          <span className="status-pill">
-            <span />
-            {t("workspaceReady")}
-          </span>
-        }
+      <Notice error={org.error} />
+      <MissionOverview
+        key={me.organizationId}
+        locale={locale}
+        organization={org.data?.name}
+        role={me.role}
       />
-      <section className="welcome-panel">
-        <div>
-          <span className="eyebrow">{t("independent")}</span>
-          <h2>{org?.name ?? me.user.name}</h2>
-          <p>{t("independentSub")}</p>
-          <Link className="button light" to="/organization">
-            {t("organization")}
-            <ArrowUpRight size={16} />
-          </Link>
-        </div>
-        <div className="globe-art" aria-hidden="true">
-          <Globe2 />
-        </div>
-      </section>
-      <div className="stat-grid">
-        <div className="stat">
-          <span>{t("plan")}</span>
-          <strong>{t((org?.plan ?? "trial") as Key)}</strong>
-          <Link to="/usage">
-            {t("viewUsage")}
-            <ArrowUpRight size={14} />
-          </Link>
-        </div>
-        <div className="stat">
-          <span>{t("memberCount")}</span>
-          <strong>
-            {members?.filter((m) => m.status === "active").length ?? "—"}
-          </strong>
-          <small>{t("active")}</small>
-        </div>
-        <div className="stat">
-          <span>{t("accountRole")}</span>
-          <strong>{t(me.role)}</strong>
-          <small>
-            <Check size={14} />
-            {t("emailVerified")}
-          </small>
-        </div>
-      </div>
-      <div className="section-heading">
-        <h2>{t("setup")}</h2>
-        <p>{t("setupSub")}</p>
-      </div>
-      <div className="setup-grid">
-        {cards.map((c) => (
-          <Link to={c.to} className="setup-card" key={c.title}>
-            <c.icon className="tile-icon" size={25} />
-            <ArrowUpRight className="corner-arrow" size={19} />
-            <h3>{t(c.title)}</h3>
-            <p>{t(c.desc)}</p>
-          </Link>
-        ))}
-      </div>
     </>
   );
 }
@@ -639,87 +568,143 @@ function OrganizationPage() {
   const { data, error, reload } = useData("/organization");
   const { data: orgs } = useData<any[]>("/organizations", true);
   const [success, setSuccess] = useState("");
+  const [switchError, setSwitchError] = useState<unknown>();
   return (
-    <>
+    <div className="account-page account-organization">
       <PageHeader title="organization" sub="organizationSub" />
       {!data ? (
-        <Loading error={error} />
+        <Loading error={error} retry={reload} />
       ) : (
-        <section className="panel">
-          <div className="panel-title">
-            <Building2 size={20} />
-            <h2>{t("organization")}</h2>
-          </div>
-          <Notice success={success} />
-          {me.role === "admin" ? (
-            <Form
-              key={data.name}
-              fields={[{ key: "name", label: "organizationName" }]}
-              initial={{ name: data.name }}
-              onSubmit={async (value) => {
-                await api("/organization", "PATCH", value);
-                setSuccess(t("saved"));
-                await reload();
-              }}
-            />
-          ) : (
-            <p>
-              {data.name} · {t("readOnly")}
-            </p>
-          )}
-          <div className="detail-row">
-            <span>{t("organizationId")}</span>
-            <code>{data.id}</code>
-          </div>
-          <div className="detail-row">
-            <span>{t("plan")}</span>
-            <span className="badge">{t(data.plan as Key)}</span>
-          </div>
-          {orgs && orgs.length > 1 && (
-            <div className="field">
-              <label htmlFor="org-switch">{t("selectOrganization")}</label>
-              <select
-                id="org-switch"
-                value={me.organizationId}
-                onChange={(e) => {
-                  void api(
-                    "/organizations/" + e.target.value + "/select",
-                    "POST",
-                  ).then(() => window.location.assign("/"));
-                }}
-              >
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
+        <>
+          <section className="panel">
+            <div className="panel-title">
+              <Building2 size={20} />
+              <h2>{t("organization")}</h2>
             </div>
-          )}
-        </section>
+            <Notice success={success} error={switchError} />
+            {me.role === "admin" ? (
+              <Form
+                key={data.name}
+                fields={[{ key: "name", label: "organizationName" }]}
+                initial={{ name: data.name }}
+                onSubmit={async (value) => {
+                  await api("/organization", "PATCH", value);
+                  setSuccess(t("saved"));
+                  await reload();
+                }}
+              />
+            ) : (
+              <p>
+                {data.name} · {t("readOnly")}
+              </p>
+            )}
+            {orgs && orgs.length > 1 && (
+              <div className="field">
+                <label htmlFor="org-switch">{t("selectOrganization")}</label>
+                <select
+                  id="org-switch"
+                  value={me.organizationId}
+                  onChange={(e) => {
+                    void api(
+                      "/organizations/" + e.target.value + "/select",
+                      "POST",
+                    )
+                      .then(() => window.location.assign("/"))
+                      .catch(setSwitchError);
+                  }}
+                >
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </section>
+          <section className="panel org-access">
+            <div className="panel-title">
+              <Building2 size={20} />
+              <h2>{t("workspaceAccess")}</h2>
+            </div>{" "}
+            <div className="detail-row">
+              <span>{t("organizationId")}</span>
+              <code>{data.id}</code>
+            </div>
+            <div className="detail-row">
+              <span>{t("plan")}</span>
+              <span className="badge">{t(data.plan as Key)}</span>
+            </div>
+            <div className="detail-row">
+              <span>{t("accountRole")}</span>
+              <strong>{t(me.role)}</strong>
+            </div>
+            <div className="org-links">
+              <Link to="/members">
+                {t("members")}
+                <ArrowUpRight size={14} />
+              </Link>
+              <Link to="/usage">
+                {t("viewUsage")}
+                <ArrowUpRight size={14} />
+              </Link>
+            </div>
+          </section>
+        </>
       )}
-    </>
+    </div>
   );
 }
 function MembersPage() {
   const { t } = useI18n();
   const { me } = useContext(Auth);
   const { data, error, reload } = useData<any[]>("/members", true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const filteredMembers = data?.filter(
+    (m) => statusFilter === "all" || m.status === statusFilter,
+  );
   const [receipt, setReceipt] = useState<string>();
   const [success, setSuccess] = useState("");
   const [actionError, setActionError] = useState<unknown>();
   return (
-    <>
+    <div className="account-page account-members">
       <PageHeader title="members" sub="inviteSub" />
       <Notice error={actionError} success={success} />
       <section className="panel wide">
         <div className="panel-title">
           <Users size={20} />
           <h2>{t("members")}</h2>
-          <span className="count">{data?.length ?? 0}</span>
+          <span className="count">{data?.length ?? "—"}</span>
         </div>
+        {data && data.length > 0 && (
+          <div
+            className="account-filters"
+            role="group"
+            aria-label={t("status")}
+          >
+            {(["all", "active", "invited", "revoked"] as const).map(
+              (status) => (
+                <button
+                  type="button"
+                  key={status}
+                  aria-pressed={status === statusFilter}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status === "all" ? t("allMembers") : t(status)}{" "}
+                  <span>
+                    {status === "all"
+                      ? data.length
+                      : data.filter((m) => m.status === status).length}
+                  </span>
+                </button>
+              ),
+            )}
+          </div>
+        )}
         {!data ? (
-          <Loading error={error} />
+          <Loading error={error} retry={reload} />
+        ) : !filteredMembers?.length ? (
+          <p className="mission-placeholder">{t("noMembersFilter")}</p>
         ) : (
           <div className="table-scroll">
             <table>
@@ -735,7 +720,7 @@ function MembersPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.map((m) => (
+                {filteredMembers.map((m) => (
                   <tr key={m.id}>
                     <td>
                       <span className="avatar small">
@@ -831,7 +816,7 @@ function MembersPage() {
           <DevMail receipt={receipt} />
         </section>
       )}
-    </>
+    </div>
   );
 }
 function SecurityPage() {
@@ -842,14 +827,16 @@ function SecurityPage() {
   const [success, setSuccess] = useState("");
   const [actionError, setActionError] = useState<unknown>();
   return (
-    <>
+    <div className="account-page account-security">
       <PageHeader title="security" sub="safe" />
       <Notice success={success} error={actionError} />
       <section className="panel">
         <div className="panel-title">
           <KeyRound size={20} />
           <h2>{t("twoFactor")}</h2>
-          <span className="badge active">
+          <span
+            className={"badge " + (me.user.twoFactorEnabled ? "active" : "")}
+          >
             {t(me.user.twoFactorEnabled ? "enabled" : "disabled")}
           </span>
         </div>
@@ -891,7 +878,7 @@ function SecurityPage() {
         </div>
         <p>{t("sessionsSub")}</p>
         {!data ? (
-          <Loading error={error} />
+          <Loading error={error} retry={reload} />
         ) : (
           <div className="session-list">
             {data.map((s) => (
@@ -937,12 +924,12 @@ function SecurityPage() {
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }
 function UsagePage() {
   const { t, locale } = useI18n();
-  const { data, error } = useData("/usage");
+  const { data, error, reload } = useData("/usage");
   const fmt = (n: number | null, key: string) =>
     n === null
       ? t("unlimited")
@@ -950,7 +937,7 @@ function UsagePage() {
         ? (n / 1073741824).toFixed(2) + " GiB"
         : new Intl.NumberFormat(locale).format(n);
   return (
-    <>
+    <div className="account-page account-usage">
       <PageHeader
         title="usage"
         sub="usageSub"
@@ -962,7 +949,7 @@ function UsagePage() {
         }
       />
       {!data ? (
-        <Loading error={error} />
+        <Loading error={error} retry={reload} />
       ) : (
         <>
           <div className="section-heading">
@@ -975,12 +962,13 @@ function UsagePage() {
             {(
               [
                 "ai_tokens",
+                "images",
                 "builds",
                 "publishes",
                 "inquiries",
                 "storage_bytes",
               ] as const
-            ).map((key, index) => {
+            ).map((key) => {
               const row = data.items.find((x: any) => x.metric === key) ?? {
                 consumed: 0,
                 reserved: 0,
@@ -993,9 +981,7 @@ function UsagePage() {
               );
               return (
                 <section className="panel usage-card" key={key}>
-                  <span className="eyebrow">
-                    0{index + 1} / {t(key)}
-                  </span>
+                  <span className="eyebrow">{t(key)}</span>
                   <h2>{fmt(row.consumed, key)}</h2>
                   <p>
                     {t("limit")} {fmt(data.limits[key], key)}
@@ -1015,7 +1001,7 @@ function UsagePage() {
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 function AiPage() {
@@ -1034,7 +1020,7 @@ function AiPage() {
     }
   }, [data]);
   return (
-    <>
+    <div className="account-page account-provider">
       <PageHeader
         title="ai"
         sub="aiSub"
@@ -1043,12 +1029,12 @@ function AiPage() {
       {me.role !== "admin" ? (
         <Notice error={new ApiError("FORBIDDEN", 403)} />
       ) : !data ? (
-        <Loading error={error} />
+        <Loading error={error} retry={reload} />
       ) : (
         <section className="panel">
           <div className="panel-title">
             <Sparkles size={20} />
-            <h2>OpenAI</h2>
+            <h2>{t("providerTitle")}</h2>
             <span className={"badge " + (data.configured ? "active" : "")}>
               {t(data.configured ? "configured" : "unconfigured")}
             </span>
@@ -1116,7 +1102,20 @@ function AiPage() {
           </button>
         </section>
       )}
-    </>
+      {me.role === "admin" && (
+        <section className="panel provider-imagery">
+          <div className="panel-title">
+            <Sparkles size={20} />
+            <h2>{t("imageProviderTool")}</h2>
+          </div>
+          <p>{t("imageProviderHelp")}</p>
+          <Link to="/assets" className="button secondary">
+            {t("openAssetLibrary")}
+            <ArrowUpRight size={15} />
+          </Link>
+        </section>
+      )}
+    </div>
   );
 }
 function AcceptInvite() {
@@ -1164,9 +1163,9 @@ function Workspace() {
   const navigate = useNavigate();
   const [me, setMe] = useState<Me>();
   const [error, setError] = useState<unknown>();
-  const [open, setOpen] = useState(false);
   const reload = async () => setMe(await api<Me>("/auth/me"));
-  useEffect(() => {
+  const loadSession = () => {
+    setError(undefined);
     void reload().catch((e) => {
       if (e instanceof ApiError && e.status === 401)
         navigate(
@@ -1176,209 +1175,103 @@ function Workspace() {
         );
       else setError(e);
     });
-  }, []);
+  };
+  useEffect(loadSession, []);
   if (!me)
     return (
       <main className="initial-loading">
-        <Loading error={error} />
+        <Loading error={error} retry={loadSession} />
         <Link to="/login">{t("backLogin")}</Link>
       </main>
     );
-  const nav: Array<[string, Key, typeof Globe2]> = [
-    ["/", "overview", LayoutDashboard],
-    ["/sites", "sites", Globe2],
-    ["/inquiries", "inquiries", Mail],
-    ["/products", "products", Building2],
-    ["/assets", "assets", Building2],
-    ["/facts", "facts", ShieldCheck],
-    ["/website-reads", "website", Globe2],
-    ["/organization", "organization", Building2],
-    ["/members", "members", Users],
-    ["/security", "security", ShieldCheck],
-    ["/usage", "usage", ChartNoAxesCombined],
-  ];
-  if (me.role === "admin") {
-    nav.push(["/ai", "ai", Sparkles]);
-    nav.push(["/crm", "crm", Plug]);
-  }
   return (
     <Auth.Provider value={{ me, reload }}>
-      <div className={"workspace " + (open ? "nav-open" : "")}>
-        <a href="#main" className="skip-link">
-          {t("continue")}
-        </a>
-        <aside className="sidebar">
-          <Link to="/" className="brand">
-            <span className="brand-icon">
-              <Globe2 size={24} />
-            </span>
-            GlobalSite
-            <span className="brand-dot" aria-hidden="true">
-              ●
-            </span>
-          </Link>
-          <div className="workspace-label">
-            <span className="workspace-avatar">
-              {me.user.name.slice(0, 1).toUpperCase()}
-            </span>
-            <div>
-              <strong>{t("workspace")}</strong>
-              <small>{t("independent")}</small>
-            </div>
-          </div>
-          <span className="nav-heading">{t("settings")}</span>
-          <nav aria-label={t("settings")}>
-            {nav.map(([to, label, Icon]) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === "/"}
-                onClick={() => setOpen(false)}
-              >
-                <Icon size={19} aria-hidden="true" />
-                {t(label as Key)}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="sidebar-note">
-            <Globe2 size={24} />
-            <strong>{t("tagline")}</strong>
-            <p>{t("independentSub")}</p>
-          </div>
-          <div className="account-box">
-            <span className="avatar">
-              {me.user.name.slice(0, 1).toUpperCase()}
-            </span>
-            <div>
-              <strong>{me.user.name}</strong>
-              <small>{t(me.role)}</small>
-            </div>
-            <button
-              aria-label={t("signOut")}
-              onClick={() => {
-                void api("/auth/logout", "POST").then(() => navigate("/login"));
-              }}
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        </aside>
-        <div className="main-shell">
-          <header className="topbar">
-            <button
-              className="mobile-menu"
-              onClick={() => setOpen(!open)}
-              aria-label={t("settings")}
-              aria-expanded={open}
-            >
-              {open ? <X size={22} /> : <Menu size={22} />}
-            </button>
-            <div className="breadcrumb">
-              <span>GlobalSite</span>
-              <span>/</span>
-              <strong>
-                {t(
-                  (nav.find(
-                    ([to]) =>
-                      to === location.pathname ||
-                      (to === "/inquiries" &&
-                        location.pathname.startsWith("/inquiries/")) ||
-                      (to === "/sites" &&
-                        /^\/(sites|pages)\//.test(location.pathname)),
-                  )?.[1] ?? "workspace") as Key,
-                )}
-              </strong>
-            </div>
-            <div className="topbar-right">
-              <span className="verified">
-                <Check size={14} />
-                {t("emailVerified")}
-              </span>
-              <LocaleButton />
-            </div>
-          </header>
-          <main id="main" className="content">
-            <Routes>
-              <Route index element={<Overview />} />
-              <Route
-                path="crm"
-                element={<CrmConnectionPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="inquiries"
-                element={<InquiriesPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="inquiries/:id"
-                element={<InquiryDetailPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="sites/:id/inquiry-settings"
-                element={<InquirySettingsPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="sites"
-                element={<SitesPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="sites/:id"
-                element={<SiteWorkspace locale={locale} role={me.role} />}
-              />
-              <Route
-                path="sites/:id/preview"
-                element={<LatestSitePreview locale={locale} />}
-              />
-              <Route
-                path="sites/:id/publishing"
-                element={<PublishPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="pages/:id"
-                element={<PageReview locale={locale} role={me.role} />}
-              />
-              <Route
-                path="products"
-                element={<ProductsPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="products/new"
-                element={<ProductEditor locale={locale} role={me.role} />}
-              />
-              <Route
-                path="products/imports"
-                element={<ImportPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="products/:id"
-                element={<ProductEditor locale={locale} role={me.role} />}
-              />
-              <Route
-                path="assets"
-                element={<AssetsPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="facts"
-                element={<FactsPage locale={locale} role={me.role} />}
-              />
-              <Route
-                path="website-reads"
-                element={<WebsitePage locale={locale} role={me.role} />}
-              />
-              <Route path="organization" element={<OrganizationPage />} />
-              <Route path="members" element={<MembersPage />} />
-              <Route path="security" element={<SecurityPage />} />
-              <Route path="usage" element={<UsagePage />} />
-              <Route path="ai" element={<AiPage />} />
-              <Route path="accept-invitation" element={<AcceptInvite />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <footer className="workspace-footer">
-            <span>© {new Date().getFullYear()} GlobalSite</span>
-            <span>{t("independent")}</span>
-          </footer>
-        </div>
-      </div>
+      <WorkspaceFrame
+        locale={locale}
+        userName={me.user.name}
+        role={me.role}
+        organizationId={me.organizationId}
+        languageButton={<LocaleButton />}
+      >
+        <Routes>
+          <Route index element={<Overview />} />
+          <Route
+            path="agent"
+            element={<AgentWorkbench locale={locale} role={me.role} />}
+          />
+          <Route
+            path="crm"
+            element={<CrmConnectionPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="inquiries"
+            element={<InquiriesPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="inquiries/:id"
+            element={<InquiryDetailPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="sites/:id/inquiry-settings"
+            element={<InquirySettingsPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="sites"
+            element={<SitesPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="sites/:id"
+            element={<SiteWorkspace locale={locale} role={me.role} />}
+          />
+          <Route
+            path="sites/:id/preview"
+            element={<LatestSitePreview locale={locale} />}
+          />
+          <Route
+            path="sites/:id/publishing"
+            element={<PublishPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="pages/:id"
+            element={<PageReview locale={locale} role={me.role} />}
+          />
+          <Route
+            path="products"
+            element={<ProductsPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="products/new"
+            element={<ProductEditor locale={locale} role={me.role} />}
+          />
+          <Route
+            path="products/imports"
+            element={<ImportPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="products/:id"
+            element={<ProductEditor locale={locale} role={me.role} />}
+          />
+          <Route
+            path="assets"
+            element={<AssetsPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="facts"
+            element={<FactsPage locale={locale} role={me.role} />}
+          />
+          <Route
+            path="website-reads"
+            element={<WebsitePage locale={locale} role={me.role} />}
+          />
+          <Route path="organization" element={<OrganizationPage />} />
+          <Route path="members" element={<MembersPage />} />
+          <Route path="security" element={<SecurityPage />} />
+          <Route path="usage" element={<UsagePage />} />
+          <Route path="ai" element={<AiPage />} />
+          <Route path="accept-invitation" element={<AcceptInvite />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </WorkspaceFrame>
     </Auth.Provider>
   );
 }

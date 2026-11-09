@@ -1,3 +1,4 @@
+import { useCatalogueQuery as useLoad } from "./catalog-query";
 import { useEffect, useState } from "react";
 import {
   Link,
@@ -7,43 +8,12 @@ import {
 } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { api, ApiError } from "./api";
+import { ArrowUpRight, Box, ClipboardList, FileCheck2 } from "lucide-react";
+import "./operations.css";
 import { catalogText, catalogMessages } from "./catalog-i18n";
 import type { Locale } from "./i18n";
 type Props = { locale: Locale; role: "admin" | "editor" | "viewer" };
 type Item = Record<string, any>;
-function useLoad(path: string, poll = false) {
-  const [data, setData] = useState<{ path: string; value: any }>(),
-    [error, setError] = useState<unknown>(),
-    [version, setVersion] = useState(0);
-  useEffect(() => {
-    let live = true;
-    setError(undefined);
-    setData(undefined);
-    const load = () =>
-      api(path)
-        .then((r) => {
-          if (live) {
-            setData({ path, value: r });
-            setError(undefined);
-          }
-        })
-        .catch((e) => {
-          if (live) setError(e);
-        });
-    void load();
-    const timer = poll ? setInterval(() => void load(), 2000) : undefined;
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
-  }, [path, version, poll]);
-  return {
-    data: data?.path === path ? data.value : undefined,
-    error,
-    replace: (value: any) => setData({ path, value }),
-    reload: () => setVersion((v) => v + 1),
-  };
-}
 function useAction() {
   const [error, setError] = useState<unknown>(),
     [busy, setBusy] = useState(false),
@@ -106,8 +76,8 @@ function Frame({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="catalog">
-      <header className="catalog-heading">
+    <div className="catalog ops-workspace">
+      <header className="catalog-heading ops-header">
         <div>
           <h1>{title}</h1>
           {sub && <p className="muted">{sub}</p>}
@@ -122,34 +92,73 @@ function Frame({
 function Rows({
   items,
   t,
+  error,
   children,
 }: {
   items?: Item[];
+  error?: unknown;
   t: ReturnType<typeof catalogText>;
   children: (r: Item) => React.ReactNode;
 }) {
+  if (error && !items) return null;
   return !items ? (
-    <p role="status">{t("loading")}</p>
+    <p className="ops-loading" role="status">
+      {t("loading")}
+    </p>
   ) : !items.length ? (
     <p className="catalog-empty">{t("empty")}</p>
   ) : (
     <>{items.map(children)}</>
   );
 }
-function More({
+function useCursor() {
+  const [trail, setTrail] = useState([""]);
+  return {
+    cursor: trail[trail.length - 1],
+    page: trail.length,
+    reset: () => setTrail([""]),
+    next: (cursor: string) =>
+      setTrail((previous) =>
+        previous[previous.length - 1] === cursor
+          ? previous
+          : [...previous, cursor],
+      ),
+    previous: () =>
+      setTrail((previous) =>
+        previous.length > 1 ? previous.slice(0, -1) : previous,
+      ),
+  };
+}
+function Pager({
   list,
-  setCursor,
+  pages,
   t,
 }: {
-  list: any;
-  setCursor: (s: string) => void;
+  list?: Item;
+  pages: ReturnType<typeof useCursor>;
   t: ReturnType<typeof catalogText>;
 }) {
-  return list?.hasMore ? (
-    <button className="secondary" onClick={() => setCursor(list.nextCursor)}>
-      {t("more")}
-    </button>
-  ) : null;
+  if (!pages.cursor && !list?.hasMore) return null;
+  return (
+    <nav className="ops-pagination" aria-label={t("pagination")}>
+      {pages.page > 1 && (
+        <button className="secondary" onClick={pages.previous}>
+          {t("prevPage")}
+        </button>
+      )}
+      <span>
+        {t("pageIndex")} {pages.page}
+      </span>
+      {list?.hasMore && (
+        <button
+          className="secondary"
+          onClick={() => pages.next(list.nextCursor)}
+        >
+          {t("nextPage")}
+        </button>
+      )}
+    </nav>
+  );
 }
 const fieldNames = [
   "name",
@@ -173,12 +182,38 @@ function Badge({
 }) {
   return <span className={"catalog-badge " + value}>{t(value)}</span>;
 }
+function ProductThumb({ assetId }: { assetId?: string }) {
+  const [variant, setVariant] = useState<"thumb" | "original" | "missing">(
+    "thumb",
+  );
+  return (
+    <span className="ops-product-thumb">
+      {assetId && variant !== "missing" ? (
+        <img
+          loading="lazy"
+          alt=""
+          src={
+            "/api/v1/assets/" +
+            assetId +
+            (variant === "thumb" ? "?variant=thumb" : "")
+          }
+          onError={() =>
+            setVariant(variant === "thumb" ? "original" : "missing")
+          }
+        />
+      ) : (
+        <Box size={20} aria-hidden="true" />
+      )}
+    </span>
+  );
+}
 export function ProductsPage({ locale, role }: Props) {
   const t = catalogText(locale),
     [q, setQ] = useState(""),
     [query, setQuery] = useState(""),
     [status, setStatus] = useState(""),
-    [cursor, setCursor] = useState("");
+    pages = useCursor(),
+    { cursor } = pages;
   const { data, error } = useLoad(
     "/products?" +
       new URLSearchParams({
@@ -186,6 +221,11 @@ export function ProductsPage({ locale, role }: Props) {
         ...(status ? { status } : {}),
         ...(cursor ? { cursor } : {}),
       }),
+  );
+  const rows: Item[] = data?.items ?? [];
+  const drafts = rows.filter((row) => row.status === "draft");
+  const needsSpecs = rows.filter(
+    (row) => !row.specs?.length && !row.specTable?.rows?.length,
   );
   return (
     <Frame
@@ -210,7 +250,7 @@ export function ProductsPage({ locale, role }: Props) {
         className="catalog-toolbar"
         onSubmit={(e) => {
           e.preventDefault();
-          setCursor("");
+          pages.reset();
           setQuery(q);
         }}
       >
@@ -224,7 +264,7 @@ export function ProductsPage({ locale, role }: Props) {
           aria-label={t("status")}
           value={status}
           onChange={(e) => {
-            setCursor("");
+            pages.reset();
             setStatus(e.target.value);
           }}
         >
@@ -237,30 +277,105 @@ export function ProductsPage({ locale, role }: Props) {
         </select>
         <button className="secondary">{t("search")}</button>
       </form>
-      <div className="catalog-list">
-        <Rows items={data?.items} t={t}>
-          {(p) => (
-            <article className="catalog-row" key={p.id}>
-              <div>
-                <Link className="catalog-name" to={"/products/" + p.id}>
-                  {p.name}
-                </Link>
-                <p className="muted">
-                  {p.sku} · {p.category ?? "—"}
-                </p>
-                <small>
-                  {t("updated")}: {new Date(p.updatedAt).toLocaleString(locale)}
-                </small>
-              </div>
-              <div className="catalog-actions">
-                <Badge value={p.source} t={t} />
-                <Badge value={p.status} t={t} />
-              </div>
-            </article>
+      <div className="ops-columns">
+        <section className="ops-table-panel" aria-label={t("products")}>
+          <div className="ops-panel-title">
+            <h2>{t("productList")}</h2>
+            {data && (
+              <span>
+                {rows.length} {t("thisPage")}
+              </span>
+            )}
+          </div>
+          {rows.length > 0 && (
+            <div className="ops-product-line ops-colheads" aria-hidden="true">
+              <span>{t("name")}</span>
+              <span>{t("category")}</span>
+              <span>{t("source")}</span>
+              <span>{t("status")}</span>
+            </div>
           )}
-        </Rows>
+          {!error && (
+            <Rows items={data?.items} error={error} t={t}>
+              {(product) => (
+                <article className="ops-product-line" key={product.id}>
+                  <div className="ops-product-id">
+                    <ProductThumb
+                      key={product.assetIds?.[0]}
+                      assetId={product.assetIds?.[0]}
+                    />
+                    <div>
+                      <Link
+                        className="catalog-name"
+                        to={"/products/" + product.id}
+                      >
+                        {product.name}
+                      </Link>
+                      <small>{product.sku || "—"}</small>
+                    </div>
+                  </div>
+                  <span className="ops-category">
+                    {product.category || "—"}
+                  </span>
+                  <span>
+                    <Badge value={product.source} t={t} />
+                  </span>
+                  <span>
+                    <Badge value={product.status} t={t} />
+                  </span>
+                  <time className="ops-updated" dateTime={product.updatedAt}>
+                    {t("updated")} ·{" "}
+                    {new Date(product.updatedAt).toLocaleDateString(locale)}
+                  </time>
+                </article>
+              )}
+            </Rows>
+          )}
+          <Pager list={data} pages={pages} t={t} />
+        </section>
+        <aside className="ops-rail">
+          <div className="ops-rail-title">
+            <ClipboardList size={18} aria-hidden="true" />
+            <h2>{t("catalogReview")}</h2>
+          </div>
+          {data && (
+            <>
+              <div className="ops-counts">
+                <div>
+                  <strong>{drafts.length}</strong>
+                  <span>{t("draft")}</span>
+                </div>
+                <div>
+                  <strong>{needsSpecs.length}</strong>
+                  <span>{t("missingSpecs")}</span>
+                </div>
+              </div>
+              <p className="ops-caption">{t("pageScope")}</p>
+              {needsSpecs.slice(0, 3).map((row) => (
+                <Link
+                  key={row.id}
+                  className="ops-task"
+                  to={"/products/" + row.id}
+                >
+                  <span>
+                    {row.name}
+                    <small>{t("inspectSpecs")}</small>
+                  </span>
+                  <ArrowUpRight size={15} aria-hidden="true" />
+                </Link>
+              ))}
+            </>
+          )}
+          <Link
+            className="ops-task ops-facts-link"
+            to="/facts?status=candidate"
+          >
+            <FileCheck2 size={16} aria-hidden="true" />
+            <span>{t("viewFacts")}</span>
+            <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
+        </aside>
       </div>
-      <More list={data} setCursor={setCursor} t={t} />
     </Frame>
   );
 }
@@ -317,7 +432,7 @@ function RunStatus({
   id: string;
   t: ReturnType<typeof catalogText>;
 }) {
-  const { data, error } = useLoad("/facts/extractions/" + id, true);
+  const { data, error } = useLoad("/facts/extractions/" + id, 2000);
   return (
     <div className="catalog-job" role="status">
       <strong>{t("run")}</strong> {data && <Badge value={data.status} t={t} />}
@@ -339,15 +454,33 @@ function RunStatus({
 export function ProductEditor(props: Props) {
   const { id } = useParams(),
     t = catalogText(props.locale),
-    load = useLoad(id ? "/products/" + id : "/products?limit=1");
-  if (!load.data)
+    load = useLoad(id ? "/products/" + id : null);
+  if (!id && props.role === "viewer")
+    return (
+      <Frame
+        title={t("products")}
+        t={t}
+        actions={
+          <Link className="button secondary" to="/products">
+            {t("back")}
+          </Link>
+        }
+      >
+        <p className="notice">{t("viewOnly")}</p>
+      </Frame>
+    );
+  if (id && !load.data)
     return (
       <Frame
         title={t(id ? "editProduct" : "addProduct")}
         t={t}
         error={load.error}
       >
-        <p>{t("loading")}</p>
+        {!load.error && (
+          <p className="ops-loading" role="status">
+            {t("loading")}
+          </p>
+        )}
       </Frame>
     );
   return (
@@ -409,6 +542,11 @@ function ProductForm({
         </Link>
       }
     >
+      <nav className="ops-section-nav" aria-label={t("productSections")}>
+        <a href="#product-basics">{t("productBasics")}</a>
+        <a href="#product-specs">{t("specs")}</a>
+        <a href="#product-images">{t("images")}</a>
+      </nav>
       {readOnly && <p className="notice">{t("viewOnly")}</p>}
       <form
         className="catalog-panel"
@@ -441,6 +579,7 @@ function ProductForm({
         )}
       >
         <fieldset disabled={readOnly || a.busy}>
+          <h2 id="product-basics">{t("productBasics")}</h2>
           <div className="catalog-grid">
             {(
               [
@@ -491,7 +630,7 @@ function ProductForm({
             {t("certifications")}
             <textarea rows={3} {...register("certifications")} />
           </label>
-          <h2>{t("specs")}</h2>
+          <h2 id="product-specs">{t("specs")}</h2>
           <div className="catalog-specs">
             {specs.fields.map((f, i) => (
               <div className="catalog-spec-row" key={f.id}>
@@ -614,7 +753,7 @@ function ProductForm({
               </>
             )}
           </section>
-          <h2>{t("images")}</h2>
+          <h2 id="product-images">{t("images")}</h2>
           <p className="muted">
             {t("imageHint")} <Link to="/assets">{t("assets")}</Link>
           </p>
@@ -657,23 +796,40 @@ export function ImportPage({ locale, role }: Props) {
     [mapping, setMapping] = useState<Record<string, string>>({}),
     [file, setFile] = useState<File>(),
     a = useAction(),
-    history = useLoad("/products/imports"),
+    pages = useCursor(),
+    { cursor } = pages,
+    history = useLoad(
+      "/products/imports" + (cursor ? "?cursor=" + cursor : ""),
+    ),
+    [pollError, setPollError] = useState<unknown>(),
     [pollVersion, setPollVersion] = useState(0);
   useEffect(() => {
     if (!batch || !["queued", "running"].includes(batch.status)) return;
+    let live = true;
     const timer = setTimeout(
       () =>
         void api("/products/imports/" + batch.id)
           .then((r) => {
+            if (!live) return;
+            setPollError(undefined);
             setBatch(r);
             setPollVersion((v) => v + 1);
           })
-          .catch(() => setPollVersion((v) => v + 1)),
+          .catch((err) => {
+            if (live) {
+              setPollError(err);
+              setPollVersion((v) => v + 1);
+            }
+          }),
       1500,
     );
-    return () => clearTimeout(timer);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
   }, [batch, pollVersion]);
   const pick = (r: Item) => {
+    setPollError(undefined);
     setBatch(r);
     setMapping(r.mapping);
   };
@@ -682,13 +838,35 @@ export function ImportPage({ locale, role }: Props) {
       title={t("importExcel")}
       sub={t("importSub")}
       t={t}
-      error={history.error}
+      error={history.error ?? pollError}
       actions={
         <Link to="/products" className="button secondary">
           {t("back")}
         </Link>
       }
     >
+      <ol className="ops-steps" aria-label={t("importSteps")}>
+        {[t("upload"), t("mapping"), t("importValid"), t("complete")].map(
+          (step, index) => {
+            const current = !batch
+              ? 0
+              : batch.status === "preview"
+                ? 1
+                : batch.status === "complete"
+                  ? 3
+                  : 2;
+            return (
+              <li
+                key={step}
+                aria-current={index === current ? "step" : undefined}
+              >
+                <span>{index + 1}</span>
+                {step}
+              </li>
+            );
+          },
+        )}
+      </ol>
       <section className="catalog-panel">
         <p>{t("importHint")}</p>
         <details>
@@ -711,6 +889,7 @@ export function ImportPage({ locale, role }: Props) {
                 const form = new FormData();
                 form.set("file", file);
                 pick(await api("/products/imports", "POST", form));
+                pages.reset();
                 history.reload();
               });
             }}
@@ -859,7 +1038,7 @@ export function ImportPage({ locale, role }: Props) {
       )}
       <section className="catalog-panel">
         <h2>{t("importHistory")}</h2>
-        <Rows items={history.data?.items} t={t}>
+        <Rows items={history.data?.items} error={history.error} t={t}>
           {(r) => (
             <div className="catalog-row" key={r.id}>
               <button className="secondary" onClick={() => pick(r)}>
@@ -869,6 +1048,7 @@ export function ImportPage({ locale, role }: Props) {
             </div>
           )}
         </Rows>
+        <Pager list={history.data} pages={pages} t={t} />
       </section>
     </Frame>
   );
@@ -889,7 +1069,6 @@ function ImageStudio({
     [asset, setAsset] = useState("");
   return (
     <section className="catalog-panel">
-      <h2>{t("imageStudio")}</h2>
       {role === "admin" && (
         <details open={status.data && !status.data.configured}>
           <summary>{t("imageConnection")}</summary>
@@ -1014,7 +1193,8 @@ function ImageStudio({
 export function AssetsPage({ locale, role }: Props) {
   const t = catalogText(locale),
     [kind, setKind] = useState(""),
-    [cursor, setCursor] = useState(""),
+    pages = useCursor(),
+    { cursor } = pages,
     [file, setFile] = useState<File>(),
     [uploadKind, setUploadKind] = useState("image"),
     a = useAction(),
@@ -1029,15 +1209,18 @@ export function AssetsPage({ locale, role }: Props) {
   return (
     <Frame title={t("assets")} sub={t("assetsSub")} t={t} error={load.error}>
       {role !== "viewer" && (
-        <ImageStudio
-          locale={locale}
-          role={role}
-          onGenerated={() => {
-            setKind("");
-            setCursor("");
-            load.reload();
-          }}
-        />
+        <details className="ops-tool">
+          <summary>{t("imageStudio")}</summary>
+          <ImageStudio
+            locale={locale}
+            role={role}
+            onGenerated={() => {
+              setKind("");
+              pages.reset();
+              load.reload();
+            }}
+          />
+        </details>
       )}
       {role !== "viewer" && (
         <form
@@ -1050,7 +1233,7 @@ export function AssetsPage({ locale, role }: Props) {
               form.set("kind", uploadKind);
               form.set("file", file);
               await api("/assets", "POST", form);
-              setCursor("");
+              pages.reset();
               load.reload();
             });
           }}
@@ -1091,7 +1274,7 @@ export function AssetsPage({ locale, role }: Props) {
         <select
           value={kind}
           onChange={(e) => {
-            setCursor("");
+            pages.reset();
             setKind(e.target.value);
           }}
         >
@@ -1104,7 +1287,7 @@ export function AssetsPage({ locale, role }: Props) {
         </select>
       </label>
       <div className="catalog-assets">
-        <Rows items={load.data?.items} t={t}>
+        <Rows items={load.data?.items} error={load.error} t={t}>
           {(r) => (
             <article className="catalog-asset" key={r.id}>
               <div className="catalog-preview">
@@ -1158,7 +1341,7 @@ export function AssetsPage({ locale, role }: Props) {
           )}
         </Rows>
       </div>
-      <More list={load.data} setCursor={setCursor} t={t} />
+      <Pager list={load.data} pages={pages} t={t} />
       {extractId && (
         <>
           <Extraction key={extractId} kind="asset" id={extractId} t={t} />
@@ -1174,7 +1357,8 @@ export function FactsPage({ locale, role }: Props) {
   const t = catalogText(locale),
     [params] = useSearchParams(),
     [status, setStatus] = useState(params.get("status") ?? "candidate"),
-    [cursor, setCursor] = useState(""),
+    pages = useCursor(),
+    { cursor } = pages,
     [editing, setEditing] = useState<Item | null | undefined>(),
     [historyId, setHistoryId] = useState<string>(),
     a = useAction();
@@ -1197,26 +1381,31 @@ export function FactsPage({ locale, role }: Props) {
         )
       }
     >
-      <p className="catalog-review-hint">{t("reviewHint")}</p>
       <Notice error={a.error} saved={a.saved} t={t} />
-      <label className="catalog-filter">
-        {t("status")}
-        <select
-          aria-label={t("status")}
-          value={status}
-          onChange={(e) => {
-            setCursor("");
-            setStatus(e.target.value);
-          }}
-        >
-          <option value="">{t("all")}</option>
-          {["candidate", "confirmed", "rejected"].map((s) => (
-            <option key={s} value={s}>
-              {t(s)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="ops-fact-tools">
+        <label className="catalog-filter">
+          {t("status")}
+          <select
+            aria-label={t("status")}
+            value={status}
+            onChange={(e) => {
+              pages.reset();
+              setStatus(e.target.value);
+            }}
+          >
+            <option value="">{t("all")}</option>
+            {["candidate", "confirmed", "rejected"].map((s) => (
+              <option key={s} value={s}>
+                {t(s)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="ops-fact-guidance">
+          <FileCheck2 size={18} aria-hidden="true" />
+          {t("reviewHint")}
+        </p>
+      </div>
       {editing !== undefined && (
         <FactForm
           key={editing?.id ?? "new"}
@@ -1230,7 +1419,7 @@ export function FactsPage({ locale, role }: Props) {
         />
       )}
       <div className="catalog-list">
-        <Rows items={load.data?.items} t={t}>
+        <Rows items={load.data?.items} error={load.error} t={t}>
           {(f) => (
             <article key={f.id} className="catalog-fact">
               <div className="catalog-heading">
@@ -1297,7 +1486,7 @@ export function FactsPage({ locale, role }: Props) {
           )}
         </Rows>
       </div>
-      <More list={load.data} setCursor={setCursor} t={t} />
+      <Pager list={load.data} pages={pages} t={t} />
     </Frame>
   );
 }
@@ -1346,7 +1535,7 @@ function FactHistory({
   return (
     <div className="catalog-subpanel">
       <Notice error={error} t={t} />
-      <Rows items={data?.items} t={t}>
+      <Rows items={data?.items} error={error} t={t}>
         {(r) => (
           <div className="catalog-row" key={r.id}>
             <div>
@@ -1495,18 +1684,20 @@ export function WebsitePage({ locale, role }: Props) {
     }),
     a = useAction(),
     [runId, setRunId] = useState(""),
-    history = useLoad("/website-reads", true),
-    detail = useLoad(
-      runId ? "/website-reads/" + runId : "/website-reads?limit=1",
-      true,
+    pages = useCursor(),
+    { cursor } = pages,
+    history = useLoad(
+      "/website-reads" + (cursor ? "?cursor=" + cursor : ""),
+      2000,
     ),
+    detail = useLoad(runId ? "/website-reads/" + runId : null, 2000),
     run = runId ? detail.data : undefined;
   return (
     <Frame
       title={t("website")}
       sub={t("websiteSub")}
       t={t}
-      error={history.error}
+      error={history.error ?? detail.error}
     >
       {role !== "viewer" && (
         <form
@@ -1515,6 +1706,7 @@ export function WebsitePage({ locale, role }: Props) {
             a.run(async () => {
               const r = await api("/website-reads", "POST", values);
               setRunId(r.id);
+              pages.reset();
               history.reload();
             }),
           )}
@@ -1553,7 +1745,7 @@ export function WebsitePage({ locale, role }: Props) {
       )}
       <section className="catalog-panel">
         <h2>{t("history")}</h2>
-        <Rows items={history.data?.items} t={t}>
+        <Rows items={history.data?.items} error={history.error} t={t}>
           {(r) => (
             <div key={r.id} className="catalog-row">
               <button
@@ -1566,6 +1758,7 @@ export function WebsitePage({ locale, role }: Props) {
             </div>
           )}
         </Rows>
+        <Pager list={history.data} pages={pages} t={t} />
       </section>
       {run && (
         <section className="catalog-panel">
@@ -1579,10 +1772,20 @@ export function WebsitePage({ locale, role }: Props) {
             }
             t={t}
           />
-          <p>
-            {t("newDrafts")}: {run.resultIds.length} · {t("newFacts")}:{" "}
-            {run.factIds.length}
-          </p>
+          <dl className="ops-output-counts">
+            <div>
+              <dt>{t("pages")}</dt>
+              <dd>{run.pages.length}</dd>
+            </div>
+            <div>
+              <dt>{t("newDrafts")}</dt>
+              <dd>{run.resultIds.length}</dd>
+            </div>
+            <div>
+              <dt>{t("newFacts")}</dt>
+              <dd>{run.factIds.length}</dd>
+            </div>
+          </dl>
           {run.truncated && <p>{t("truncated")}</p>}
           <div className="catalog-actions">
             <a
