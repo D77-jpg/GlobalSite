@@ -1,3 +1,4 @@
+import { SiteGuide } from "./site-journey";
 import { BuyerWorkspace, SiteQuality } from "./b2b";
 import { orderedNodes, moveNode } from "./site-plan";
 import { useEffect, useState } from "react";
@@ -177,8 +178,7 @@ export function SitesPage({ locale, role }: Props) {
   const t = st(locale),
     [cursorHistory, setCursorHistory] = useState<string[]>([""]),
     cursor = cursorHistory[cursorHistory.length - 1],
-    load = useLoad("/sites" + (cursor ? "?cursor=" + cursor : "")),
-    [creating, setCreating] = useState(false);
+    load = useLoad("/sites" + (cursor ? "?cursor=" + cursor : ""));
   return (
     <Frame
       title={t("sites")}
@@ -188,21 +188,12 @@ export function SitesPage({ locale, role }: Props) {
       error={load.error}
       actions={
         role !== "viewer" && (
-          <button onClick={() => setCreating(!creating)}>{t("create")}</button>
+          <Link className="button primary" to="/sites/new">
+            {t("create")}
+          </Link>
         )
       }
     >
-      {creating && (
-        <SiteForm
-          locale={locale}
-          t={t}
-          done={() => {
-            setCreating(false);
-            setCursorHistory([""]);
-            load.reload();
-          }}
-        />
-      )}
       <div className="studio-site-list">
         {!load.data ? (
           !load.error && <p role="status">{t("loading")}</p>
@@ -215,11 +206,7 @@ export function SitesPage({ locale, role }: Props) {
         ) : (
           load.data.items.map((s: Row) => (
             <article className="studio-site-row" key={s.id}>
-              <div
-                className="sites-brand"
-                style={{ background: s.brandColor }}
-                aria-hidden="true"
-              >
+              <div className="sites-brand" aria-hidden="true">
                 {s.name.slice(0, 1)}
               </div>
               <div className="studio-site-title">
@@ -321,7 +308,8 @@ function SiteForm({
             templateId: v.templateId,
             targetMarkets: split(v.targetMarkets),
             language: "en",
-            brandColor: v.brandColor,
+            brandColor: site?.brandColor ?? "#126a54",
+            ...(site?.buyerProfile ? { buyerProfile: site.buyerProfile } : {}),
             logoId: v.logoId || null,
             productIds: ids,
             status: v.status,
@@ -361,10 +349,6 @@ function SiteForm({
           <label>
             {t("markets")}
             <input required {...register("targetMarkets")} />
-          </label>
-          <label>
-            {t("brandColor")}
-            <input type="color" {...register("brandColor")} />
           </label>
           <label>
             {t("logo")}
@@ -421,6 +405,7 @@ function SiteForm({
   );
 }
 const workspaceTabs = [
+  "guide",
   "planning",
   "interview",
   "business",
@@ -439,8 +424,8 @@ export function SiteWorkspace({ locale, role }: Props) {
     pages = useLoad("/sites/" + id + "/pages"),
     ready = useLoad("/sites/" + id + "/readiness"),
     [query, setQuery] = useSearchParams(),
-    requestedTab = query.get("tab") ?? "planning",
-    tab = workspaceTabs.includes(requestedTab) ? requestedTab : "planning",
+    requestedTab = query.get("tab") ?? "guide",
+    tab = workspaceTabs.includes(requestedTab) ? requestedTab : "guide",
     [consent, setConsent] = useState(false),
     a = useAction();
   function setTab(next: string) {
@@ -480,7 +465,7 @@ export function SiteWorkspace({ locale, role }: Props) {
       { "Idempotency-Key": crypto.randomUUID() },
     );
     runs.reload();
-    setTab(["review", "refine"].includes(step) ? "quality" : "runs");
+    if (tab !== "guide") setTab(["review", "refine"].includes(step) ? "quality" : "runs");
   }
   return (
     <Frame
@@ -587,6 +572,21 @@ export function SiteWorkspace({ locale, role }: Props) {
         }
         saved={a.saved}
       />
+      {tab === "guide" && (
+        <SiteGuide
+          site={site}
+          sources={sources.data}
+          pages={pages.data?.items}
+          runs={runs.data?.items}
+          locale={locale}
+          canEdit={canEdit}
+          busy={a.busy}
+          consent={consent}
+          setConsent={setConsent}
+          queue={(step) => a.run(() => queue(step))}
+          setTab={setTab}
+        />
+      )}
       {tab === "business" && (
         <BuyerWorkspace
           key={site.revision}

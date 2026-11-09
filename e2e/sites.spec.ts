@@ -9,11 +9,75 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await login(page, request);
+  const csrf = (await page.context().cookies()).find(
+    (c) => c.name === "gs_csrf",
+  )!.value;
+  const fixture = await page.request.post("/api/v1/products", {
+    headers: {
+      Origin: process.env.E2E_BASE_URL ?? "http://localhost:5080",
+      "X-CSRF-Token": csrf,
+    },
+    data: { name: "Travel collection", status: "draft" },
+  });
+  expect(fixture.status()).toBe(201);
+  const productId = (await fixture.json()).data.id;
+
   await page.goto("/sites");
-  await page.getByRole("button", { name: "创建站点", exact: true }).click();
+  await page.getByRole("link", { name: "创建站点", exact: true }).click();
+  await expect(page).toHaveURL(/\/sites\/new$/);
+  await page.screenshot({ path: "test-results/s16-create-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("heading", { name: "创建你的网站" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: "test-results/s16-create-mobile.png" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
   await page.getByLabel("站点名称", { exact: true }).fill("Fixture Export");
-  await page.getByRole("button", { name: "保存", exact: true }).click();
-  await page.getByRole("link", { name: "Fixture Export", exact: true }).click();
+  await page
+    .getByLabel("面向哪些客户", { exact: true })
+    .fill("Wholesale buyers");
+  await expect(page.locator('input[type="color"]')).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "下一步，选择产品", exact: true })
+    .click();
+  await page.getByRole("checkbox", { name: /Travel collection/ }).check();
+  await page.getByRole("button", { name: "上一步", exact: true }).click();
+  await expect(page.getByLabel("站点名称", { exact: true })).toHaveValue(
+    "Fixture Export",
+  );
+  await expect(page.getByLabel("面向哪些客户", { exact: true })).toHaveValue(
+    "Wholesale buyers",
+  );
+  await page
+    .getByRole("button", { name: "下一步，选择产品", exact: true })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: /Travel collection/ }),
+  ).toBeChecked();
+  await page
+    .getByRole("button", { name: "创建并进入建站向导", exact: true })
+    .click();
+  await expect(page).toHaveURL(/tab=guide/);
+  const created = await page.request.get(
+    "/api/v1/sites/" + new URL(page.url()).pathname.split("/")[2],
+  );
+  const siteData = (await created.json()).data;
+  expect(siteData.productIds).toEqual([productId]);
+  expect(siteData.buyerProfile.audiences).toEqual(["Wholesale buyers"]);
+
+  await expect(
+    page.getByRole("heading", { name: "建站向导", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/s16-guide-desktop.png" });
+  await page
+    .getByRole("button", { name: "关键词与站点地图", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Fixture Export", exact: true }),
   ).toBeVisible();
@@ -88,13 +152,24 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByText("待审核", { exact: true }).first()).toBeVisible();
   await page.getByRole("link", { name: "站点", exact: true }).last().click();
-  await page.getByRole("checkbox").first().check();
-  await page
-    .getByRole("button", { name: "生成关键词与规划建议", exact: true })
-    .click();
-  await expect(page.getByText("已暂停", { exact: true }).first()).toBeVisible({
-    timeout: 20000,
+  await expect(
+    page.getByRole("heading", { name: "建站向导", exact: true }),
+  ).toBeVisible();
+  const generate = page.getByRole("button", {
+    name: "让 Agent 生成页面",
+    exact: true,
   });
+  await expect(generate).toBeDisabled();
+  await page.locator(".guide-consent input").check();
+  await generate.click();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("tab"));
+  await expect(page.locator(".guide-next [role=status]")).toContainText(
+    "已暂停",
+    { timeout: 20000 },
+  );
+  await page
+    .getByRole("button", { name: "处理暂停或失败的任务", exact: true })
+    .click();
   await expect(
     page.getByText("请先由管理员配置 AI 服务商，再恢复任务", { exact: true }),
   ).toBeVisible();

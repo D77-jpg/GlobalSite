@@ -1,5 +1,6 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  guide: ["建站向导", "Site guide"],
   reviewMethod: ["本次审查方式", "Recorded review method"],
   reviewMethod_structural: ["浏览器结构检查", "Browser structure checks"],
   reviewMethod_text: [
