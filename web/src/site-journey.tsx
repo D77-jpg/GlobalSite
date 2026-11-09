@@ -591,7 +591,9 @@ export function SiteGuide({
       : !expected || drafted.length < expected || approved < expected
         ? 2
         : 3;
-  const pending = runs.find((r) => r.active);
+  const pending = runs.find(
+    (r) => r.active && !["paused", "failed"].includes(r.status),
+  );
   const last = runs[0];
   const actionable = last && ["failed", "paused"].includes(last.status);
   const planningDone = runs.some(
