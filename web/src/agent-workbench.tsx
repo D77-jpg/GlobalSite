@@ -10,7 +10,6 @@ import {
   ScanEye,
 } from "lucide-react";
 import { RunList, useLoad } from "./sites";
-import { st } from "./sites-i18n";
 import type { Locale } from "./i18n";
 const labels = {
   zh: {
@@ -21,7 +20,7 @@ const labels = {
     sites: "打开站点",
     more: "下一批站点",
     first: "返回首批站点",
-    flow: "站点工作流程",
+    flow: "继续建站",
     plan: "规划站点",
     planSub: "查看关键词和页面结构",
     content: "内容审核",
@@ -42,7 +41,7 @@ const labels = {
     sites: "Open sites",
     more: "Next sites",
     first: "First sites",
-    flow: "Site workflow",
+    flow: "Continue building",
     plan: "Plan the site",
     planSub: "Keywords and page structure",
     content: "Review content",
@@ -64,16 +63,28 @@ export function AgentWorkbench({
   role: "admin" | "editor" | "viewer";
 }) {
   const c = labels[locale],
-    t = st(locale),
     [cursor, setCursor] = useState(""),
-    [selected, setSelected] = useState("");
+    [selected, setSelected] = useState(""),
+    [history, setHistory] = useState<{ siteId: string; cursors: string[] }>({
+      siteId: "",
+      cursors: [""],
+    });
   const sites = useLoad(
       "/sites" + (cursor ? "?cursor=" + encodeURIComponent(cursor) : ""),
     ),
     items: { id: string; name: string }[] = sites.data?.items ?? [];
   const site = items.find((s) => s.id === selected) ?? items[0],
     base = site ? "/sites/" + site.id : "";
-  const runs = useLoad(site ? base + "/agent-runs" : null, true);
+  const trail = history.siteId === site?.id ? history.cursors : [""],
+    cursorKey = trail[trail.length - 1];
+  const runs = useLoad(
+    site
+      ? base +
+          "/agent-runs" +
+          (cursorKey ? "?cursor=" + encodeURIComponent(cursorKey) : "")
+      : null,
+    true,
+  );
   return (
     <div className="agent-workbench catalog">
       <header className="agent-mast">
@@ -82,36 +93,36 @@ export function AgentWorkbench({
           <h1>{c.title}</h1>
           <p>{c.sub}</p>
         </div>
+        <section className="agent-picker">
+          <label>
+            {c.site}
+            <select
+              value={site?.id ?? ""}
+              onChange={(e) => setSelected(e.target.value)}
+              disabled={!items.length}
+            >
+              {items.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {sites.data?.nextCursor && (
+            <button
+              className="secondary"
+              onClick={() => setCursor(sites.data.nextCursor)}
+            >
+              {c.more}
+            </button>
+          )}
+          {cursor && (
+            <button className="secondary" onClick={() => setCursor("")}>
+              {c.first}
+            </button>
+          )}
+        </section>
       </header>
-      <section className="agent-picker">
-        <label>
-          {c.site}
-          <select
-            value={site?.id ?? ""}
-            onChange={(e) => setSelected(e.target.value)}
-            disabled={!items.length}
-          >
-            {items.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {sites.data?.nextCursor && (
-          <button
-            className="secondary"
-            onClick={() => setCursor(sites.data.nextCursor)}
-          >
-            {c.more}
-          </button>
-        )}
-        {cursor && (
-          <button className="secondary" onClick={() => setCursor("")}>
-            {c.first}
-          </button>
-        )}
-      </section>
       {sites.error ? (
         <div className="notice error" role="alert">
           {c.error}
@@ -139,8 +150,21 @@ export function AgentWorkbench({
               <RunList
                 key={site.id}
                 runs={runs.data?.items}
-                t={t}
+                locale={locale}
+                siteId={site.id}
                 refresh={runs.reload}
+                page={trail.length}
+                hasMore={!!runs.data?.hasMore}
+                onNext={() => {
+                  if (runs.data?.nextCursor)
+                    setHistory({
+                      siteId: site.id,
+                      cursors: [...trail, runs.data.nextCursor],
+                    });
+                }}
+                onPrevious={() =>
+                  setHistory({ siteId: site.id, cursors: trail.slice(0, -1) })
+                }
                 canEdit={role !== "viewer"}
               />
             )}

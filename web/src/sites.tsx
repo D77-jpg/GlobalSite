@@ -1,3 +1,5 @@
+import { RunList } from "./agent-tasks";
+export { RunList } from "./agent-tasks";
 import { SiteDesign } from "./site-design";
 import { SiteGuide } from "./site-journey";
 import { BuyerWorkspace, SiteQuality } from "./b2b";
@@ -419,12 +421,24 @@ const workspaceTabs = [
 export function SiteWorkspace({ locale, role }: Props) {
   const { id } = useParams(),
     t = st(locale),
+    [query, setQuery] = useSearchParams(),
+    [taskHistory, setTaskHistory] = useState({ siteId: id, cursors: [""] }),
+    taskTrail =
+      taskHistory.siteId === id && query.get("tab") === "runs"
+        ? taskHistory.cursors
+        : [""],
+    taskCursor = taskTrail[taskTrail.length - 1],
     load = useLoad("/sites/" + id),
     sources = useLoad("/sites/" + id + "/sources"),
-    runs = useLoad("/sites/" + id + "/agent-runs", true),
+    runs = useLoad(
+      "/sites/" +
+        id +
+        "/agent-runs" +
+        (taskCursor ? "?cursor=" + encodeURIComponent(taskCursor) : ""),
+      true,
+    ),
     pages = useLoad("/sites/" + id + "/pages"),
     ready = useLoad("/sites/" + id + "/readiness"),
-    [query, setQuery] = useSearchParams(),
     requestedTab = query.get("tab") ?? "guide",
     tab = workspaceTabs.includes(requestedTab) ? requestedTab : "guide",
     [consent, setConsent] = useState(false),
@@ -499,7 +513,7 @@ export function SiteWorkspace({ locale, role }: Props) {
         </>
       }
     >
-      {tab !== "guide" && (
+      {!["guide", "runs"].includes(tab) && (
         <div
           className="studio-metrics"
           role="group"
@@ -803,9 +817,22 @@ export function SiteWorkspace({ locale, role }: Props) {
       {tab === "runs" && (
         <RunList
           runs={runs.data?.items}
-          t={t}
+          locale={locale}
+          siteId={id!}
           canEdit={canEdit}
           refresh={runs.reload}
+          page={taskTrail.length}
+          hasMore={!!runs.data?.hasMore}
+          onNext={() => {
+            if (runs.data?.nextCursor)
+              setTaskHistory({
+                siteId: id,
+                cursors: [...taskTrail, runs.data.nextCursor],
+              });
+          }}
+          onPrevious={() =>
+            setTaskHistory({ siteId: id, cursors: taskTrail.slice(0, -1) })
+          }
         />
       )}
       {tab === "settings" &&
@@ -1345,213 +1372,6 @@ function Interview({
         <p className="notice success" role="status">
           {t("candidatesSaved")}
         </p>
-      )}
-    </section>
-  );
-}
-export function RunList({
-  runs,
-  t,
-  canEdit,
-  refresh,
-}: {
-  runs?: Row[];
-  t: T;
-  canEdit: boolean;
-  refresh: () => void;
-}) {
-  const a = useAction();
-  return (
-    <section className="catalog-panel studio-runs">
-      <h2>
-        <Workflow size={20} />
-        {t("runs")}
-      </h2>
-      <Notice t={t} error={a.error} />
-      {!runs ? (
-        <p>{t("loading")}</p>
-      ) : !runs.length ? (
-        <div className="studio-empty">
-          <Activity aria-hidden="true" />
-          <strong>{t("noTasks")}</strong>
-          <p>{t("noTasksHint")}</p>
-        </div>
-      ) : (
-        runs.map((r) => (
-          <article className="studio-run" key={r.id}>
-            <div className="catalog-heading">
-              <h3>{t(r.step === "rewrite" ? "rewriteStep" : r.step)}</h3>
-              {r.cancelRequested && r.active && (
-                <p role="status">{t("cancelling")}</p>
-              )}
-              <Badge status={r.status} t={t} />
-            </div>
-            <div className="studio-run-progress">
-              <span>
-                {t("stepsCompleted")}{" "}
-                <strong>
-                  {r.steps.filter((u: Row) => u.status === "succeeded").length}{" "}
-                  / {r.steps.length}
-                </strong>
-              </span>
-              {r.steps.length > 0 && (
-                <progress
-                  aria-label={t("stepsCompleted")}
-                  value={
-                    r.steps.filter((u: Row) => u.status === "succeeded").length
-                  }
-                  max={r.steps.length}
-                />
-              )}
-            </div>
-            <p className="muted">
-              {t("inputSummary")}: {t("products")} {r.inputSummary.products} ·{" "}
-              {t("confirmedFacts")} {r.inputSummary.confirmedFacts} ·{" "}
-              {t("pages")} {r.inputSummary.pages}
-            </p>
-            <p>
-              {t("tokens")}: {r.tokens} · {t("elapsed")}:{" "}
-              {(r.elapsedMs / 1000).toFixed(1)} {t("seconds")}
-            </p>
-            {r.errorCode && (
-              <p className="notice error">
-                {t(r.errorCode in siteMessages ? r.errorCode : "AGENT_FAILED")}
-              </p>
-            )}
-            {r.steps.map((s: Row) => (
-              <details key={s.key}>
-                <summary>
-                  {s.inputSummary?.pageTitle || s.key}
-                  {r.step === "rewrite" && " / " + s.key} · {t(s.status)} ·{" "}
-                  {t("attempts")} {s.attempts} · {s.tokens} tokens
-                </summary>
-                <p>
-                  {t("elapsed")}: {(s.elapsedMs / 1000).toFixed(1)}{" "}
-                  {t("seconds")}
-                </p>
-                {s.inputSummary && (
-                  <p className="muted">
-                    {t("sourceMaterial")} · {t("products")}{" "}
-                    {s.inputSummary.products} · {t("confirmedFacts")}{" "}
-                    {s.inputSummary.confirmedFacts}
-                  </p>
-                )}
-                {s.output?.reviewMode && (
-                  <p>
-                    <strong>{t("reviewMethod")}</strong> ·{" "}
-                    {t("reviewMethod_" + s.output.reviewMode)}
-                  </p>
-                )}
-                {s.output?.metrics?.length > 0 && (
-                  <ul aria-label={t("browserMeasurements")}>
-                    {s.output.metrics.map((m: Row) => (
-                      <li key={m.width}>
-                        {m.width}px ·{" "}
-                        {t(m.overflow ? "overflowDetected" : "noOverflow")} ·{" "}
-                        {t("brokenImages")} {m.brokenImages}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {Array.isArray(s.output?.findings) && (
-                  <p>
-                    {t("recordedFindings")} · {s.output.findings.length}
-                  </p>
-                )}
-                {s.output?.directions?.length > 0 && (
-                  <Link to={"/sites/" + r.siteId + "?tab=design"}>
-                    {t("design")}
-                  </Link>
-                )}
-                {s.output?.nodes && (
-                  <Link to={"/sites/" + r.siteId + "?tab=planning"}>
-                    {t("openGeneratedPlan")} · {s.output.nodes.length}
-                  </Link>
-                )}
-                {s.output?.questions?.length > 0 && (
-                  <Link to={"/sites/" + r.siteId + "?tab=interview"}>
-                    {t("openInterview")} · {s.output.questions.length}
-                  </Link>
-                )}
-                {s.output?.screenshots?.length > 0 && (
-                  <Link to={"/sites/" + r.siteId + "?tab=quality"}>
-                    {t("openReport")} · {s.output.screenshots.length}{" "}
-                    {t("screenCaptures")}
-                  </Link>
-                )}
-                {s.output?.pageId && (
-                  <Link to={"/pages/" + s.output.pageId}>{t("editPage")}</Link>
-                )}
-                {s.output?.directions?.length > 0 && (
-                  <Link to={"/sites/" + r.siteId + "?tab=design"}>
-                    {t("design")}
-                  </Link>
-                )}
-                {s.output?.nodes && (
-                  <ul>
-                    {s.output.nodes.map((n: Row) => (
-                      <li key={n.key}>
-                        {n.title} · {n.path}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {s.output?.questions && (
-                  <ul>
-                    {s.output.questions.map((q: Row) => (
-                      <li key={q.id}>{q.question}</li>
-                    ))}
-                  </ul>
-                )}
-                {s.history.map((h: Row, i: number) => (
-                  <p key={i}>
-                    {t("attempts")} {h.attempt} · {h.tokens} tokens ·{" "}
-                    {(h.elapsedMs / 1000).toFixed(1)} {t("seconds")}{" "}
-                    {h.errorCode
-                      ? t(
-                          h.errorCode in siteMessages
-                            ? h.errorCode
-                            : "AGENT_FAILED",
-                        )
-                      : ""}
-                  </p>
-                ))}
-              </details>
-            ))}
-            {canEdit && (
-              <div className="catalog-actions">
-                {["failed", "paused"].includes(r.status) && (
-                  <button
-                    className="secondary"
-                    disabled={a.busy}
-                    onClick={() =>
-                      void a.run(async () => {
-                        await api("/agent-runs/" + r.id + "/retry", "POST");
-                        refresh();
-                      })
-                    }
-                  >
-                    {t("retry")}
-                  </button>
-                )}
-                {r.active && (
-                  <button
-                    className="secondary"
-                    disabled={a.busy || r.cancelRequested}
-                    onClick={() =>
-                      void a.run(async () => {
-                        await api("/agent-runs/" + r.id + "/cancel", "POST");
-                        refresh();
-                      })
-                    }
-                  >
-                    {t("cancel")}
-                  </button>
-                )}
-              </div>
-            )}
-          </article>
-        ))
       )}
     </section>
   );
