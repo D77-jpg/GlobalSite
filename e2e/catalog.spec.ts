@@ -1,11 +1,10 @@
-import { login as fixtureLogin } from "./helpers/site-login";
+import { login as fixtureLogin, gotoWorkspace } from "./helpers/site-login";
 import {
   test,
   expect,
   type APIRequestContext,
   type Page,
 } from "@playwright/test";
-const origin = process.env.E2E_BASE_URL ?? "http://localhost:5080";
 async function login(page: Page, request: APIRequestContext) {
   await fixtureLogin(page, request, "Catalog Demo");
 }
@@ -203,7 +202,7 @@ test("catalog mobile: usable source review and upload/import layout without hori
     "/facts",
     "/website-reads",
   ]) {
-    await page.goto(path);
+    await gotoWorkspace(page, path);
     await expect(page.locator(".catalog h1")).toBeVisible();
     expect(
       await page.evaluate(

@@ -90,3 +90,15 @@ export async function login(
     page.off("response", watch);
   }
 }
+
+// Full navigations reload the session; honor the same auth bucket as a user.
+export async function gotoWorkspace(page: Page, path: string) {
+  const response = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === "/api/v1/auth/me",
+  );
+  const [, auth] = await Promise.all([page.goto(path), response]);
+  if (auth.status() === 429) {
+    await cooldown(page, await auth.allHeaders());
+    await page.getByRole("button", { name: "重试", exact: true }).click();
+  }
+}
