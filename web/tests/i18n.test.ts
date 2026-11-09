@@ -30,4 +30,11 @@ test("login return targets cannot escape the workspace origin", () => {
     ),
     "/accept-invitation?token=fixture",
   );
+  for (const target of [
+    "/agent?site=" + "a".repeat(24),
+    "/sites/new",
+    "/sites/" + "a".repeat(24) + "/preview",
+  ]) {
+    assert.equal(safeReturnTo(target, "https://site.example.invalid"), target);
+  }
 });

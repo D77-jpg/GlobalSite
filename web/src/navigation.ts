@@ -1,5 +1,7 @@
 const allowed = new Set([
   "/",
+  "/agent",
+  "/sites/new",
   "/organization",
   "/sites",
   "/inquiries",
@@ -28,7 +30,7 @@ export function safeReturnTo(value: string | null, origin: string) {
     const url = new URL(value, origin);
     return url.origin === origin &&
       (allowed.has(url.pathname) ||
-        /^\/sites\/[a-f0-9]{24}\/(?:inquiry-settings|publishing)$/.test(
+        /^\/sites\/[a-f0-9]{24}\/(?:inquiry-settings|publishing|preview)$/.test(
           url.pathname,
         ) ||
         /^\/(?:products|sites|pages|inquiries)\/[a-f0-9]{24}$/.test(
