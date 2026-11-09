@@ -122,7 +122,7 @@ test("design proposal interface compares, retries previews, expands and selects 
           success: true,
           data: {
             html:
-              '<!doctype html><html lang="en"><head><meta name="robots" content="noindex"></head><body><h1>' +
+              '<!doctype html><html lang="en"><head><meta name="robots" content="noindex"></head><body class="b2b-site composed-site type-editorial palette-clay products-gallery"><h1>' +
               key +
               " collection</h1><p>Isolated UI preview fixture</p></body></html>",
             hash: "fixture",
@@ -169,6 +169,21 @@ test("design proposal interface compares, retries previews, expands and selects 
   ).toBeVisible();
   await page.getByRole("button", { name: "重试预览", exact: true }).click();
   await expect(page.locator(".proposal iframe")).toHaveCount(2);
+  const proposalBody = page
+    .frameLocator('iframe[title="Product-led showcase"]')
+    .locator("body");
+  await expect(proposalBody).toHaveCSS(
+    "background-color",
+    "rgb(251, 248, 243)",
+  );
+  await expect(proposalBody).toHaveCSS(
+    "font-family",
+    "Arial, Helvetica, sans-serif",
+  );
+  expect(
+    await page.locator(".proposal-canvas").first().getAttribute("style"),
+  ).toBeNull();
+
   await expect(page.locator(".proposal-issues")).toContainText(
     "1 项内容检查待处理",
   );

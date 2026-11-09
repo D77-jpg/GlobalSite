@@ -141,3 +141,18 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+.proposal-canvas {
+  container-type: inline-size;
+  aspect-ratio: 1280/900;
+}
+.proposal-canvas:not(.expanded) iframe {
+  width: 1280px;
+  height: 900px;
+  transform: scale(calc(100cqw / 1280px));
+  transform-origin: top left;
+  pointer-events: none;
+}
+.proposal-canvas.expanded {
+  aspect-ratio: auto;
+}
