@@ -1,3 +1,4 @@
+import { compositionIssues } from "./site-composition.service";
 import type { PageInput } from "../validators/sites.validator";
 import { productSections } from "../validators/sites.validator";
 export type Issue = {
@@ -75,6 +76,7 @@ export function validatePage(
     type: string;
     brandName?: string;
     paths?: string[];
+    requireComposition?: boolean;
   },
 ): Issue[] {
   const issues: Issue[] = [],
@@ -205,6 +207,8 @@ export function validatePage(
     )
       add("UNSOURCED_CAPACITY", field, key, "capacity");
   }
+  if (context.requireComposition && !data.presentation?.composition)
+    add("CONTENT_DESIGN_REQUIRED", "presentation", null);
   if (context.brandName) text(context.brandName, data.refs, "site.name", null);
   if (data.presentation) {
     for (const field of [
@@ -367,7 +371,7 @@ export function validatePage(
         )
       )
         add("PRODUCT_SECTION_REQUIRED", "blocks." + key, key, key);
-  return issues;
+  return [...issues, ...compositionIssues(data, context.type)];
 }
 export function escapeHtml(value: unknown) {
   return String(value ?? "").replace(

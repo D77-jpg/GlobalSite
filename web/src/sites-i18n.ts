@@ -233,6 +233,40 @@ export const siteMessages = {
   "product.samples": ["样品政策", "Sample terms"],
   "product.images": ["产品图片", "Product images"],
   generatePage: ["用 Agent 重新生成", "Regenerate with Agent"],
+  heroEditorial: ["非对称画册", "Asymmetric editorial"],
+  heroPanorama: ["宽幅场景", "Panoramic scene"],
+  CONTENT_DESIGN_REQUIRED: [
+    "该站点已选定设计，请保留完整设计规则",
+    "Keep the complete selected site design",
+  ],
+  CONTENT_DIRECTIONS_REQUIRED: [
+    "两套提案需要有不同的布局与展示方式",
+    "The proposals need distinct compositions and presentation",
+  ],
+  CONTENT_DEPTH_REQUIRED: [
+    "内容仍然单薄，请补充具体选型信息与采购指导",
+    "Add useful selection information and purchasing guidance",
+  ],
+  CONTENT_SECTIONS_REQUIRED: [
+    "首页缺少完整的采购内容结构",
+    "The homepage needs a complete buying journey",
+  ],
+  CONTENT_DISCOVERY_REQUIRED: [
+    "缺少产品或能力浏览入口",
+    "Add product or capability discovery",
+  ],
+  CONTENT_DECISION_REQUIRED: [
+    "缺少帮助买家选型的内容",
+    "Add information that helps buyers choose",
+  ],
+  CONTENT_BUYING_REQUIRED: [
+    "缺少采购流程或买家问答",
+    "Add buying guidance or buyer questions",
+  ],
+  CONTENT_REPEATED: [
+    "存在重复内容或重复产品展示，请整合",
+    "Consolidate duplicated content or product listings",
+  ],
   brandPresentation: ["品牌展示", "Brand presentation"],
   presentationHint: [
     "首屏标题和导航名称独立于 SEO 标题；修改后需要重新审核。",

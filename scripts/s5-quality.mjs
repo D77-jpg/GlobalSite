@@ -43,6 +43,40 @@ const validator = new HtmlValidate({
     ],
   },
 });
+const compositions = {
+  "composition-engineering": {
+    typography: "technical",
+    palette: "cobalt",
+    navigation: "capabilities",
+    productLayout: "rows",
+    hero: "split",
+    subject: "Precision parts",
+  },
+  "composition-oem": {
+    typography: "sans",
+    palette: "graphite",
+    navigation: "solutions",
+    productLayout: "cards",
+    hero: "stacked",
+    subject: "Contract assembly",
+  },
+  "composition-packaging": {
+    typography: "sans",
+    palette: "clay",
+    navigation: "catalogue",
+    productLayout: "cards",
+    hero: "editorial",
+    subject: "Custom packaging",
+  },
+  "composition-material": {
+    typography: "editorial",
+    palette: "violet",
+    navigation: "catalogue",
+    productLayout: "gallery",
+    hero: "panorama",
+    subject: "Glass collections",
+  },
+};
 const results = [];
 let current = {};
 const server = http.createServer((req, res) => {
@@ -90,9 +124,12 @@ try {
     "building-hardware",
     "packaging-bags",
     "b2b-wholesale",
+    ...Object.keys(compositions),
   ]) {
     const templateId =
-      testCase === "b2b-wholesale" ? "packaging-bags" : testCase;
+      testCase === "b2b-wholesale" || compositions[testCase]
+        ? "packaging-bags"
+        : testCase;
     const block = (key, type, heading, extra = {}) => ({
       key,
       type,
@@ -182,7 +219,7 @@ try {
       assets: {},
       createdAt: "2026-11-05",
     };
-    if (testCase === "b2b-wholesale") {
+    if (testCase === "b2b-wholesale" || compositions[testCase]) {
       snapshot.site.buyerProfile = {
         businessModel: "wholesale",
         audiences: ["Retail buyers"],
@@ -300,6 +337,62 @@ try {
         ],
       });
     }
+    if (compositions[testCase]) {
+      const { hero, subject, ...axes } = compositions[testCase];
+      const composition = { version: "v1", ...axes };
+      snapshot.site.designDirection = { composition };
+      for (const row of snapshot.pages) {
+        row.presentation = { ...row.presentation, composition };
+      }
+      page.presentation.headline = subject + " for your next project";
+      page.presentation.heroLayout = hero;
+      page.presentation.visualStyle = "minimal";
+      page.presentation.primaryActionLabel = "Discuss your project";
+      page.presentation.primaryActionTarget = "inquiry";
+      const original = snapshot.pages.find((row) => row.type === "product");
+      original.presentation = {
+        ...original.presentation,
+        navigationLabel: "Option A",
+        headline: subject + " option A",
+      };
+      for (const label of ["B", "C"]) {
+        snapshot.pages.push({
+          ...original,
+          id: "option-" + label,
+          productId: "option-" + label,
+          path: "/products/option-" + label.toLowerCase(),
+          title: subject + " option " + label,
+          presentation: {
+            ...original.presentation,
+            navigationLabel: "Option " + label,
+            headline: subject + " option " + label,
+          },
+        });
+        snapshot.products.push({
+          id: "option-" + label,
+          name: "Option " + label,
+          category: "Collection",
+          assetIds: ["fixture-image"],
+        });
+        snapshot.site.productIds.push("option-" + label);
+      }
+      snapshot.pages.push({
+        ...page,
+        id: "contact",
+        type: "contact",
+        path: "/contact",
+        title: "Discuss your project",
+        presentation: {
+          ...page.presentation,
+          navigationLabel: "Contact",
+          headline: "Prepare your project brief",
+          heroLayout: "stacked",
+        },
+        blocks: [
+          block("contact-guidance", "text", "Information for your inquiry"),
+        ],
+      });
+    }
     const start = Date.now(),
       built = await buildStatic(snapshot, async () => ({
         body: img,
@@ -358,6 +451,21 @@ try {
       throw Error("Overloaded primary navigation");
     if ((await p.locator("h1").textContent()) !== page.presentation.headline)
       throw Error("SEO title leaked into hero");
+    if (compositions[testCase]) {
+      const h = await p.locator(".hero h1").evaluate((el) => {
+        const box = el.getBoundingClientRect(),
+          css = getComputedStyle(el);
+        return {
+          width: box.width,
+          height: box.height,
+          lineHeight: parseFloat(css.lineHeight),
+        };
+      });
+      if (h.width < 320 || h.height > h.lineHeight * 4.2)
+        throw Error("Hero copy is cramped despite no page overflow");
+      if (await p.locator(".catalog-section.line-sheet").count())
+        throw Error("Legacy catalogue layout leaked into a composed site");
+    }
     for (const width of [375, 768, 1440]) {
       await p.setViewportSize({ width, height: 1000 });
       if (

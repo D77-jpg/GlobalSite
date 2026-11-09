@@ -13628,6 +13628,25 @@ components:
         - alt
         - refs
       additionalProperties: false
+    SiteComposition:
+      type: object
+      description: >-
+        Optional v1 art direction shared across the selected design and all pages. These are
+        bounded rendering choices, not industry templates or factual business claims.
+        Old pages without this object retain the legacy renderer. No generated code is accepted.
+      additionalProperties: false
+      required: [version, typography, palette, navigation, productLayout]
+      properties:
+        version:
+          enum: [v1]
+        typography:
+          enum: [sans, editorial, technical]
+        palette:
+          enum: [graphite, cobalt, clay, forest, violet]
+        navigation:
+          enum: [catalogue, capabilities, solutions]
+        productLayout:
+          enum: [cards, rows, gallery]
     SitePresentation:
       type: object
       description: >-
@@ -13660,6 +13679,10 @@ components:
           enum:
             - split
             - stacked
+            - editorial
+            - panorama
+        composition:
+          $ref: "#/components/schemas/SiteComposition"
         designNotes:
           type: string
           maxLength: 500
@@ -13926,6 +13949,10 @@ components:
               enum:
                 - split
                 - stacked
+                - editorial
+                - panorama
+            composition:
+              $ref: "#/components/schemas/SiteComposition"
             density:
               enum:
                 - comfortable

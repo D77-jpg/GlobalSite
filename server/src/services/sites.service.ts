@@ -341,6 +341,7 @@ export async function pageView(
       productIds: site.productIds.map(String),
       type: page.type,
       brandName: site.name,
+      requireComposition: !!site.designDirection?.composition,
       paths: site.plan?.nodes.map((n: any) => n.path),
     });
   if (
@@ -712,6 +713,7 @@ export async function preview(
               productIds: site.productIds.map(String),
               type: "home",
               brandName: site.name,
+              requireComposition: !!site.designDirection?.composition,
               paths: site.plan.nodes.map((n: any) => n.path),
             },
           ),
@@ -801,7 +803,15 @@ export async function preview(
     createdAt: new Date().toISOString(),
   };
   const css = (
-    await fs.readFile(path.resolve(__dirname, "../../builder/site.css"), "utf8")
+    (await fs.readFile(
+      path.resolve(__dirname, "../../builder/site.css"),
+      "utf8",
+    )) +
+    "\n" +
+    (await fs.readFile(
+      path.resolve(__dirname, "../../builder/composition.css"),
+      "utf8",
+    ))
   ).replace(/@font-face\s*\{[^}]+\}/g, "");
   const current = views.find((p: any) => p.id === id);
   ensure(current, 409, "PAGE_PLAN_CHANGED");

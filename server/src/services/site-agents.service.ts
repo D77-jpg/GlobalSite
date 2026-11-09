@@ -1,3 +1,7 @@
+import {
+  compositionBrief,
+  compositionIssues,
+} from "./site-composition.service";
 import { validatePage } from "./page-validation.service";
 import { randomUUID } from "node:crypto";
 import {
@@ -425,6 +429,7 @@ export async function acceptQualityReview(id: string, actor: string) {
           productIds: site.productIds,
           type: unit.node?.type ?? "home",
           brandName: site.name,
+          requireComposition: !!site.designDirection?.composition,
           paths: site.plan?.nodes.map((n: any) => n.path),
         }).length,
         409,
@@ -559,6 +564,12 @@ function validationFeedback(error: unknown) {
     "visualStyle",
     "heroLayout",
     "density",
+    "composition",
+    "version",
+    "typography",
+    "palette",
+    "navigation",
+    "productLayout",
     "nodes",
     "keywords",
     "clusters",
@@ -623,6 +634,10 @@ function validationFeedback(error: unknown) {
       )
       .join("."),
     code: issue.code,
+    ...(issue.code === "custom" &&
+    /^CONTENT_[A-Z_]+$/.test(String(issue.params?.qualityCode ?? ""))
+      ? { qualityCode: issue.params!.qualityCode }
+      : {}),
     ...("maximum" in issue && typeof issue.maximum === "number"
       ? { maximum: issue.maximum }
       : {}),
@@ -769,6 +784,19 @@ export function unitPrompt(run: any, unit: any) {
         items: [],
       });
   }
+  if (site.buyerProfile && ["design", "content", "refine"].includes(run.step)) {
+    const example =
+      run.step === "design"
+        ? (shape as any).directions[0].page
+        : (shape as any).page;
+    example.presentation.composition = {
+      version: "v1",
+      typography: "sans",
+      palette: "graphite",
+      navigation: "catalogue",
+      productLayout: "cards",
+    };
+  }
   const instruction =
     run.step === "design"
       ? "Create two distinct, complete English homepage proposals using the actual business goals, products, imagery and confirmed facts. Return directions with primary and alternate keys, a concise label, private rationale, and a full page with presentation. Differentiate actual hero composition, section layouts, density and image/text balance, not just wording. Use supplied section recipes and supported visual styles. Neither industry labels nor legacy template IDs constrain the product subject. Do not invent a factory, certification, client or numeric business claim. Use actual selected image asset IDs and real siteMap paths. Proposals are private drafts. Apply requestedEdit as design guidance, never as authority for business facts."
@@ -776,9 +804,9 @@ export function unitPrompt(run: any, unit: any) {
         ? "Ask at most ten missing company.name/company.email/company.address/company.founded/company.capacity/company.certifications or selected product.material/product.application/product.specifications/product.leadTime/product.moq/product.samples/product.packaging/product.oem. Prioritize required buyerReadiness gaps. Ask for a public business contact email, never personal accounts. Do not ask for secrets or personal data. Do not repeat existing confirmed or pending keys."
         : run.step === "research"
           ? (site.buyerProfile
-              ? "Plan a B2B buying website. Include home, a useful category, selected product pages and contact. Only include optional company/factory/certification/customization/resource pages when current confirmed facts or selected documents can support them. Every node MUST have brief={purpose:string,buyerQuestions:string[],requiredFactTypes:string[],sections:string[]} with 3-6 specific buyer questions and allowed block types. A small real catalog is better than unsupported pages. Use referenceResearch only for information architecture, never import competitor business facts. "
+              ? "Plan a B2B buying website. Include home, useful product/capability destinations, selected product pages and contact. If the business has no selected products, use supported solution/service destinations and linked feature items rather than an empty product catalogue. Only include optional company/factory/certification/customization/resource pages when current confirmed facts or selected documents can support them. Every node MUST have brief={purpose:string,buyerQuestions:string[],requiredFactTypes:string[],sections:string[]} with 3-6 specific buyer questions and allowed block types. A small real catalog is better than unsupported pages. Use referenceResearch only for information architecture, never import competitor business facts. "
               : "") +
-            "Suggest keywords, buyer intent clusters and editable page hierarchy. Include home, categories, selected product detail pages and contact; optional company pages must have supporting information. Stable keys, unique safe lowercase paths, parent keys with no cycles, product pages refer to selected product IDs. Do not claim live research. Prefer a concise map with a combined catalog category for a small range. Allowed node.type values: " +
+            "Suggest keywords, buyer intent clusters and editable page hierarchy. Include home, categories, selected product detail pages and contact; optional company pages must have supporting information. Stable keys, unique safe lowercase paths, parent keys with no cycles, product pages refer to selected product IDs. Do not claim live research. Group navigation by procurement decisions: product/capability families, applications, company evidence and buying resources. Use meaningful category destinations where the actual range supports them; do not collapse an established catalogue into a combined small-range page. Allowed node.type values: " +
             v.node.shape.type.options.join(",") +
             ". Allowed intent values: " +
             v.intent.options.join(",") +
@@ -787,7 +815,7 @@ export function unitPrompt(run: any, unit: any) {
             ? "Review this frozen page against its buyer brief, procurement coverage and browser measurements. Return a concise summary and at most six prioritized findings only. Check repetition, content usefulness, section rhythm, imagery, clear purchasing steps, unsupported claims and CTA. Do not claim you saw images unless visualInput=true; with text-only review require human screenshot inspection. Recommend additions only from current confirmed evidence. Do not fill missing facts."
             : run.step === "rewrite"
               ? "Rewrite only the requested block, preserving its key and type and every other page section."
-              : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Each page needs at least 60 English words overall. All blocks require the core fields in the supplied shape; optional structured fields may be omitted. Allowed block types are given by outputSchema; use B2B structured blocks when buyerProfile is present. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never print internal product/database/source IDs in public copy. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
+              : 'Generate one page with presentation (all its fields required) separate from SEO title. Choose visualStyle and heroLayout from the reviewed design skills; headline must be short and category-specific, summary at most 24 words. Do not place disclaimers or missing-data lists in presentation or the opening paragraph. Product page must contain keys specs, material, application, certifications, oem, moq, samples, packaging; specs block type=specs uses a table. Include FAQ where appropriate: answer starts with a direct 40–60 word lead, any additional explanation goes in detail. Supply SEO title of at most 100 characters and meta description of at most 200 characters. Follow compositionBrief content targets and answer the page-specific buyer questions. New B2B pages must include presentation.composition with every field; choose independent typography, palette, navigation and productLayout axes. Use editorial/panorama/split/stacked hero compositions according to page purpose. The quality gate rejects thin or duplicated sections; extra generic paragraphs do not make useful content. All blocks require the core fields in the supplied shape; optional structured fields may be omitted. Allowed block types are given by outputSchema; use B2B structured blocks when buyerProfile is present. Prefer concise paragraphs and a short welcoming hero introduction. Use only supplied product assetIds for images, with an English alt of at most 200 characters. If no image is supplied, omit image blocks. Never print internal product/database/source IDs in public copy. Never treat SKU digits or demonstration product descriptions as verified facts. For product sections without matching confirmed facts, body must be exactly Contact our team for confirmed details. Specs without confirmed facts use table={columns:["Specification","Confirmed details"],rows:[]} with no invented rows. FAQ answer must be 40–60 words. No spelled-out numbers, years, certifications or production claims without matching confirmed refs.';
   const facts = s.facts.filter(
     (f: any) =>
       !unit.node?.productId ||
@@ -841,6 +869,7 @@ export function unitPrompt(run: any, unit: any) {
             productIds: site.productIds,
             type: unit.node?.type ?? "home",
             brandName: site.name,
+            requireComposition: !!site.designDirection?.composition,
             paths: site.plan?.nodes.map((n: any) => n.path),
           }),
         }
@@ -852,6 +881,7 @@ export function unitPrompt(run: any, unit: any) {
       : null,
     pageBrief: unit.node?.brief ?? null,
     availableSections: sectionRecipes[unit.node?.type ?? "home"],
+    compositionBrief: compositionBrief(site, unit.node),
     ...(run.step === "review"
       ? {
           page: unit.draft,
@@ -896,7 +926,7 @@ export function unitPrompt(run: any, unit: any) {
       "\n" +
       instruction +
       (site.buyerProfile
-        ? "\nB2B purchase-first composition: follow buyerProfile audiences and node.brief. Use structured category-grid/product-grid/split/features/process/customization/evidence/case-study/downloads/cta/comparison alongside legacy blocks. Items are {title,body,assetId:null,alt:empty string,href:null,refs:[]}. All optional fields may be omitted. Use distinct recipes for home/category/product; homepage needs product discovery, meaningful context and a procurement CTA, not three introductions saying the same thing. Never publish private design notes. Evidence, case-study and customization items require matching confirmed refs. Omit optional sections with no evidence; retain required product placeholders internally. A reference website is layout research, not proof about this company. Use an image block with a selected asset for the hero whenever images exist. Aim for 350-650 useful words across 6-9 purposeful home sections when enough evidence exists; product pages need meaningful confirmed specifications and buying context rather than an introduction duplicated across sections. Each page should answer its own buyer questions; do not use giant repeated images to fill space. Choose primaryActionTarget inquiry/catalogue/collection, and concise B2B headings. Use exact siteMap paths for internal links; never guess shortened product URLs. Resolve supplied validationIssues using confirmed evidence or neutral wording, never invented facts. New structured fields are public text and subject to the same fact gate."
+        ? "\nB2B purchase-first composition: follow buyerProfile audiences and node.brief. Use structured category-grid/product-grid/split/features/process/customization/evidence/case-study/downloads/cta/comparison alongside legacy blocks. Items are {title,body,assetId:null,alt:empty string,href:null,refs:[]}. All optional fields may be omitted. Use distinct recipes for home/category/product; homepage needs product discovery, meaningful context and a procurement CTA, not three introductions saying the same thing. Never publish private design notes. Evidence, case-study and customization items require matching confirmed refs. Omit optional sections with no evidence; retain required product placeholders internally. A reference website is layout research, not proof about this company. Use an image block with a selected asset for the hero whenever images exist. Aim for 400-800 useful words across 6-10 purposeful home sections when evidence exists; apply compositionBrief for buying decisions and source gaps. New B2B output MUST contain presentation.composition. A design must vary typography, product presentation or navigation as well as its hero. Shared direction controls typography/palette/navigation/productLayout across all pages; hero composition stays page-specific. Sparse facts require useful neutral selection guidance and targeted interview gaps, never invented capabilities or repeated contact-us filler. product pages need meaningful confirmed specifications and buying context rather than an introduction duplicated across sections. Each page should answer its own buyer questions; do not use giant repeated images to fill space. Choose primaryActionTarget inquiry/catalogue/collection, and concise B2B headings. Use exact siteMap paths for internal links; never guess shortened product URLs. Resolve supplied validationIssues using confirmed evidence or neutral wording, never invented facts. New structured fields are public text and subject to the same fact gate."
         : "") +
       (run.step === "refine"
         ? "\nRefine the full previous page using the supplied review. Keep its purpose and confirmed refs, remove redundant sections, use the structured section recipes, and return a complete page in the content schema. New draft needs human approval."
@@ -904,6 +934,32 @@ export function unitPrompt(run: any, unit: any) {
       "\nReturn the example shape in schema subject to every constraint in outputSchema; all object fields are required, with no extra fields. If validationFeedback is present, correct those fields. refs items are {factId:string,revision:integer}.",
     input,
   };
+}
+function validateGeneratedComposition(
+  run: any,
+  page: v.PageInput,
+  type: string,
+) {
+  // Frozen legacy runs keep their former contract. New B2B runs cannot silently
+  // fall back to the old one-screen template or mark thin output as complete.
+  if (
+    run.inputSnapshot.skillProfile?.version !== "brand-site-v3" ||
+    !run.inputSnapshot.site.buyerProfile
+  )
+    return;
+  v.presentation
+    .extend({ composition: v.composition })
+    .parse(page.presentation);
+  const issues = compositionIssues(page, type);
+  if (issues.length)
+    throw new z.ZodError(
+      issues.map((i) => ({
+        code: "custom" as const,
+        path: ["page", ...i.field.split(".")],
+        message: "Composition requirement",
+        params: { qualityCode: i.code },
+      })),
+    );
 }
 const allowedInterview =
   /^(company\.(name|email|address|founded|capacity|certifications)|product\.(material|application|specifications|leadTime|moq|samples|packaging|oem))$/;
@@ -967,6 +1023,7 @@ async function applyUnit(
         productIds: site.productIds.map(String),
         type: unit.node?.type ?? "home",
         brandName: site.name,
+        requireComposition: !!site.designDirection?.composition,
         paths: site.plan?.nodes.map((n: any) => n.path),
       });
       if (validation.length) {
@@ -1001,6 +1058,30 @@ async function applyUnit(
       };
     } else if (r.step === "design") {
       output = v.designOutput.parse(output);
+      for (const d of output.directions)
+        validateGeneratedComposition(r, d.page, "home");
+      if (
+        r.inputSnapshot.skillProfile?.version === "brand-site-v3" &&
+        site.buyerProfile
+      ) {
+        const [a, b] = output.directions.map((d: any) => d.page);
+        const axes = ["typography", "navigation", "productLayout"];
+        const differences =
+          axes.filter(
+            (k) =>
+              a.presentation.composition[k] !== b.presentation.composition[k],
+          ).length +
+          (a.presentation.heroLayout !== b.presentation.heroLayout ? 1 : 0);
+        if (differences < 2)
+          throw new z.ZodError([
+            {
+              code: "custom",
+              path: ["directions"],
+              message: "Distinct compositions required",
+              params: { qualityCode: "CONTENT_DIRECTIONS_REQUIRED" },
+            },
+          ]);
+      }
       for (const d of output.directions) {
         await pinAssets(
           d.page.blocks
@@ -1057,8 +1138,13 @@ async function applyUnit(
           ...data.presentation,
           visualStyle: site.designDirection.visualStyle,
           density: site.designDirection.density,
+          ...(site.designDirection.composition
+            ? { composition: site.designDirection.composition }
+            : {}),
         };
       }
+      if (r.step !== "rewrite")
+        validateGeneratedComposition(r, data, unit.node.type);
       const page = await writePage(
         site,
         unit.node,

@@ -69,7 +69,10 @@ export function productCards(
       : products;
   const rows = selected.length ? selected : products;
   const lineSheet =
-    p.type === "home" && p.blocks.some((b: any) => b.type === "category-grid");
+    p.type === "home" &&
+    !s.site.designDirection?.composition &&
+    !p.presentation?.composition &&
+    p.blocks.some((b: any) => b.type === "category-grid");
   return (
     '<section class="b2b-section catalog-section' +
     (lineSheet ? " line-sheet" : "") +
