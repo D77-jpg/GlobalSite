@@ -35,7 +35,7 @@ export type Snapshot = {
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "b2b-site-v5";
+export const templateVersion = "b2b-site-v6";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
@@ -227,27 +227,64 @@ export function renderStaticPage(s: Snapshot, p: any) {
     .map((type) => s.pages.find((v) => v.type === type))
     .filter(Boolean);
   const contact = s.pages.find((v) => v.type === "contact");
-  const browse =
-    categories.length > 1 ? categories : [...categories, ...products];
-  const navPages = s.site.buyerProfile
-    ? [...browse.slice(0, buyingPages.length ? 3 : 5), ...buyingPages]
-        .slice(0, contact ? 4 : 5)
-        .concat(contact ? [contact] : [])
-    : ["category", "about", "faq", "contact"]
-        .map((type) => s.pages.find((v) => v.type === type))
-        .filter(Boolean);
-  const nav = navPages
-    .map(
-      (v) =>
-        '<a href="' +
-        e(v.path) +
-        '"' +
-        (v.path === p.path ? ' aria-current="page"' : "") +
-        ">" +
-        e(label(v)) +
-        "</a>",
-    )
+  const link = (path: string, text: string, visual = "") =>
+    '<a href="' +
+    e(path) +
+    '"' +
+    (p.path === path ? ' aria-current="page"' : "") +
+    ">" +
+    visual +
+    "<span>" +
+    e(text) +
+    "</span></a>";
+  const catalogueLink = link("/catalogue.html", "View full catalogue");
+  const ranges = categories.length > 1 ? categories : products;
+  const rangeLinks = ranges
+    .slice(0, 6)
+    .map((v) => {
+      const artwork = v.blocks.find(
+        (block: any) => block.type === "image" && s.assets[block.assetId],
+      );
+      return link(
+        v.path,
+        label(v),
+        artwork ? '<span aria-hidden="true">' + image(s, artwork.assetId, artwork.alt || label(v)) + "</span>" : "",
+      );
+    })
     .join("");
+  const rangeMenu =
+    '<details class="range-menu"><summary>Products</summary><div class="range-panel"><div class="range-index">' +
+    catalogueLink +
+    (categories.length === 1 ? link(categories[0].path, label(categories[0])) : "") +
+    '</div><div class="range-tiles">' +
+    rangeLinks +
+    "</div></div></details>";
+  const buyingLinks = buyingPages.map((v) => link(v.path, label(v)));
+  for (const [type, title] of [
+    ["process", "How to order"],
+    ["faq", "Buyer FAQs"],
+  ]) {
+    const block = home?.blocks.find(
+      (v: any) =>
+        v.type === type &&
+        (type === "faq" ? v.faq?.length : v.items?.length),
+    );
+    if (block && !buyingPages.some((v) => v.type === type)) {
+      buyingLinks.push(link("/#block-" + block.key, title));
+    }
+  }
+  const legacyLinks = ["category", "about", "faq", "contact"]
+    .map((type) => s.pages.find((v) => v.type === type))
+    .filter(Boolean)
+    .map((v) => link(v.path, label(v)))
+    .join("");
+  const destinations =
+    buyingLinks.slice(0, contact ? 3 : 4).join("") +
+    (contact ? link(contact.path, label(contact)) : "");
+  const nav = s.site.buyerProfile ? rangeMenu + destinations : legacyLinks;
+  const footerNav = s.site.buyerProfile
+    ? catalogueLink + destinations
+    : legacyLinks;
 
   const catalog = s.pages.find((v) => v.type === "category");
   const collectionHref =
@@ -462,7 +499,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
         .join(" · "),
     ) +
     '</p></div><nav aria-label="Footer navigation">' +
-    nav +
+    footerNav +
     '<a href="' +
     e(privacyPath(s)) +
     '">Privacy Policy</a><button type="button" data-cookie-settings>Privacy choices</button></nav><a class="back-top" href="#main">Back to top</a></footer>' +

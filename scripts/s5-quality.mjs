@@ -352,7 +352,7 @@ try {
     });
     await p.goto(url);
     if (
-      (await p.locator(".desktop-nav a").count()) >
+      (await p.locator(".desktop-nav > a, .desktop-nav > details").count()) >
       (snapshot.site.buyerProfile ? 5 : 4)
     )
       throw Error("Overloaded primary navigation");

@@ -303,6 +303,11 @@ test("single-category ranges expose approved product destinations in navigation 
   const html = renderStaticPage(s, s.pages[0]);
   const navigation =
     html.match(/<nav class="desktop-nav"[^>]*>(.*?)<\/nav>/s)?.[1] ?? "";
+  assert.match(
+    navigation,
+    /<details class="range-menu"><summary>Products<\/summary>/,
+  );
+  assert.ok(!navigation.split("</details>")[1].includes(s.pages[2].path));
   const card = {
     ...item,
     href: s.pages[2].path,
