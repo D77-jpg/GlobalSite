@@ -1402,13 +1402,53 @@ export function RunList({
             {r.steps.map((s: Row) => (
               <details key={s.key}>
                 <summary>
-                  {s.inputSummary?.pageTitle || s.key} · {t(s.status)} ·{" "}
+                  {s.inputSummary?.pageTitle || s.key}
+                  {r.step === "rewrite" && " / " + s.key} · {t(s.status)} ·{" "}
                   {t("attempts")} {s.attempts} · {s.tokens} tokens
                 </summary>
                 <p>
                   {t("elapsed")}: {(s.elapsedMs / 1000).toFixed(1)}{" "}
                   {t("seconds")}
                 </p>
+                {s.inputSummary && (
+                  <p className="muted">
+                    {t("sourceMaterial")} · {t("products")}{" "}
+                    {s.inputSummary.products} · {t("confirmedFacts")}{" "}
+                    {s.inputSummary.confirmedFacts}
+                  </p>
+                )}
+                {s.output?.reviewMode && (
+                  <p>
+                    <strong>{t("reviewMethod")}</strong> ·{" "}
+                    {t("reviewMethod_" + s.output.reviewMode)}
+                  </p>
+                )}
+                {s.output?.metrics?.length > 0 && (
+                  <ul aria-label={t("browserMeasurements")}>
+                    {s.output.metrics.map((m: Row) => (
+                      <li key={m.width}>
+                        {m.width}px ·{" "}
+                        {t(m.overflow ? "overflowDetected" : "noOverflow")} ·{" "}
+                        {t("brokenImages")} {m.brokenImages}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {Array.isArray(s.output?.findings) && (
+                  <p>
+                    {t("recordedFindings")} · {s.output.findings.length}
+                  </p>
+                )}
+                {s.output?.nodes && (
+                  <Link to={"/sites/" + r.siteId + "?tab=planning"}>
+                    {t("openGeneratedPlan")} · {s.output.nodes.length}
+                  </Link>
+                )}
+                {s.output?.questions?.length > 0 && (
+                  <Link to={"/sites/" + r.siteId + "?tab=interview"}>
+                    {t("openInterview")} · {s.output.questions.length}
+                  </Link>
+                )}
                 {s.output?.screenshots?.length > 0 && (
                   <Link to={"/sites/" + r.siteId + "?tab=quality"}>
                     {t("openReport")} · {s.output.screenshots.length}{" "}

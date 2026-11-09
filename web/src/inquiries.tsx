@@ -41,6 +41,101 @@ export function InquiriesPage({ locale }: Props) {
     />
   );
 }
+type SiteChoice = { id: string; name: string };
+function InquirySitePicker({
+  value,
+  onChange,
+  t,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  t: (key: string) => string;
+}) {
+  const [sites, setSites] = useState<SiteChoice[]>([]);
+  const [request, setRequest] = useState({ cursor: "", attempt: 0 });
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let active = true;
+    const query = new URLSearchParams({ limit: "100" });
+    if (request.cursor) query.set("cursor", request.cursor);
+    api<{ items: SiteChoice[]; nextCursor: string | null }>("/sites?" + query)
+      .then((page) => {
+        if (!active) return;
+        setSites((previous) => {
+          const merged = new Map(previous.map((site) => [site.id, site]));
+          for (const site of page.items) merged.set(site.id, site);
+          return [...merged.values()];
+        });
+        setNextCursor(
+          page.nextCursor === request.cursor ? null : page.nextCursor,
+        );
+        setState("ready");
+      })
+      .catch(() => {
+        if (active) setState("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [request]);
+
+  function loadPage(cursor: string) {
+    setState("loading");
+    setRequest((previous) => ({ cursor, attempt: previous.attempt + 1 }));
+  }
+
+  return (
+    <div>
+      <label>
+        {t("site")}
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="">{t("allSites")}</option>
+          {value && !sites.some((site) => site.id === value) && (
+            <option value={value}>{t("selectedSite")}</option>
+          )}
+          {sites.map((site) => (
+            <option key={site.id} value={site.id}>
+              {site.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {state === "loading" && (
+        <span className="ops-caption" role="status">
+          {t("loadingSites")}
+        </span>
+      )}
+      {state === "error" && (
+        <>
+          <p className="ops-caption" role="alert">
+            {t("sitesFailed")}
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => loadPage(request.cursor)}
+          >
+            {t("retrySites")}
+          </button>
+        </>
+      )}
+      {state === "ready" && nextCursor && (
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => loadPage(nextCursor)}
+        >
+          {t("moreSites")}
+        </button>
+      )}
+    </div>
+  );
+}
 function InquiryInbox({
   locale,
   initialSiteId,
@@ -65,7 +160,6 @@ function InquiryInbox({
     ),
     [cursor, setCursor] = useState(""),
     form = useForm<Row>({ defaultValues: filters }),
-    sites = useLoad("/sites?limit=200"),
     load = useLoad("/inquiries?" + query + (cursor ? "&cursor=" + cursor : ""));
   function filter(d: Row) {
     setFilters(d);
@@ -92,23 +186,17 @@ function InquiryInbox({
           {t("export")}
         </a>
       </header>
-      <Notice error={load.error ?? sites.error} t={t} />
+      <Notice error={load.error} t={t} />
       <form
         className="catalog-panel inquiry-filters"
         onSubmit={form.handleSubmit(filter)}
       >
         <div className="catalog-grid">
-          <label>
-            {t("site")}
-            <select aria-label={t("site")} {...form.register("siteId")}>
-              <option value="">{t("allSites")}</option>
-              {sites.data?.items.map((s: Row) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <InquirySitePicker
+            t={t}
+            value={form.watch("siteId")}
+            onChange={(siteId) => form.setValue("siteId", siteId)}
+          />
         </div>
         <div className="ops-status-tabs" role="group" aria-label={t("status")}>
           {["", "new", "following", "resolved", "spam"].map((status) => (

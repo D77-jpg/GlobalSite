@@ -1,5 +1,19 @@
 import type { Locale } from "./i18n";
 export const siteMessages = {
+  reviewMethod: ["本次审查方式", "Recorded review method"],
+  reviewMethod_structural: ["浏览器结构检查", "Browser structure checks"],
+  reviewMethod_text: [
+    "浏览器检查与 AI 文本审查",
+    "Browser checks and AI text review",
+  ],
+  reviewMethod_visual: [
+    "浏览器检查与 AI 截图审查",
+    "Browser checks and AI screenshot review",
+  ],
+  browserMeasurements: ["浏览器检测结果", "Browser measurements"],
+  recordedFindings: ["审查发现", "Review findings"],
+  openGeneratedPlan: ["查看生成的站点地图", "Open generated sitemap"],
+  openInterview: ["打开待回答问题", "Open interview questions"],
   noSites: ["尚未创建站点", "No sites yet"],
   noSitesAction: [
     "创建站点并选择产品，即可开始规划。",

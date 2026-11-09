@@ -327,6 +327,10 @@
   color: var(--muted);
   margin: 8px 0 18px;
 }
+/* Keep the visually hidden action heading inside its horizontal scroll region. */
+.account-page .table-scroll {
+  position: relative;
+}
 .account-page .panel {
   border-radius: 10px;
   min-width: 0;

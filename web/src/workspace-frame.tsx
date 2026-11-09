@@ -33,7 +33,7 @@ type Props = {
   locale: Locale;
   userName: string;
   role: "admin" | "editor" | "viewer";
-  organizationId: string;
+  organizationName?: string;
   languageButton: ReactNode;
   children: ReactNode;
 };
@@ -103,7 +103,7 @@ export function WorkspaceFrame({
   locale,
   userName,
   role,
-  organizationId,
+  organizationName,
   languageButton,
   children,
 }: Props) {
@@ -113,7 +113,6 @@ export function WorkspaceFrame({
     navigate = useNavigate(),
     [popup, setPopup] = useState<"menu" | "search" | null>(null),
     [query, setQuery] = useState(""),
-    [org, setOrg] = useState(""),
     [logoutError, setLogoutError] = useState(false);
   const groups = useMemo<Group[]>(() => {
     const item = (path: string, key: Key, icon: LucideIcon): Item => ({
@@ -180,17 +179,6 @@ export function WorkspaceFrame({
     : "/" + location.pathname.split("/")[1];
   const current = all.find((i) => i.path === parentPath);
   useEffect(() => {
-    let live = true;
-    void api<{ name: string }>("/organization")
-      .then((o) => {
-        if (live) setOrg(o.name);
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [organizationId, location.pathname]);
-  useEffect(() => {
     setPopup(null);
     setLogoutError(false);
   }, [location.pathname, location.search]);
@@ -223,7 +211,7 @@ export function WorkspaceFrame({
         </span>
         <div>
           <small>{t("workspace")}</small>
-          <strong>{org || userName}</strong>
+          <strong>{organizationName || userName}</strong>
         </div>
         <ChevronRight size={14} />
       </Link>

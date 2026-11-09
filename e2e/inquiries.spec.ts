@@ -195,7 +195,67 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
     await preview.locator('meta[name="robots"]').getAttribute("content"),
   ).toContain("noindex");
   await preview.close();
-  await page.goto("/inquiries?siteId=" + site.id);
+  await test.step("Site filtering preserves the deep link and recovers after a failed second page", async () => {
+    const pickerRoute = /\/api\/v1\/sites\?/;
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: (100 - index).toString(16).padStart(24, "0"),
+      name: "Fixture site " + (index + 1),
+    }));
+    const cursor = firstPage[99].id;
+    let nextPageRequests = 0;
+    await page.route(pickerRoute, async (route) => {
+      const params = new URL(route.request().url()).searchParams;
+      expect(params.get("limit")).toBe("100");
+      if (!params.has("cursor")) {
+        const realResponse = await route.fetch();
+        expect(realResponse.status()).toBe(200);
+        return route.fulfill({
+          json: {
+            success: true,
+            data: { items: firstPage, nextCursor: cursor, hasMore: true },
+          },
+        });
+      }
+      expect(params.get("cursor")).toBe(cursor);
+      if (++nextPageRequests === 1)
+        return route.fulfill({
+          status: 503,
+          json: { error: { code: "UNAVAILABLE" } },
+        });
+      return route.fulfill({
+        json: {
+          success: true,
+          data: { items: [site], nextCursor: null, hasMore: false },
+        },
+      });
+    });
+    await page.goto("/inquiries?siteId=" + site.id);
+    const picker = page.getByRole("combobox", { name: "站点", exact: true });
+    await expect(picker).toHaveValue(site.id);
+    const more = page.getByRole("button", { name: "加载更多站点" });
+    await expect(more).toBeVisible();
+    expect(nextPageRequests).toBe(0);
+    await more.click();
+    await expect(page.getByText("未能加载这批站点。")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Fixture Buyer", exact: true }),
+    ).toBeVisible();
+    await expect(picker.locator("option")).toHaveCount(102);
+    await page.getByRole("button", { name: "重新加载站点" }).click();
+    await expect(picker.locator("option:checked")).toHaveText(site.name);
+    await expect(picker.locator("option")).toHaveCount(102);
+    await expect(more).toBeHidden();
+    expect(nextPageRequests).toBe(2);
+    await picker.selectOption(firstPage[99].id);
+    await page.getByRole("button", { name: "应用筛选" }).click();
+    await expect(page.getByText("暂无符合条件的询盘。")).toBeVisible();
+    await picker.selectOption(site.id);
+    await page.getByRole("button", { name: "应用筛选" }).click();
+    await expect(
+      page.getByRole("link", { name: "Fixture Buyer", exact: true }),
+    ).toBeVisible();
+    await page.unroute(pickerRoute);
+  });
   await page.getByRole("link", { name: "Fixture Buyer", exact: true }).click();
   await expect(
     page.getByText(
