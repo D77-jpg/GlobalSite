@@ -166,9 +166,11 @@ export async function buildStatic(
       path.join(root, "public/assets/fonts"),
       { recursive: true },
     );
-    await fs.copyFile(
-      path.join(builder, "site.css"),
+    await fs.writeFile(
       path.join(root, "public/assets/site.css"),
+      (await fs.readFile(path.join(builder, "site.css"), "utf8")) +
+        "\n" +
+        (await fs.readFile(path.join(builder, "composition.css"), "utf8")),
     );
     await fs.writeFile(
       path.join(root, "public/404.html"),
@@ -318,7 +320,7 @@ export async function buildStatic(
         .map(([n, b]) => [n, createHash("sha256").update(b).digest("hex")]),
     );
     files["globalsite-manifest.json"] = bytes(
-      JSON.stringify({ templateVersion: "b2b-site-v2", files: manifest }),
+      JSON.stringify({ templateVersion: "b2b-site-v7", files: manifest }),
     );
     return {
       body: Buffer.from(

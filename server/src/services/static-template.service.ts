@@ -1,3 +1,4 @@
+import { composition as compositionSchema } from "../validators/sites.validator";
 import {
   renderB2BBlock,
   productCards,
@@ -35,7 +36,7 @@ export type Snapshot = {
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "b2b-site-v6";
+export const templateVersion = "b2b-site-v7";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
@@ -198,6 +199,12 @@ export function renderStaticPage(s: Snapshot, p: any) {
           ? "industrial"
           : "minimal"),
     layout = presentation.heroLayout ?? (firstImage ? "split" : "stacked");
+  const parsedComposition = compositionSchema.safeParse(
+    s.site.designDirection?.composition ??
+      home?.presentation?.composition ??
+      presentation.composition,
+  );
+  const composition = parsedComposition.success ? parsedComposition.data : null;
   const cleanTitle = (v: any) => String(v.title).split(/[|—–]/)[0].trim();
   const label = (v: any) =>
     v.presentation?.navigationLabel ??
@@ -287,10 +294,57 @@ export function renderStaticPage(s: Snapshot, p: any) {
   const destinations =
     buyingLinks.slice(0, contact ? 3 : 4).join("") +
     (contact ? link(contact.path, label(contact)) : "");
-  const nav = s.site.buyerProfile ? rangeMenu + destinations : legacyLinks;
-  const footerNav = s.site.buyerProfile
-    ? catalogueLink + destinations
-    : legacyLinks;
+  const group = (title: string, rows: any[], extra = "") => {
+    if (!rows.length) return "";
+    if (rows.length === 1 && !extra) return link(rows[0].path, label(rows[0]));
+    return (
+      '<details class="range-menu"><summary>' +
+      e(title) +
+      '</summary><div class="buyer-menu">' +
+      extra +
+      rows.map((v) => link(v.path, label(v))).join("") +
+      "</div></details>"
+    );
+  };
+  const composedNav = composition
+    ? [
+        group(
+          composition.navigation === "capabilities"
+            ? "Capabilities"
+            : "Products",
+          categories.length ? categories : products,
+          catalogueLink,
+        ),
+        group(
+          "Solutions",
+          s.pages.filter((v) => ["solution", "customization"].includes(v.type)),
+        ),
+        group(
+          "Company",
+          s.pages.filter((v) =>
+            ["about", "factory", "certifications"].includes(v.type),
+          ),
+        ),
+        group(
+          "Resources",
+          s.pages.filter((v) => ["resources", "faq"].includes(v.type)),
+        ),
+        contact ? link(contact.path, label(contact)) : "",
+      ].join("")
+    : "";
+  const nav = composition
+    ? composedNav
+    : s.site.buyerProfile
+      ? rangeMenu + destinations
+      : legacyLinks;
+  const footerNav = composition
+    ? s.pages
+        .filter((v) => v.type !== "product" && v.type !== "home")
+        .map((v) => link(v.path, label(v)))
+        .join("") + catalogueLink
+    : s.site.buyerProfile
+      ? catalogueLink + destinations
+      : legacyLinks;
 
   const catalog = s.pages.find((v) => v.type === "category");
   const collectionHref =
@@ -386,10 +440,17 @@ export function renderStaticPage(s: Snapshot, p: any) {
   const heading = presentation.headline ?? cleanTitle(p);
   const lead = presentation.summary ?? p.metaDescription;
   const hero =
-    '<section class="hero hero-' +
+    '<section class="hero ' +
+    (composition ? "composition-hero-" : "hero-") +
     e(layout) +
     (firstImage ? " has-visual" : "") +
-    '"><div class="hero-copy"><h1>' +
+    '"><div class="hero-copy">' +
+    (composition
+      ? '<p class="hero-eyebrow">' +
+        e(p.type === "home" ? s.site.name : label(p)) +
+        "</p>"
+      : "") +
+    "<h1>" +
     e(heading) +
     '</h1><p class="hero-lead">' +
     e(lead) +
@@ -471,6 +532,14 @@ export function renderStaticPage(s: Snapshot, p: any) {
             presentation.density ??
             "comfortable",
         )
+      : "") +
+    (composition
+      ? " composed-site type-" +
+        composition.typography +
+        " palette-" +
+        composition.palette +
+        " products-" +
+        composition.productLayout
       : "") +
     " style-" +
     e(style) +

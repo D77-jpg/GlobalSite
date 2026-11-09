@@ -1,3 +1,4 @@
+import { compositionPage } from "./fixtures/composition";
 import { before, after, beforeEach, test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -1305,7 +1306,7 @@ test("queued agents freeze reviewed design skills and new content uses brand pre
   const site = await planSite(await newSite());
   const queued = await queue(site);
   const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
-  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v2");
+  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v3");
   const { unitPrompt } = await import("../src/services/site-agents.service");
   const prompt = unitPrompt(run, run!.steps[0]);
   assert(prompt.system.includes(run!.inputSnapshot.skillProfile.guidance));
@@ -1803,7 +1804,7 @@ test("known metered format errors retry promptly but stop after the unit attempt
 });
 
 const proposalPage = (style = "organic", layout = "split") => ({
-  ...draft(),
+  ...compositionPage(0),
   presentation: {
     navigationLabel: "Home",
     headline: "Products for thoughtful buyers",
@@ -1813,6 +1814,13 @@ const proposalPage = (style = "organic", layout = "split") => ({
     heroLayout: layout,
     density: "comfortable",
     designNotes: "Use product photography and a clear buying journey.",
+    composition: {
+      version: "v1",
+      typography: style === "organic" ? "editorial" : "technical",
+      palette: "clay",
+      navigation: "catalogue",
+      productLayout: "gallery",
+    },
   },
 });
 const proposals = () => ({
@@ -1907,6 +1915,7 @@ test("design proposals run once in Worker, stay private, select atomically and e
   );
   const chosen = results[0].body.data;
   assert.equal(chosen.designDirection.visualStyle, "organic");
+  assert.equal(chosen.designDirection.composition.typography, "editorial");
   assert.equal(
     await tenant(() =>
       m.AuditLog.countDocuments({
@@ -1943,6 +1952,10 @@ test("design proposals run once in Worker, stay private, select atomically and e
     await a.client.request("GET", "/sites/" + site.id + "/pages")
   ).body.data.items.find((p: any) => p.nodeKey === "contact");
   assert.equal(generated.presentation.visualStyle, "organic");
+  assert.deepEqual(
+    generated.presentation.composition,
+    chosen.designDirection.composition,
+  );
 });
 test("design selection refuses stale homepage edits and proposal schema rejects identical directions", async () => {
   const { designOutput } = await import("../src/validators/sites.validator");
@@ -1976,5 +1989,171 @@ test("design selection refuses stale homepage edits and proposal schema rejects 
     (await a.client.request("GET", "/sites/" + site.id)).body.data
       .designDirection,
     undefined,
+  );
+});
+
+test("new B2B Worker enforces content depth and persists distinct shared compositions through real HTTP", async () => {
+  const { compositionCases, compositionPage } = await import(
+    "./fixtures/composition"
+  );
+  const { processSiteAgent, unitPrompt } = await import(
+    "../src/services/site-agents.service"
+  );
+  for (const [index, scenario] of compositionCases.entries()) {
+    await tenant(() => m.Site.updateMany({}, { $set: { status: "archived" } }));
+    const site = await planSite(
+      await newSite({
+        businessBrief: scenario.brief,
+        buyerProfile: {
+          businessModel: "manufacturer",
+          audiences: ["Buying teams"],
+          buyerNeeds: scenario.considerations,
+          primaryAction: "quote",
+          referenceUrls: [],
+        },
+      }),
+    );
+    const queued = await queue(site);
+    assert.equal(queued.status, 202);
+    const runId = queued.body.data.id;
+    const run = await tenant(() => m.AgentRun.findById(runId));
+    const prompt = unitPrompt(run, run.steps[0]);
+    assert.equal((prompt.input as any).compositionBrief.patterns.length, 4);
+    assert.match(prompt.system, /presentation.composition/);
+    const task = await taskFor(runId);
+    let calls = 0;
+    const provider = async (_s: any, _i: any, _o: any, save: any) => {
+      calls++;
+      const page = compositionPage(index);
+      if (calls === 1) page.blocks = [page.blocks[0]];
+      const result = { output: { page }, tokens: 20 };
+      await save(result);
+      return result;
+    };
+    assert.equal(
+      (await tenant(() => processSiteAgent(task, provider))).status,
+      "pending",
+    );
+    const failed = await tenant(() => m.AgentRun.findById(runId));
+    assert(
+      failed.steps[0].validationFeedback.some((v: any) =>
+        /^CONTENT_/.test(v.qualityCode ?? ""),
+      ),
+    );
+    assert.equal(
+      await tenant(() => m.SitePage.countDocuments({ siteId: site.id })),
+      0,
+    );
+    const result = await tenant(() => processSiteAgent(task, provider));
+    assert.equal(result.status, "done", JSON.stringify(result));
+    assert.equal(calls, 2);
+    const pages = (
+      await a.client.request("GET", "/sites/" + site.id + "/pages")
+    ).body.data.items;
+    assert.equal(pages.length, 1);
+    assert.deepEqual(
+      pages[0].presentation.composition,
+      compositionPage(index).presentation!.composition,
+    );
+    assert(!pages[0].issues.some((v: any) => /^CONTENT_/.test(v.code)));
+    const preview = await a.client.request(
+      "GET",
+      "/pages/" + pages[0].id + "/preview",
+    );
+    assert.equal(preview.status, 200);
+    assert.match(
+      preview.body.data.html,
+      new RegExp("products-" + scenario.productLayout),
+    );
+    assert.match(
+      preview.body.data.html,
+      new RegExp("composition-hero-" + scenario.hero),
+    );
+    assert.equal(
+      (await b.client.request("GET", "/pages/" + pages[0].id)).status,
+      404,
+    );
+  }
+});
+
+test("new B2B design rejects palette-only alternatives and requires a shared rendering contract", async () => {
+  const site = await planSite(
+    await newSite({
+      buyerProfile: {
+        businessModel: "private_label",
+        audiences: ["Brand teams"],
+        buyerNeeds: [],
+        primaryAction: "quote",
+        referenceUrls: [],
+      },
+    }),
+  );
+  const response = await queue(site, "design");
+  assert.equal(response.status, 202);
+  const id = response.body.data.id,
+    task = await taskFor(id);
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  let calls = 0;
+  const provider = async (_s: any, _i: any, _o: any, save: any) => {
+    calls++;
+    const primary = compositionPage(0),
+      alternate = compositionPage(calls === 1 ? 0 : 3);
+    if (calls === 1) alternate.presentation!.composition!.palette = "clay";
+    const output = {
+      directions: [
+        {
+          key: "primary",
+          label: "Engineering index",
+          rationale: "Make selection requirements visible.",
+          page: primary,
+        },
+        {
+          key: "alternate",
+          label: "Material publication",
+          rationale: "Use editorial structure and product photography.",
+          page: alternate,
+        },
+      ],
+    };
+    const result = { output, tokens: 20 };
+    await save(result);
+    return result;
+  };
+  assert.equal(
+    (await tenant(() => processSiteAgent(task, provider))).status,
+    "pending",
+  );
+  const failed = await tenant(() => m.AgentRun.findById(id));
+  assert(
+    failed.steps[0].validationFeedback.some(
+      (v: any) => v.qualityCode === "CONTENT_DIRECTIONS_REQUIRED",
+    ),
+  );
+  assert.equal(
+    (await tenant(() => processSiteAgent(task, provider))).status,
+    "done",
+  );
+  const fresh = (await a.client.request("GET", "/sites/" + site.id)).body.data;
+  const chosen = await a.client.request(
+    "POST",
+    "/sites/" + site.id + "/design-direction",
+    { revision: fresh.revision, runId: id, key: "primary" },
+  );
+  assert.equal(chosen.status, 200);
+  const pages = (await a.client.request("GET", "/sites/" + site.id + "/pages"))
+    .body.data.items;
+  const edited = compositionPage(0);
+  delete edited.presentation!.composition;
+  const saved = await a.client.request("PATCH", "/pages/" + pages[0].id, {
+    revision: pages[0].revision,
+    data: edited,
+  });
+  assert.equal(saved.status, 200);
+  assert(
+    saved.body.data.issues.some(
+      (v: any) => v.code === "CONTENT_DESIGN_REQUIRED",
+    ),
   );
 });

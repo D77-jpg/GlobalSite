@@ -1,3 +1,4 @@
+import { referenceStructure } from "./reference-structure.service";
 import {
   fetchWebsite,
   robotsAllows,
@@ -32,7 +33,10 @@ export async function referenceResearch(
         capturedAt: new Date().toISOString(),
         title: parsed.title.slice(0, 200),
         headings: parsed.headings.slice(0, 18),
-        excerpt: parsed.text.slice(0, 3500),
+        structure: referenceStructure(response.text, response.url),
+        // Competitor body claims are unnecessary for composition research.
+        excerpt:
+          "Structure research only; do not import supplier claims or assets.",
       });
     } catch {
       results.push({ url: raw, status: "unavailable" });

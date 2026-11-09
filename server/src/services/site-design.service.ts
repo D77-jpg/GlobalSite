@@ -86,6 +86,9 @@ export async function selectDesign(
       heroLayout: presentation.heroLayout,
       density: presentation.density ?? "comfortable",
       rationale: choice.rationale,
+      ...(presentation.composition
+        ? { composition: presentation.composition }
+        : {}),
     };
     site.revision += 1;
     site.lockVersion += 1;

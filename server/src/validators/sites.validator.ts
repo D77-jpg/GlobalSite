@@ -202,6 +202,15 @@ export const block = z
     refs: z.array(factRef).max(50),
   })
   .strict();
+export const composition = z
+  .object({
+    version: z.literal("v1"),
+    typography: z.enum(["sans", "editorial", "technical"]),
+    palette: z.enum(["graphite", "cobalt", "clay", "forest", "violet"]),
+    navigation: z.enum(["catalogue", "capabilities", "solutions"]),
+    productLayout: z.enum(["cards", "rows", "gallery"]),
+  })
+  .strict();
 export const presentation = z
   .object({
     navigationLabel: z.string().trim().min(1).max(24),
@@ -209,7 +218,8 @@ export const presentation = z
     summary: z.string().trim().min(1).max(240),
     primaryActionLabel: z.string().trim().min(1).max(32),
     visualStyle: z.enum(["organic", "industrial", "minimal"]),
-    heroLayout: z.enum(["split", "stacked"]),
+    heroLayout: z.enum(["split", "stacked", "editorial", "panorama"]),
+    composition: composition.optional(),
     designNotes: z.string().max(500),
     density: z.enum(["comfortable", "compact"]).optional(),
     primaryActionTarget: z
@@ -251,12 +261,14 @@ export const designOutput = z
         a.presentation?.visualStyle,
         a.presentation?.heroLayout,
         a.presentation?.density,
+        a.presentation?.composition,
         a.blocks.map((v) => [v.type, v.layout, v.tone]),
       ]) !==
       JSON.stringify([
         b.presentation?.visualStyle,
         b.presentation?.heroLayout,
         b.presentation?.density,
+        b.presentation?.composition,
         b.blocks.map((v) => [v.type, v.layout, v.tone]),
       ])
     );

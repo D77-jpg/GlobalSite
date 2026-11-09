@@ -1805,6 +1805,8 @@ function PageEditor({
               >
                 <option value="split">{t("split")}</option>
                 <option value="stacked">{t("stacked")}</option>
+                <option value="editorial">{t("heroEditorial")}</option>
+                <option value="panorama">{t("heroPanorama")}</option>
               </select>
             </label>
             <label>

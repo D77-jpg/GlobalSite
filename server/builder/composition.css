@@ -1,0 +1,547 @@
+/* v1 compositions apply only to newly selected directions. No legacy selectors. */
+.composed-site {
+  --paper: #fff;
+  --ink: #20242a;
+  --muted: #545b65;
+  --line: #dedfe2;
+  --surface: #f2f3f5;
+  --accent: #244bc0;
+  --display: Arial, Helvetica, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.composed-site.palette-graphite {
+  --paper: #fff;
+  --ink: #20242a;
+  --muted: #545b65;
+  --surface: #f2f3f5;
+  --accent: #244bc0;
+}
+.composed-site.type-sans,
+.composed-site.type-technical {
+  --display: Arial, Helvetica, sans-serif;
+}
+.composed-site.palette-cobalt {
+  --accent: #1744b5;
+  --surface: #eef3fb;
+  --ink: #14253d;
+  --muted: #506079;
+}
+.composed-site.palette-clay {
+  --paper: #fbf8f3;
+  --accent: #914421;
+  --surface: #efe7dc;
+  --ink: #302921;
+  --muted: #655c51;
+}
+.composed-site.palette-forest {
+  --paper: #fcfcf8;
+  --accent: #205a42;
+  --surface: #e9efea;
+  --ink: #203b30;
+  --muted: #53685b;
+}
+.composed-site.palette-violet {
+  --paper: #faf9fc;
+  --accent: #63418a;
+  --surface: #efebf4;
+  --ink: #30263b;
+  --muted: #665a71;
+}
+.composed-site.type-editorial {
+  --display: Georgia, "Times New Roman", serif;
+}
+.composed-site.b2b-site :is(h1, h2, h3, .brand) {
+  font-family: var(--display);
+}
+.composed-site.type-editorial :is(h1, h2, h3) {
+  font-weight: 400;
+  letter-spacing: -0.045em;
+}
+.composed-site.type-technical
+  :is(.section-kicker, .hero-eyebrow, .product-category, .card-specs dt) {
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+.composed-site.type-technical :is(h1, h2, h3) {
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+.composed-site :is(h1, h2, h3, p, a, summary) {
+  overflow-wrap: break-word;
+}
+.composed-site :is(main, footer, .header-inner) {
+  max-width: 1440px;
+  padding-inline: clamp(22px, 4.5vw, 72px);
+}
+.composed-site.b2b-site .site-header {
+  background: var(--paper);
+}
+.composed-site.b2b-site .header-inner {
+  min-height: 86px;
+  gap: 24px;
+}
+.composed-site.b2b-site .brand {
+  font-size: 28px;
+  letter-spacing: -0.045em;
+}
+.composed-site .brand-mark {
+  border-radius: 2px;
+  background: var(--accent);
+  color: white;
+}
+.composed-site .desktop-nav {
+  flex-wrap: nowrap;
+  gap: 24px;
+}
+.composed-site :is(.cta, .header-action, .quote-add) {
+  border-radius: 3px;
+}
+.composed-site :is(.cta, .header-action) {
+  background: var(--accent);
+  color: #fff;
+}
+.composed-site a {
+  text-decoration-thickness: 1px;
+}
+.composed-site :is(a, button, summary) {
+  transition:
+    background-color 0.16s,
+    color 0.16s,
+    box-shadow 0.16s;
+}
+.composed-site :is(a, button, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.composed-site :is(.cta, .header-action):hover {
+  box-shadow: inset 0 0 0 100px #0002;
+}
+.composed-site .range-menu {
+  position: relative;
+}
+.composed-site .buyer-menu {
+  position: absolute;
+  z-index: 15;
+  top: 100%;
+  left: -20px;
+  min-width: 250px;
+  max-width: 340px;
+  max-height: 60vh;
+  overflow: auto;
+  display: grid;
+  padding: 12px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: 0 14px 30px #16212c15;
+}
+.composed-site .buyer-menu a {
+  display: block;
+  min-height: 44px;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+.composed-site .buyer-menu a:hover {
+  background: var(--surface);
+}
+.composed-site.b2b-site .hero {
+  min-height: 0;
+  margin-top: 0;
+  padding: 56px 0;
+  gap: clamp(28px, 4vw, 64px);
+  background: transparent;
+  color: var(--ink);
+  overflow: visible;
+}
+.composed-site .hero :is(.hero-copy, .hero-visual) {
+  min-width: 0;
+}
+.composed-site.b2b-site .hero .hero-copy {
+  padding: 0;
+  max-width: none;
+  text-align: left;
+}
+.composed-site.b2b-site .hero h1 {
+  font-size: clamp(38px, 4.4vw, 70px);
+  color: var(--ink);
+  line-height: 1.02;
+  max-width: 16ch;
+  margin: 0 0 24px;
+  text-wrap: balance;
+}
+.composed-site.b2b-site .hero .hero-lead {
+  color: var(--muted);
+  max-width: 48ch;
+  font-size: 18px;
+}
+.composed-site .hero-eyebrow {
+  font:
+    600 12px/1.5 Arial,
+    sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.composed-site.b2b-site .hero .hero-visual {
+  border-radius: 0;
+  margin: 0;
+  max-height: none;
+  min-height: 0;
+  position: static;
+  align-self: stretch;
+}
+.composed-site.b2b-site .hero .hero-visual img {
+  position: static;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1.12;
+  object-fit: cover;
+  object-position: center;
+}
+.composed-site.b2b-site .hero .cta {
+  background: var(--accent);
+  color: white;
+}
+.composed-site.b2b-site .hero .secondary-link {
+  color: var(--ink);
+}
+.composed-site.b2b-site .composition-hero-split.has-visual {
+  grid-template-columns: 0.95fr 1.05fr;
+  align-items: center;
+}
+.composed-site.b2b-site .composition-hero-editorial.has-visual {
+  grid-template-columns: 1.25fr 0.75fr;
+  align-items: start;
+  padding-top: 68px;
+}
+.composed-site.b2b-site .composition-hero-editorial h1 {
+  font-size: clamp(42px, 5.4vw, 86px);
+  max-width: 13ch;
+}
+.composed-site.b2b-site .composition-hero-editorial .hero-visual {
+  margin-top: 74px;
+}
+.composed-site.b2b-site .composition-hero-editorial .hero-visual img {
+  aspect-ratio: 0.83;
+}
+.composed-site.b2b-site .composition-hero-panorama {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 32px;
+}
+.composed-site.b2b-site .composition-hero-panorama .hero-copy {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 0 60px;
+  align-items: start;
+}
+.composed-site.b2b-site .composition-hero-panorama .hero-eyebrow {
+  grid-column: 1/-1;
+}
+.composed-site.b2b-site .composition-hero-panorama h1 {
+  grid-row: 2/4;
+  max-width: 18ch;
+}
+.composed-site.b2b-site .composition-hero-panorama .hero-visual img {
+  aspect-ratio: 2.45;
+  max-height: 530px;
+}
+.composed-site.b2b-site .composition-hero-stacked {
+  display: block;
+}
+.composed-site.b2b-site .composition-hero-stacked .hero-copy {
+  max-width: 840px;
+}
+.composed-site.b2b-site .composition-hero-stacked .hero-visual {
+  margin-top: 32px;
+}
+.composed-site.b2b-site .composition-hero-stacked .hero-visual img {
+  aspect-ratio: 2;
+  max-height: 480px;
+}
+.composed-site.b2b-site :is(.b2b-section, .section) {
+  padding-block: 56px;
+  margin-block: 0;
+}
+.composed-site.b2b-site :is(.b2b-section, .section) h2 {
+  font-size: clamp(28px, 3vw, 44px);
+  max-width: 25ch;
+}
+.composed-site :is(.feature-grid, .process-grid, .resource-grid) {
+  gap: 28px;
+}
+.composed-site
+  :is(.feature-grid article, .resource-grid article, .process-grid li) {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 24px 0 0;
+}
+.composed-site .process-grid li::before {
+  font:
+    500 18px/1.4 "Courier New",
+    monospace;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+.composed-site .feature-grid img {
+  border-radius: 0;
+}
+.composed-site :is(.tone-sage, .tone-dark) {
+  padding: 40px;
+  border-radius: 0;
+}
+.composed-site .tone-sage {
+  background: var(--surface);
+}
+.composed-site .tone-dark {
+  background: var(--ink);
+  color: white;
+}
+.composed-site .tone-dark :is(p, .section-kicker) {
+  color: #eeedf0;
+}
+.composed-site .layout-compact .feature-grid {
+  display: block;
+}
+.composed-site .layout-compact .feature-grid article {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px 36px;
+  padding: 20px 0;
+}
+.composed-site .layout-compact .feature-grid article img {
+  max-height: 220px;
+  grid-row: span 3;
+}
+.composed-site .layout-compact .feature-grid article p {
+  margin: 0;
+}
+.composed-site .block-split {
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(24px, 5vw, 80px);
+}
+.composed-site .block-split:not(:has(figure)) {
+  grid-template-columns: 1fr;
+}
+.composed-site .block-split img {
+  border-radius: 0;
+}
+.composed-site .product-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: 0;
+}
+.composed-site .product-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+.composed-site .product-copy {
+  padding: 20px 0 0;
+}
+.composed-site .product-visual {
+  border-radius: 0;
+  background: var(--surface);
+}
+.composed-site .product-visual img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.composed-site.products-rows .product-grid {
+  display: block;
+}
+.composed-site.products-rows .product-card {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 32px;
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+.composed-site.products-rows .product-copy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  gap: 8px 28px;
+  padding: 0;
+}
+.composed-site.products-rows .product-category {
+  grid-column: 1/-1;
+}
+.composed-site.products-rows .card-actions {
+  grid-column: 1/-1;
+}
+.composed-site.products-rows .product-copy h3 {
+  font-size: 26px;
+}
+.composed-site.products-gallery .product-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+}
+.composed-site.products-gallery .product-visual img {
+  aspect-ratio: 1.16;
+  object-fit: cover;
+}
+.composed-site.products-gallery .product-card:nth-child(even) {
+  padding-top: 56px;
+}
+.composed-site .category-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.composed-site .category-grid a {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.composed-site .category-grid a img {
+  aspect-ratio: 1.4;
+}
+.composed-site .catalog-tools {
+  border-radius: 0;
+  background: var(--surface);
+}
+.composed-site .card-specs {
+  padding-block: 12px;
+}
+.composed-site footer {
+  padding-block: 48px;
+  border-top: 1px solid var(--line);
+}
+.composed-site footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.composed-site .quote-bar {
+  border-radius: 4px;
+  background: var(--ink);
+}
+@media (max-width: 1050px) {
+  .composed-site .desktop-nav {
+    display: none;
+  }
+  .composed-site .mobile-navigation {
+    display: block;
+  }
+  .composed-site .mobile-navigation nav {
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .composed-site .mobile-navigation .buyer-menu {
+    position: static;
+    min-width: 0;
+    border: 0;
+    box-shadow: none;
+    padding: 0 0 0 12px;
+  }
+  .composed-site .mobile-navigation .range-menu {
+    width: 100%;
+  }
+  .composed-site.b2b-site .hero h1 {
+    font-size: clamp(38px, 5vw, 58px);
+  }
+}
+@media (max-width: 767px) {
+  .composed-site.b2b-site .header-inner {
+    min-height: 72px;
+    gap: 14px;
+  }
+  .composed-site.b2b-site .brand {
+    font-size: 24px;
+  }
+  .composed-site.b2b-site .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 32px 0;
+  }
+  .composed-site.b2b-site .hero .hero-copy {
+    display: block;
+    width: 100%;
+  }
+  .composed-site.b2b-site .hero h1 {
+    font-size: clamp(36px, 9.5vw, 56px);
+    max-width: 18ch;
+  }
+  .composed-site.b2b-site .hero .hero-visual {
+    margin-top: 0;
+    width: 100%;
+  }
+  .composed-site.b2b-site .hero .hero-visual img {
+    aspect-ratio: 1.25;
+    max-height: 420px;
+  }
+  .composed-site.b2b-site :is(.b2b-section, .section) {
+    padding-block: 32px;
+  }
+  .composed-site
+    :is(
+      .feature-grid,
+      .process-grid,
+      .resource-grid,
+      .block-split,
+      .category-grid
+    ) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .composed-site .layout-compact .feature-grid article {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .composed-site :is(.tone-sage, .tone-dark) {
+    padding: 24px 20px;
+  }
+  .composed-site.b2b-site .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 14px;
+  }
+  .composed-site .product-copy h3 {
+    font-size: 21px;
+  }
+  .composed-site.products-rows .product-card {
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .composed-site.products-rows .product-copy {
+    display: block;
+  }
+  .composed-site.products-rows .product-copy h3 {
+    font-size: 23px;
+  }
+  .composed-site.products-gallery .product-card:nth-child(even) {
+    padding-top: 0;
+  }
+  .composed-site .card-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composed-site :is(a, button, summary) {
+    transition: none;
+  }
+}
+
+.composed-site .product-card:last-child:nth-child(odd) {
+  grid-column: auto;
+}
+
+.composed-site .hero {
+  display: grid;
+}
+.composed-site .hero .hero-copy {
+  width: auto;
+  margin: 0;
+  background: transparent;
+}
+.composed-site .block-process .process-grid li {
+  border-top-color: var(--accent);
+}
