@@ -1,45 +1,15 @@
+import { login as fixtureLogin } from "./helpers/site-login";
 import {
   test,
   expect,
   type APIRequestContext,
   type Page,
 } from "@playwright/test";
-import { randomBytes } from "node:crypto";
 const origin = process.env.E2E_BASE_URL ?? "http://localhost:5080";
 async function login(page: Page, request: APIRequestContext) {
-  const email = "s3-" + randomBytes(8).toString("hex") + "@example.invalid",
-    password = "Fixture-" + randomBytes(20).toString("hex");
-  const reg = await request.post("/api/v1/auth/register", {
-    headers: { Origin: origin },
-    data: {
-      name: "Catalog Demo",
-      organizationName: "Catalog Demo",
-      email,
-      password,
-      locale: "en",
-    },
-  });
-  expect(reg.status()).toBe(202);
-  const mail = await request.get(
-      "/api/v1/dev/mail/" + (await reg.json()).data.devReceipt,
-    ),
-    token = new URL((await mail.json()).data.text).searchParams.get("token");
-  expect(
-    (
-      await request.post("/api/v1/auth/verify-email", {
-        headers: { Origin: origin },
-        data: { token },
-      })
-    ).ok(),
-  ).toBeTruthy();
-  await page.goto("/login");
-  await page.getByLabel("工作邮箱", { exact: true }).fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Catalog Demo", exact: true }),
-  ).toBeVisible();
+  await fixtureLogin(page, request, "Catalog Demo");
 }
+
 test("catalog desktop: image upload, product/spec/table editing, import worker, facts/review/history, website safety and translations", async ({
   page,
   request,
