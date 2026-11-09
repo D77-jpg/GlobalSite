@@ -1979,7 +1979,9 @@ export function WebsitePage({ locale, role }: Props) {
               ))}
             </section>
           )}
-          {!run && <p className="website-reader-empty">{t("readHint")}</p>}
+          {!run && (
+            <p className="website-reader-empty">{t("websiteResultEmpty")}</p>
+          )}
         </div>
       </div>
     </Frame>

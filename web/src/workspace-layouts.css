@@ -1241,3 +1241,47 @@
     width: 100%;
   }
 }
+
+.product-shell .asset-library :is(.asset-filters, .asset-view-options) button {
+  background: none;
+  color: var(--muted);
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: 400;
+}
+.product-shell
+  .asset-library
+  :is(.asset-filters, .asset-view-options)
+  button:hover {
+  background: #f3f4f6;
+  color: var(--ink);
+}
+.product-shell
+  .asset-library
+  :is(.asset-filters, .asset-view-options)
+  button[aria-pressed="true"] {
+  background: #eceef1;
+  color: var(--ink);
+  border-color: transparent;
+}
+.product-shell .asset-empty {
+  padding: 44px 16px;
+}
+.product-shell .asset-empty > svg {
+  margin: 0 auto 12px;
+  color: #929ba5;
+}
+.product-shell .asset-empty h2 {
+  font-size: 15px;
+}
+.product-shell .catalog-empty {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 24px 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.product-shell .catalog-badge {
+  justify-self: start;
+}
