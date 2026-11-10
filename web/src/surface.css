@@ -1,0 +1,394 @@
+/* Shared surfaces. Loaded last so list, settings and workspace pages share one visual rhythm. */
+.product-shell .content > :is(.catalog, .account-page, .mission) {
+  gap: 22px;
+}
+.product-shell
+  :is(
+    .catalog-panel,
+    .panel,
+    .site-guide,
+    .ops-table-panel,
+    .studio-site-list,
+    .fact-register,
+    .usage-ledger,
+    .member-table
+  ) {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+}
+.product-shell :is(.catalog-panel, .panel, .site-guide) {
+  padding: 20px 22px;
+}
+.product-shell .catalog-panel + .catalog-panel {
+  border-top: 1px solid var(--line);
+}
+.product-shell .mission-metrics {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+}
+.product-shell .mission-body {
+  gap: 16px;
+}
+.product-shell .mission-body .mission-panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+}
+.product-shell .mission-body .mission-panel:first-child {
+  border-left: 1px solid var(--line);
+  padding-left: 20px;
+}
+.product-shell .mission-panel header > a,
+.product-shell .studio-site-links > a,
+.product-shell .guide-steps a,
+.product-shell .ops-facts-link {
+  color: var(--brand);
+  font-weight: 600;
+}
+.product-shell .studio-site-list .sites-brand {
+  background: var(--brand);
+  color: #fff;
+}
+.product-shell .studio-site-row {
+  padding: 16px 18px;
+}
+.product-shell .studio-site-row:hover {
+  background: #faf8f5;
+}
+.product-shell .studio-site-links > a.button {
+  color: #3a404a;
+  font-weight: 550;
+}
+.product-shell .project-workspace-layout {
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 18px;
+}
+.product-shell .sites-tabs {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+}
+.product-shell .sites-tabs button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #3e4450;
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+.product-shell .sites-tabs button:hover {
+  background: #f6f5f2;
+}
+.product-shell .sites-tabs button[aria-pressed="true"] {
+  background: var(--ws-tint);
+  color: #143528;
+  font-weight: 650;
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+.product-shell .project-workspace-layout:has(.project-tab-runs) .sites-tabs {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+}
+.product-shell .studio-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+}
+.product-shell .studio-metrics > button {
+  min-height: 76px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  align-items: flex-start;
+  flex-direction: column;
+}
+.product-shell .studio-metrics > button:last-child {
+  border-right: 0;
+}
+.product-shell .studio-metrics > button:hover {
+  background: #f7f6f3;
+}
+.product-shell .studio-metrics strong {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.product-shell .guide-next {
+  background: #f7f6f3;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+}
+.product-shell :is(table, .ops-table-panel, .publish-table) {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.product-shell .ops-product-line {
+  padding: 14px 16px;
+}
+.product-shell .ops-table-panel > .ops-panel-title {
+  padding: 16px 16px 12px;
+}
+.product-shell .ops-product-line:hover {
+  background: #faf8f5;
+}
+.product-shell .ops-status-tabs {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+}
+.product-shell .ops-status-tabs button {
+  border-radius: 8px;
+  min-height: 34px;
+  font-size: 13px;
+}
+.product-shell .ops-status-tabs button[aria-pressed="true"] {
+  background: var(--ws-tint);
+  color: #143528;
+  font-weight: 650;
+}
+.product-shell .inquiry-reading-layout {
+  gap: 16px;
+}
+.product-shell .inquiry-reading-layout > :is(.inquiry-letter, .inquiry-followup) {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+}
+.product-shell .inquiry-message {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.product-shell .fact-register {
+  padding: 8px 18px 12px;
+}
+.product-shell .fact-register .catalog-fact {
+  padding: 16px 0;
+}
+.product-shell .account-page .panel,
+.product-shell .account-page .settings-section {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
+  padding: 20px 22px;
+  overflow: visible;
+}
+.product-shell .account-page > .panel:first-of-type {
+  padding: 20px 22px;
+  border-top: 1px solid var(--line);
+}
+.product-shell .account-page .panel-title {
+  min-width: 0;
+}
+.product-shell .account-page .panel-title .badge {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.product-shell .usage-ledger {
+  padding: 6px 18px 8px;
+  overflow: visible;
+}
+.product-shell .usage-line {
+  padding: 16px 4px;
+}
+.product-shell .usage-line progress {
+  height: 6px;
+  accent-color: var(--brand);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.product-shell .asset-tile {
+  border-color: var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.05);
+}
+.product-shell .asset-tile:hover {
+  box-shadow: 0 10px 28px rgba(28, 27, 23, 0.08);
+}
+.product-shell .catalog .asset-thumbnail {
+  padding: 0;
+  border-radius: 0;
+  background: #eceae4;
+}
+.product-shell .asset-thumbnail img {
+  border-radius: 0;
+}
+.product-shell .catalog .asset-menu-content :is(a, button),
+.product-shell
+  .catalog
+  :is(
+    .asset-name,
+    .asset-menu-trigger,
+    .asset-thumbnail,
+    .asset-filters button,
+    .asset-view-options button
+  ) {
+  background: transparent;
+  color: var(--ink);
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: 600;
+}
+.product-shell .catalog .asset-name {
+  min-height: 0;
+  padding: 0;
+  font-size: 13px;
+  justify-content: flex-start;
+}
+.product-shell .catalog .asset-menu-trigger {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  color: #5c564e;
+}
+.product-shell .catalog .asset-menu-trigger:hover,
+.product-shell .catalog .asset-menu-trigger[aria-expanded="true"] {
+  background: #f3f1ec;
+}
+.product-shell
+  .catalog
+  :is(
+    .asset-filters button[aria-pressed="true"],
+    .asset-view-options button[aria-pressed="true"]
+  ) {
+  background: var(--ws-tint);
+  color: #143528;
+}
+.product-shell .catalog .asset-menu-content :is(a, button) {
+  width: 100%;
+  min-height: 40px;
+  justify-content: flex-start;
+  font-weight: 500;
+  background: #fff;
+}
+.product-shell .catalog .asset-menu-content :is(a, button):hover {
+  background: #f6f5f2;
+}
+.product-shell .catalog .asset-delete {
+  color: #9a4036;
+}
+.product-shell .ops-status-tabs button {
+  background: transparent;
+  color: var(--muted);
+  border-color: transparent;
+}
+.product-shell .asset-tile-info p {
+  font-size: 12px;
+}
+.product-shell .catalog .asset-tile-info {
+  padding: 12px 52px 14px 14px;
+}
+.product-shell .catalog .asset-list .asset-tile-info {
+  padding: 2px 48px 2px 14px;
+}
+.product-shell .agent-studio {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+.product-shell .agent-studio .task-navigation {
+  background: #f7f6f3;
+}
+.product-shell
+  :is(.catalog-empty, .studio-empty, .mission-empty, .creation-empty) {
+  background: #fff;
+  border: 1px dashed var(--ws-border);
+  border-radius: 14px;
+  padding: 36px 20px;
+}
+.product-shell .page-heading {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: start;
+}
+.product-shell .page-heading > :last-child:not(:first-child) {
+  margin-left: auto;
+}
+.product-shell .project-heading .button.secondary {
+  background: #fff;
+}
+@media (max-width: 1100px) {
+  .product-shell .studio-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .product-shell .studio-metrics > button:nth-child(2) {
+    border-right: 0;
+  }
+  .product-shell .guide-next {
+    padding: 18px;
+  }
+}
+@media (max-width: 760px) {
+  .product-shell .project-workspace-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-shell .sites-tabs {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    position: static;
+  }
+  .product-shell .sites-tabs button {
+    width: auto;
+    flex: none;
+    white-space: nowrap;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .product-shell .inquiry-reading-layout > .inquiry-followup {
+    padding: 20px;
+  }
+  .product-shell :is(.catalog-panel, .panel, .site-guide) {
+    padding: 16px;
+  }
+  .product-shell .account-page .panel,
+  .product-shell .account-page > .panel:first-of-type,
+  .product-shell .account-page .settings-section {
+    padding: 18px 16px;
+  }
+  .product-shell .account-page .wide {
+    overflow: visible;
+  }
+  .product-shell .usage-ledger {
+    padding: 4px 14px 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-shell .asset-tile {
+    transition: none;
+  }
+}

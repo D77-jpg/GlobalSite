@@ -1,182 +1,209 @@
 /* S20 foundations: navigation and neutral work surfaces. */
 :root {
-  --ink: #24272d;
-  --primary: #303640;
-  --muted: #717780;
-  --line: #e7e9ed;
+  --ink: #1c1f24;
+  --primary: #1c1f24;
+  --muted: #5f6670;
+  --line: #e6e2da;
   --card: #fff;
-  --ws-bg: #fff;
-  --ws-tint: #eef0f3;
-  --ws-border: #d8dce1;
-  --ws-focus: #6a829b;
-  --ws-radius: 5px;
-  --ws-nav: 208px;
+  --ws-bg: #f3f2ef;
+  --ws-tint: #eef4f0;
+  --ws-border: #ddd8d0;
+  --ws-focus: #1f6a4a;
+  --ws-radius: 8px;
+  --brand: #1f6a4a;
+  --ws-nav: 220px;
 }
 .product-shell {
-  --ws-nav: 208px;
-  background: #fff;
-  font-size: 13px;
+  --ws-nav: 220px;
+  background: var(--ws-bg);
+  color: var(--ink);
+  font-size: 13.5px;
+  accent-color: var(--brand);
 }
 .product-shell[data-nav-collapsed="true"] {
-  --ws-nav: 56px;
+  --ws-nav: 64px;
 }
 .product-shell .main-shell {
   margin-left: var(--ws-nav);
 }
 .product-shell > .sidebar {
   width: var(--ws-nav);
-  background: #f8f9fa;
-  padding: 16px 10px 10px;
+  background: #fff;
+  padding: 18px 12px 12px;
   border-color: var(--line);
 }
 .product-shell .sidebar > .brand {
-  font-size: 20px;
-  margin: 0 8px 20px;
-  gap: 8px;
-  letter-spacing: -0.8px;
+  margin: 2px 8px 18px;
+  gap: 10px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
 }
 .product-shell .brand-icon {
-  width: 27px;
-  height: 27px;
+  width: 28px;
+  height: 28px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
 }
 .product-shell .brand-icon svg {
-  width: 19px;
-  height: 19px;
+  width: 16px;
+  height: 16px;
 }
 .product-shell .workspace-label {
-  border: 0;
+  border: 1px solid transparent;
   box-shadow: none;
-  border-radius: 4px;
-  padding: 7px;
-  background: none;
-  margin-bottom: 16px;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f7f6f3;
+  margin-bottom: 18px;
   gap: 8px;
 }
+.product-shell .workspace-label:hover {
+  border-color: var(--line);
+  text-decoration: none;
+}
 .product-shell .workspace-avatar {
-  width: 27px;
-  height: 27px;
-  background: #e9eced;
-  color: #737b83;
-  border-radius: 5px;
+  width: 28px;
+  height: 28px;
+  background: var(--ws-tint);
+  color: var(--brand);
+  border-radius: 7px;
 }
 .product-shell .workspace-label small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .product-shell .workspace-label strong {
-  font-size: 12px;
-  font-weight: 550;
+  font-size: 13px;
+  font-weight: 600;
 }
 .product-shell .nav-heading {
-  font-size: 10px;
-  font-weight: 450;
-  color: #8a8e96;
-  margin: 0 0 5px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #8a847c;
+  margin: 0 0 6px;
   padding: 0 10px;
 }
 .product-shell .ws-group + .ws-group {
-  margin-top: 18px;
+  margin-top: 20px;
 }
 .product-shell .sidebar nav a {
-  padding: 7px 9px;
-  min-height: 32px;
-  border-radius: 4px;
+  padding: 8px 10px;
+  min-height: 36px;
+  border-radius: 8px;
   gap: 10px;
-  font-size: 12px;
-  font-weight: 450;
-  color: #616670;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3e4450;
   border: 0;
 }
 .product-shell .sidebar nav a:hover {
-  background: #eeeff2;
+  background: #f6f5f2;
+  color: var(--ink);
   text-decoration: none;
 }
 .product-shell .sidebar nav a.active {
-  background: #e9ebee;
-  color: #24272d;
-  box-shadow: none;
+  background: var(--ws-tint);
+  color: #143528;
+  box-shadow: inset 2px 0 0 var(--brand);
+  font-weight: 600;
 }
 .product-shell .sidebar nav a > svg {
   width: 16px;
   height: 16px;
-  stroke-width: 1.6;
-  color: #717780;
+  stroke-width: 1.75;
+  color: #6d7480;
+}
+.product-shell .sidebar nav a.active > svg {
+  color: var(--brand);
 }
 .product-shell .account-box {
   border-color: var(--line);
-  padding: 14px 3px 0;
+  padding: 14px 4px 2px;
   margin-top: auto;
-  gap: 7px;
+  gap: 8px;
 }
 .product-shell .account-box .avatar {
-  width: 27px;
-  height: 27px;
-  font-size: 11px;
-  background: #e9ebee;
-  color: #525b64;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  background: #f3f1ec;
+  color: #3d3428;
 }
 .product-shell .account-box strong {
-  font-size: 11px;
-  font-weight: 550;
+  font-size: 13px;
+  font-weight: 600;
 }
 .product-shell .account-box small {
-  font-size: 10px;
+  font-size: 12px;
 }
 .product-shell .topbar {
-  height: 49px;
-  min-height: 49px;
+  height: 56px;
+  min-height: 56px;
   border-bottom: 1px solid var(--line);
   background: #fff;
   padding: 0 24px;
   gap: 12px;
 }
 .product-shell .topbar .breadcrumb {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .product-shell .topbar .breadcrumb strong {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink);
 }
 .product-shell .topbar .ws-search {
-  background: none;
-  border: 0;
+  background: #f7f6f3;
+  border: 1px solid transparent;
   box-shadow: none;
-  font-size: 11px;
-  color: #7b8088;
-  padding: 4px;
-  gap: 7px;
+  border-radius: 8px;
+  height: 34px;
+  font-size: 13px;
+  color: #6a6258;
+  padding: 0 10px;
+  gap: 8px;
+}
+.product-shell .topbar .ws-search:hover {
+  background: #fff;
+  border-color: var(--ws-border);
 }
 .product-shell .ws-search kbd {
-  background: #f7f7f8;
+  background: #fff;
   border-color: var(--line);
-  font-size: 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  color: #6d675f;
 }
 .product-shell .nav-collapse {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: 0;
   background: none;
-  color: #888e96;
-  border-radius: 4px;
+  color: #6e675f;
+  border-radius: 8px;
   padding: 0;
 }
 .product-shell .nav-collapse:hover {
-  background: #f2f3f4;
+  background: #f4f2ee;
 }
 .product-shell .content {
-  padding: 26px 32px 40px;
+  padding: 28px 32px 48px;
   min-width: 0;
 }
 .product-shell h1 {
-  font-size: 23px;
-  letter-spacing: -0.65px;
-  font-weight: 600;
-  line-height: 1.35;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  font-weight: 650;
+  line-height: 1.3;
 }
 .product-shell h2 {
   font-size: 15px;
@@ -227,9 +254,9 @@
   )
   :is(h1, h2) {
   color: var(--ink);
-  font-size: 23px;
-  font-weight: 600;
-  letter-spacing: -0.65px;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
 }
 .product-shell
   :is(
@@ -240,10 +267,10 @@
     .mission-hero
   )
   p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  line-height: 1.75;
-  max-width: 750px;
+  line-height: 1.65;
+  max-width: 42rem;
   margin: 6px 0 0;
 }
 .product-shell :is(.ops-header, .page-heading, .mission-hero)::before,
@@ -252,37 +279,40 @@
   content: none;
 }
 .product-shell :is(button, .button) {
-  border-radius: 5px;
+  border-radius: 8px;
   box-shadow: none;
-  font-weight: 500;
+  font-weight: 550;
   transition:
-    background-color 120ms,
-    border-color 120ms;
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
 }
 .product-shell :is(.catalog button, .catalog .button, .button.primary) {
-  background: #303640;
-  border: 1px solid #303640;
+  background: var(--primary);
+  border: 1px solid var(--primary);
   color: #fff;
-  min-height: 34px;
-  padding: 7px 12px;
-  line-height: 1.5;
-  font-size: 12px;
+  min-height: 36px;
+  padding: 7px 14px;
+  line-height: 1.4;
+  font-size: 13px;
   gap: 6px;
 }
 .product-shell :is(.catalog button, .catalog .button, .button.primary):hover {
-  background: #404650;
+  background: #2c313a;
+  border-color: #2c313a;
   filter: none;
 }
 .product-shell :is(.catalog .secondary, .button.secondary) {
   background: #fff;
-  color: #454b55;
-  border: 1px solid #dadddf;
-  min-height: 34px;
-  padding: 7px 12px;
-  font-size: 12px;
+  color: #3a404a;
+  border: 1px solid var(--ws-border);
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 13px;
 }
 .product-shell :is(.catalog .secondary, .button.secondary):hover {
-  background: #f6f7f8;
+  background: #f7f6f3;
+  border-color: #cfc9bf;
   filter: none;
 }
 .product-shell :is(button, .button):disabled {
@@ -298,27 +328,28 @@
     .field select
   ) {
   background: #fff;
-  border: 1px solid #dadddf;
-  border-radius: 5px;
+  border: 1px solid var(--ws-border);
+  border-radius: 8px;
   box-shadow: none;
   color: var(--ink);
   font-size: 13px;
-  min-height: 35px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 8px 11px;
 }
 .product-shell :is(input, textarea, select):focus-visible {
-  outline: 2px solid #6c879f;
-  outline-offset: 1px;
+  outline: 2px solid var(--ws-focus);
+  outline-offset: 2px;
+  border-color: var(--brand);
 }
 .product-shell label,
 .product-shell .field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #515761;
+  font-size: 13px;
+  font-weight: 550;
+  color: #3c424c;
 }
 .product-shell input::placeholder,
 .product-shell textarea::placeholder {
-  color: #a2a6ad;
+  color: #8d867d;
 }
 .product-shell :is(.catalog-panel, .catalog-fact, .catalog-subpanel, .panel) {
   border-radius: 0;
@@ -353,27 +384,27 @@
   line-height: 1.8;
 }
 .product-shell .notice:not(.error):not(.success) {
-  background: #f6f7f8;
+  background: #f7f6f3;
   border-color: var(--line);
-  color: #606773;
+  color: #4e5560;
 }
 .product-shell .notice.success {
-  background: #f1f8f3;
-  border-color: #dfebe2;
-  color: #37684b;
+  background: #eef6f1;
+  border-color: #d5e6db;
+  color: #1d6244;
 }
 .product-shell .notice.error {
-  background: #fdf4f3;
-  border-color: #f0deda;
-  color: #9c514a;
+  background: #fdf4f2;
+  border-color: #f0d9d4;
+  color: #8d4038;
 }
 .product-shell :is(.badge, .catalog-badge, .mission-state) {
-  font-size: 11px;
-  font-weight: 400;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #eff0f2;
-  color: #626a73;
+  font-size: 12px;
+  font-weight: 550;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f3f1ec;
+  color: #5c564e;
 }
 .product-shell
   :is(
@@ -382,8 +413,8 @@
     .catalog-badge.approved,
     .mission-state.state-succeeded
   ) {
-  background: #edf6ef;
-  color: #427751;
+  background: #e7f3ec;
+  color: #1d6244;
 }
 .product-shell :is(.ops-panel-title, .studio-section-heading) {
   padding: 0 0 12px;
@@ -432,16 +463,17 @@
   box-shadow: none;
 }
 .product-shell :is(th, .ops-colheads) {
-  background: #fafafb;
-  color: #7c828a;
-  font-size: 11px;
-  font-weight: 450;
+  background: #faf9f7;
+  color: #6f675f;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   text-align: left;
   border-block: 1px solid var(--line);
 }
 .product-shell td {
-  font-size: 12px;
-  color: #464d58;
+  font-size: 13px;
+  color: #3a414b;
   border-bottom: 1px solid var(--line);
   padding: 13px 14px;
   vertical-align: top;
@@ -450,17 +482,21 @@
   padding: 9px 14px;
 }
 .product-shell tbody tr:hover {
-  background: #fcfcfd;
+  background: #faf8f4;
 }
 /* Overview: working queues, compact summary and supporting build route. */
 .product-shell .mission-hero-action {
-  background: none;
-  border: 1px solid var(--line);
+  background: #fff;
+  border: 1px solid var(--ws-border);
   color: var(--ink);
-  border-radius: 5px;
+  border-radius: 8px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 13px;
   box-shadow: none;
+}
+.product-shell .mission-hero-action:hover {
+  background: #f7f6f3;
+  border-color: #cfc9bf;
 }
 .product-shell .mission-context {
   padding: 0;
@@ -687,7 +723,9 @@
 }
 /* Focused authentication. */
 .auth-page {
-  background: #fafbfc;
+  background:
+    radial-gradient(900px 420px at 50% -80px, #e5efe8 0%, transparent 70%),
+    var(--ws-bg);
   grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
 }
@@ -695,36 +733,61 @@
   display: none;
 }
 .auth-page .auth-main {
+  position: relative;
   width: 100%;
   min-width: 0;
   max-width: none;
-  background: #fafbfc;
+  background: transparent;
+  padding: 28px 20px 20px;
+}
+.auth-page .auth-main > .language {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #5c564e;
 }
 .auth-page .auth-form {
-  max-width: 370px;
+  max-width: 400px;
   width: 100%;
-  box-shadow: none;
-  border: 0;
-  border-radius: 0;
-  background: none;
+  margin-top: 12px;
+  padding: 32px 28px 28px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(28, 27, 23, 0.06);
 }
 .auth-page .auth-form h1 {
-  font-size: 26px;
-  letter-spacing: -0.7px;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
 }
 .auth-page .auth-form p {
-  font-size: 13px;
+  font-size: 14px;
+}
+.auth-page .auth-form .sub {
+  margin-bottom: 22px;
 }
 .auth-page .auth-form input {
-  border-radius: 5px;
+  border-radius: 8px;
   box-shadow: none;
-  min-height: 42px;
-  border-color: #dadddf;
+  min-height: 44px;
+  border-color: var(--ws-border);
+}
+.auth-page .auth-form input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px #1f6a4a1a;
 }
 .auth-page .auth-form button.primary {
-  background: #303640;
-  border-color: #303640;
-  border-radius: 5px;
+  background: var(--primary);
+  border-color: var(--primary);
+  border-radius: 8px;
+  min-height: 44px;
+}
+.auth-page .auth-form button.primary:hover {
+  background: #2c313a;
+}
+.auth-page .auth-main footer {
+  color: #7a746c;
 }
 @media (max-width: 760px) {
   .product-shell .main-shell {
@@ -739,7 +802,7 @@
     display: none;
   }
   .product-shell .topbar .breadcrumb {
-    font-size: 11px;
+    font-size: 12px;
     min-width: 0;
   }
   .product-shell .content {
@@ -778,7 +841,7 @@
     min-height: 38px;
   }
   .product-shell :is(button, .button, .catalog button, .catalog .button) {
-    min-height: 40px;
+    min-height: 44px;
   }
   .product-shell
     :is(
@@ -787,7 +850,7 @@
       .field input,
       .field select
     ) {
-    min-height: 40px;
+    min-height: 44px;
   }
   .product-shell .mission-metrics > a {
     flex-basis: 50%;
@@ -799,7 +862,7 @@
     display: none;
   }
   .product-shell .mission-metrics > a > div {
-    font-size: 10px;
+    font-size: 12px;
   }
   .product-shell .mission-metrics strong {
     font-size: 18px;
@@ -829,13 +892,20 @@
 }
 
 .auth-page .auth-main .auth-mark {
-  margin: 0 auto 28px;
-  font-size: 22px;
+  margin: 28px auto 8px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--ink);
   justify-content: center;
 }
 .auth-page .auth-main .auth-mark .brand-icon {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--brand);
+  color: #fff;
 }
 
 .product-shell .topbar {
