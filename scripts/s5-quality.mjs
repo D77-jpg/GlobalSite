@@ -77,6 +77,34 @@ const compositions = {
     subject: "Glass collections",
   },
 };
+const businessCases = {
+  "business-art": {
+    source: "composition-material",
+    journey: "visual-selection",
+    sections: ["specs"],
+    label: "Collections",
+    frame: "gallery",
+    subject: "Artwork for interiors",
+  },
+  "business-engineering": {
+    source: "composition-engineering",
+    journey: "technical-selection",
+    sections: ["specs", "material", "application"],
+    label: "Engineering",
+    frame: "index",
+    subject: "Equipment for your application",
+  },
+  "business-bags": {
+    source: "composition-packaging",
+    journey: "configured-sourcing",
+    sections: ["specs", "material", "oem", "moq", "samples"],
+    label: "Materials & Options",
+    frame: "gallery",
+    subject: "Bags for your next collection",
+  },
+};
+for (const [key, c] of Object.entries(businessCases))
+  compositions[key] = { ...compositions[c.source], subject: c.subject };
 const results = [];
 let current = {};
 const server = http.createServer((req, res) => {
@@ -393,6 +421,56 @@ try {
         ],
       });
     }
+    if (businessCases[testCase]) {
+      const c = businessCases[testCase];
+      snapshot.site.plan = {
+        strategy: {
+          version: "v1",
+          offering: c.subject,
+          buyingJourney: c.journey,
+          decisionFactors: ["Application", "Selection"],
+          productSections: c.sections,
+          visualPriorities: ["Product imagery", "Clear decisions"],
+          questions: [],
+          navigation: [
+            { label: c.label, nodeKeys: ["range"] },
+            { label: "Contact", nodeKeys: ["contact"] },
+          ],
+        },
+        nodes: [
+          { key: "range", path: "/products" },
+          { key: "contact", path: "/contact" },
+        ],
+      };
+      page.blocks = page.blocks.filter((b) => b.type !== "product-grid");
+      for (const row of snapshot.pages)
+        for (const b of row.blocks) {
+          b.design = {
+            purpose:
+              b.type === "cta"
+                ? "conversion"
+                : b.type === "process"
+                  ? "process"
+                  : b.type === "category-grid"
+                    ? "discovery"
+                    : "selection",
+            frame:
+              b.type === "category-grid"
+                ? c.frame
+                : b.type === "product-grid"
+                  ? "index"
+                  : b.type === "split"
+                    ? "split"
+                    : b.type === "process"
+                      ? "steps"
+                      : "band",
+            ratio: b.type === "image" ? "landscape" : "natural",
+            fit: b.type === "image" ? "cover" : "contain",
+            focus: "center",
+            density: "compact",
+          };
+        }
+    }
     const start = Date.now(),
       built = await buildStatic(snapshot, async () => ({
         body: img,
@@ -474,6 +552,30 @@ try {
         ))
       )
         throw Error("Responsive overflow at " + width);
+      const directed = await p.evaluate(() => {
+        const cards = [
+          ...document.querySelectorAll(".frame-index .category-grid > a"),
+        ];
+        const cramped = cards.some((a) => {
+          const title = a.querySelector("span:first-of-type");
+          const picture = a.querySelector(":scope > picture, :scope > img");
+          return (
+            title &&
+            picture &&
+            (title.getBoundingClientRect().width < 100 ||
+              title.getBoundingClientRect().left <
+                picture.getBoundingClientRect().right)
+          );
+        });
+        const wrongFit = [
+          ...document.querySelectorAll(".hero.fit-contain img"),
+        ].some((i) => getComputedStyle(i).objectFit !== "contain");
+        return { cramped, wrongFit };
+      });
+      if (directed.cramped || directed.wrongFit)
+        throw Error(
+          "Section design intent lost at " + width + JSON.stringify(directed),
+        );
     }
     await p.screenshot({
       path: path.join(reportDir, "s5-" + testCase + "-desktop.png"),

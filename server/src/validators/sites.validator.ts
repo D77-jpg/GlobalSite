@@ -126,8 +126,87 @@ export const cluster = z
     keywords: z.array(z.string().min(1).max(120)).max(20),
   })
   .strict();
+export const strategy = z
+  .object({
+    version: z.literal("v1"),
+    offering: z.string().trim().min(1).max(240),
+    buyingJourney: z.enum([
+      "visual-selection",
+      "technical-selection",
+      "configured-sourcing",
+      "consultation",
+    ]),
+    decisionFactors: z.array(z.string().trim().min(1).max(160)).min(2).max(6),
+    navigation: z
+      .array(
+        z
+          .object({
+            label: z.string().trim().min(1).max(24),
+            nodeKeys: z.array(key).min(1).max(12),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(5),
+    productSections: z
+      .array(
+        z.enum([
+          "specs",
+          "material",
+          "application",
+          "certifications",
+          "oem",
+          "moq",
+          "samples",
+          "packaging",
+        ]),
+      )
+      .min(1)
+      .max(8),
+    visualPriorities: z.array(z.string().trim().min(1).max(180)).min(2).max(6),
+    questions: z.array(z.string().trim().min(1).max(240)).max(8),
+  })
+  .strict()
+  .refine((s) => {
+    const required =
+      s.buyingJourney === "technical-selection"
+        ? ["specs", "material", "application"]
+        : s.buyingJourney === "configured-sourcing"
+          ? ["specs", "material", "oem", "moq", "samples"]
+          : ["specs"];
+    return (
+      new Set(s.productSections).size === s.productSections.length &&
+      required.every((k) => s.productSections.includes(k as any))
+    );
+  });
+export const sectionDesign = z
+  .object({
+    purpose: z.enum([
+      "discovery",
+      "selection",
+      "context",
+      "process",
+      "evidence",
+      "conversion",
+    ]),
+    frame: z.enum([
+      "gallery",
+      "index",
+      "story",
+      "split",
+      "steps",
+      "table",
+      "band",
+    ]),
+    ratio: z.enum(["natural", "landscape", "portrait", "square"]),
+    fit: z.enum(["contain", "cover"]),
+    focus: z.enum(["center", "top", "left", "right"]),
+    density: z.enum(["compact", "comfortable"]),
+  })
+  .strict();
 export const plan = z
   .object({
+    strategy: strategy.optional(),
     nodes: z.array(node).min(1).max(50),
     keywords: z.array(keyword).max(100),
     clusters: z.array(cluster).max(30),
@@ -136,6 +215,7 @@ export const plan = z
 export const planPatch = z
   .object({
     revision,
+    strategy: strategy.optional(),
     nodes: z.array(node).min(1).max(50),
     keywords: z.array(keyword).max(100),
     clusters: z.array(cluster).max(30),
@@ -190,6 +270,7 @@ export const block = z
       "cta",
       "comparison",
     ]),
+    design: sectionDesign.optional(),
     items: z.array(blockItem).max(12).optional(),
     layout: z.enum(["cards", "split", "reverse", "band", "compact"]).optional(),
     tone: z.enum(["light", "sage", "dark"]).optional(),
@@ -237,20 +318,32 @@ export const pageInput = z
   })
   .strict()
   .refine((x) => new Set(x.blocks.map((b) => b.key)).size === x.blocks.length);
+export const designDirection = z
+  .object({
+    key: z.enum(["primary", "alternate"]),
+    label: z.string().trim().min(1).max(80),
+    rationale: z.string().trim().min(1).max(500),
+    page: pageInput.refine((p) => !!p.presentation),
+    detail: z
+      .object({
+        nodeKey: key,
+        page: pageInput.refine((p) => !!p.presentation),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+export const designPageOutput = z
+  .object({
+    label: z.string().min(1).max(80),
+    rationale: z.string().min(1).max(500),
+    page: pageInput.refine((p) => !!p.presentation),
+  })
+  .strict();
+export const directionOutput = z.object({ proposal: designDirection }).strict();
 export const designOutput = z
   .object({
-    directions: z
-      .array(
-        z
-          .object({
-            key: z.enum(["primary", "alternate"]),
-            label: z.string().trim().min(1).max(80),
-            rationale: z.string().trim().min(1).max(500),
-            page: pageInput.refine((p) => !!p.presentation),
-          })
-          .strict(),
-      )
-      .length(2),
+    directions: z.array(designDirection).length(2),
   })
   .strict()
   .refine((d) => new Set(d.directions.map((v) => v.key)).size === 2)
@@ -292,12 +385,14 @@ export const agentInput = z
       "refine",
     ]),
     consent: z.literal(true),
+    reuseRunId: objectId.optional(),
     pageKey: key.optional(),
     pageId: objectId.optional(),
     blockKey: key.optional(),
     instructions: z.string().trim().max(1000).optional(),
   })
   .strict()
+  .refine((x) => !x.reuseRunId || x.step === "design")
   .refine((x) => x.step !== "rewrite" || (!!x.pageId && !!x.blockKey))
   .refine((x) => x.step === "rewrite" || (!x.pageId && !x.blockKey));
 export const answerInput = z

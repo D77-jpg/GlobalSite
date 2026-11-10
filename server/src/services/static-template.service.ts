@@ -1,3 +1,4 @@
+import { sectionClasses } from "./section-design.service";
 import { composition as compositionSchema } from "../validators/sites.validator";
 import {
   renderB2BBlock,
@@ -93,6 +94,7 @@ function section(s: Snapshot, b: any, p?: any) {
   return (
     '<section class="section section-' +
     e(b.key) +
+    sectionClasses(b.design) +
     '" id="block-' +
     e(b.key) +
     '"><h2>' +
@@ -332,11 +334,26 @@ export function renderStaticPage(s: Snapshot, p: any) {
         contact ? link(contact.path, label(contact)) : "",
       ].join("")
     : "";
-  const nav = composition
-    ? composedNav
-    : s.site.buyerProfile
-      ? rangeMenu + destinations
-      : legacyLinks;
+  const strategyNav = s.site.plan?.strategy?.navigation
+    ?.map((g: any) => {
+      const rows = g.nodeKeys
+        .map((key: string) => {
+          const node = s.site.plan.nodes.find((n: any) => n.key === key);
+          return node ? s.pages.find((v) => v.path === node.path) : undefined;
+        })
+        .filter(Boolean);
+      return rows.length === 1
+        ? link(rows[0].path, g.label)
+        : group(g.label, rows);
+    })
+    .join("");
+  const nav =
+    strategyNav ||
+    (composition
+      ? composedNav
+      : s.site.buyerProfile
+        ? rangeMenu + destinations
+        : legacyLinks);
   const footerNav = composition
     ? s.pages
         .filter((v) => v.type !== "product" && v.type !== "home")
@@ -348,12 +365,20 @@ export function renderStaticPage(s: Snapshot, p: any) {
 
   const catalog = s.pages.find((v) => v.type === "category");
   const collectionHref =
-    p.path === "/" && products.length ? "#collection" : (catalog?.path ?? "/");
+    p.path === "/" && p.blocks.some((b: any) => b.type === "category-grid")
+      ? "#block-" + p.blocks.find((b: any) => b.type === "category-grid").key
+      : p.path === "/" && products.length
+        ? "#collection"
+        : (catalog?.path ?? "/");
   const about = s.pages.find((v) => v.type === "about");
   const grid =
     ["/", catalog?.path].includes(p.path) &&
     products.length &&
-    !p.blocks.some((b: any) => b.type === "product-grid")
+    !p.blocks.some(
+      (b: any) =>
+        b.type === "product-grid" ||
+        ((composition || s.site.plan?.strategy) && b.type === "category-grid"),
+    )
       ? s.site.buyerProfile
         ? productCards(s, p)
         : '<section class="collection section" id="collection"><div class="section-heading"><div><p class="section-kicker">The collection</p><h2>Explore the everyday essentials</h2></div>' +
@@ -443,7 +468,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     '<section class="hero ' +
     (composition ? "composition-hero-" : "hero-") +
     e(layout) +
-    (firstImage ? " has-visual" : "") +
+    (firstImage ? " has-visual" + sectionClasses(firstImage.design) : "") +
     '"><div class="hero-copy">' +
     (composition
       ? '<p class="hero-eyebrow">' +

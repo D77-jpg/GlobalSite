@@ -11,10 +11,10 @@ export function siteSkillProfile() {
       path.resolve(__dirname, "../../agent-skills/brand-site.md"),
       "utf8",
     );
-    if (!guidance.trim() || Buffer.byteLength(guidance) > 12000)
+    if (!guidance.trim() || Buffer.byteLength(guidance) > 17000)
       throw new Error("INVALID_PROFILE");
     return {
-      version: "brand-site-v3",
+      version: "brand-site-v4",
       hash: createHash("sha256").update(guidance).digest("hex"),
       guidance,
     };

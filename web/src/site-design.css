@@ -156,3 +156,39 @@
 .proposal-canvas.expanded {
   aspect-ratio: auto;
 }
+
+.proposal-view-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.proposal-view-tabs [aria-pressed="true"] {
+  background: var(--surface-active, #e8efeb);
+  border-color: var(--accent, #275d4a);
+}
+.proposal-confirm,
+.pilot-review {
+  padding: 20px 0;
+  border-block: 1px solid var(--border, #d9dfdc);
+}
+.pilot-review p {
+  max-width: 75ch;
+  margin: 8px 0 16px;
+}
+
+.proposal-canvas.mobile {
+  max-width: 390px;
+  aspect-ratio: 390/900;
+  margin-inline: auto;
+}
+.proposal-canvas.mobile iframe {
+  width: 390px;
+  height: 900px;
+  transform: scale(calc(100cqw / 390px));
+}
+.proposal-canvas.mobile.expanded {
+  aspect-ratio: 390/1800;
+}
+.proposal-canvas.mobile.expanded iframe {
+  height: 1800px;
+}

@@ -71,6 +71,8 @@ export function validatePage(
   data: PageInput,
   facts: any[],
   context: {
+    navigationLabels?: string[];
+    requiredProductSections?: string[];
     productId?: string | null;
     productIds: string[];
     type: string;
@@ -219,6 +221,8 @@ export function validatePage(
     ] as const)
       text(data.presentation[field], data.refs, "presentation." + field, null);
   }
+  for (const label of context.navigationLabels ?? [])
+    text(label, data.refs, "navigation", null);
   text(data.title, data.refs, "title", null);
   text(data.metaDescription, data.refs, "metaDescription", null);
   for (const b of data.blocks) {
@@ -364,7 +368,7 @@ export function validatePage(
       add("SPEC_TABLE_REQUIRED", "blocks." + b.key, b.key);
   }
   if (context.type === "product")
-    for (const key of productSections)
+    for (const key of context.requiredProductSections ?? productSections)
       if (
         !data.blocks.some(
           (b) => b.key === key && (key !== "specs" || b.type === "specs"),

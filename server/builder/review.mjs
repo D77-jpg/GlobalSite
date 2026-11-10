@@ -77,6 +77,37 @@ try {
         brokenImages: [...document.images].filter(
           (n) => !n.complete || !n.naturalWidth,
         ).length,
+        navigation: [
+          ...document.querySelectorAll("header nav a,.main-nav a"),
+        ].map((n) => ({
+          label: n.textContent.trim(),
+          href: n.getAttribute("href"),
+        })),
+        sections: [...document.querySelectorAll("main>section")].map((n) => {
+          const box = n.getBoundingClientRect();
+          return {
+            id: n.id,
+            height: Math.round(box.height),
+            words: (n.innerText ?? "").split(/\s+/).filter(Boolean).length,
+            images: n.querySelectorAll("img").length,
+            frame: [...n.classList].find((c) => c.startsWith("frame-")) ?? null,
+            media: [...n.querySelectorAll("img")].map((img) => {
+              const r = img.getBoundingClientRect(),
+                css = getComputedStyle(img);
+              return {
+                naturalRatio: img.naturalWidth / Math.max(1, img.naturalHeight),
+                displayRatio: r.width / Math.max(1, r.height),
+                fit: css.objectFit,
+              };
+            }),
+          };
+        }),
+        repeatedHeadings: [...document.querySelectorAll("main h2")]
+          .map((n) => n.textContent.trim().toLowerCase())
+          .filter((v, i, a) => a.indexOf(v) !== i),
+        discoverySections: document.querySelectorAll(
+          "main>.catalog-section,main>.block-category-grid,main>.block-product-grid",
+        ).length,
         blankSections: [...document.querySelectorAll("main>section")].filter(
           (n) =>
             (n.innerText ?? "").trim().length < 20 && !n.querySelector("img"),

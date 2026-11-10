@@ -60,11 +60,13 @@ test("design proposal interface compares, retries previews, expands and selects 
     {
       key: "primary",
       label: "Product-led showcase",
+      detail: { nodeKey: "detail" },
       rationale: "Prioritize product discovery.",
     },
     {
       key: "alternate",
       label: "Editorial collection",
+      detail: { nodeKey: "detail" },
       rationale: "Use a centered editorial composition.",
     },
   ];
@@ -109,9 +111,11 @@ test("design proposal interface compares, retries previews, expands and selects 
     });
   });
   await page.route(
-    "**" + base + "/design-proposals/*/*/preview",
+    "**" + base + "/design-proposals/*/*/preview*",
     async (route) => {
-      const key = new URL(route.request().url()).pathname.split("/").at(-2)!;
+      const parsed = new URL(route.request().url());
+      const key = parsed.pathname.split("/").at(-2)!;
+      const kind = parsed.searchParams.get("page") ?? "home";
       if (key === "alternate" && ++previewRequests === 1)
         return route.fulfill({
           status: 503,
@@ -124,6 +128,8 @@ test("design proposal interface compares, retries previews, expands and selects 
             html:
               '<!doctype html><html lang="en"><head><meta name="robots" content="noindex"></head><body class="b2b-site composed-site type-editorial palette-clay products-gallery"><h1>' +
               key +
+              " " +
+              kind +
               " collection</h1><p>Isolated UI preview fixture</p></body></html>",
             hash: "fixture",
             issues: key === "primary" ? [{ code: "CONTENT_TOO_SHORT" }] : [],
@@ -154,7 +160,7 @@ test("design proposal interface compares, retries previews, expands and selects 
   });
   await page.goto("/sites/" + site.id + "?tab=design");
   const generate = page.getByRole("button", {
-    name: "生成两种首页方案",
+    name: "生成两套设计提案",
     exact: true,
   });
   await expect(generate).toBeDisabled();
@@ -169,6 +175,21 @@ test("design proposal interface compares, retries previews, expands and selects 
   ).toBeVisible();
   await page.getByRole("button", { name: "重试预览", exact: true }).click();
   await expect(page.locator(".proposal iframe")).toHaveCount(2);
+  await page.getByRole("button", { name: "代表性详情页", exact: true }).click();
+  await expect(
+    page
+      .frameLocator('iframe[title="Product-led showcase · 详情页"]')
+      .getByRole("heading"),
+  ).toContainText("detail");
+  await page.getByRole("button", { name: "首页", exact: true }).click();
+  await page.getByRole("button", { name: "手机预览", exact: true }).click();
+  await expect(page.locator(".proposal-canvas.mobile")).toHaveCount(2);
+  await expect(page.locator(".proposal iframe").first()).toHaveCSS(
+    "width",
+    "390px",
+  );
+  await page.getByRole("button", { name: "桌面预览", exact: true }).click();
+
   const proposalBody = page
     .frameLocator('iframe[title="Product-led showcase"]')
     .locator("body");
@@ -199,13 +220,19 @@ test("design proposal interface compares, retries previews, expands and selects 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  page.once("dialog", (d) => void d.accept());
   await page
     .getByRole("button", { name: "采用这个方向", exact: true })
     .first()
     .click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "采用这个方向", exact: true })
+    .click();
   await expect(page.getByText("已选定设计方向", { exact: true })).toBeVisible();
-  await expect(page.locator(".proposal")).toHaveCount(0);
+  await expect(page.locator(".proposal")).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: "已采用", exact: true }),
+  ).toBeDisabled();
   await page.getByRole("button", { name: "切换语言", exact: true }).click();
   await expect(
     page.getByRole("heading", {

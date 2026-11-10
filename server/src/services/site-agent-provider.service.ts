@@ -1,3 +1,4 @@
+import { parseAgentJson } from "./agent-json.service";
 import { AgentAiProvider } from "../models";
 import { tenantContext } from "../models/tenant-context";
 import { decrypt } from "./credential-crypto";
@@ -9,6 +10,11 @@ export type AgentResult = {
   tokens: number;
   errorCode?: string;
   invalidReason?: "truncated" | "non_json";
+  responseDiagnostics?: {
+    characters: number;
+    kind: "empty" | "object" | "fence" | "text";
+    finish: "stop" | "length" | "other";
+  };
   visualInput?: boolean;
   reviewMode?: "structural" | "text" | "visual";
 };
@@ -144,14 +150,29 @@ export async function callSiteAgent(
       502,
       "AI_USAGE_UNKNOWN",
     );
+    const responseText = String(
+      body.choices?.[0]?.message?.content ?? "",
+    ).trim();
+    const responseDiagnostics = {
+      characters: responseText.length,
+      kind: (!responseText
+        ? "empty"
+        : responseText.startsWith("{")
+          ? "object"
+          : responseText.startsWith("```")
+            ? "fence"
+            : "text") as "empty" | "object" | "fence" | "text",
+      finish: (["stop", "length"].includes(body.choices?.[0]?.finish_reason)
+        ? body.choices[0].finish_reason
+        : "other") as "stop" | "length" | "other",
+    };
     let output: any, errorCode: string | undefined;
     let invalidReason: AgentResult["invalidReason"];
     try {
       const choice = body.choices?.[0];
       if (choice?.finish_reason === "length") throw new Error("TRUNCATED");
       const content = String(choice?.message?.content ?? "").trim();
-      const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(content);
-      output = JSON.parse(fenced ? fenced[1] : content);
+      output = parseAgentJson(content);
     } catch {
       output = null;
       errorCode = "AI_OUTPUT_INVALID";
@@ -164,7 +185,7 @@ export async function callSiteAgent(
       output,
       tokens,
       visualInput: !!(provider.supportsVision && images.length),
-      ...(errorCode ? { errorCode, invalidReason } : {}),
+      ...(errorCode ? { errorCode, invalidReason, responseDiagnostics } : {}),
     };
     await save(result);
     await settle("ai_tokens", operationId, tokens);

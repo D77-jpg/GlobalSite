@@ -90,6 +90,7 @@ export function compositionBrief(site: any, node?: any) {
     patterns: compositionPatterns,
     instruction:
       "Choose or mix by the actual business, buyer decisions and available evidence. Do not choose by legacy templateId. Explain the choice privately. Unfamiliar industries use the same decision analysis; do not force an industry label.",
+    businessStrategy: site.plan?.strategy ?? null,
     pagePurpose: type,
     buyerQuestions: node?.brief?.buyerQuestions ?? [],
     contentTargets:
@@ -205,6 +206,32 @@ export function compositionIssues(page: PageInput, type: string) {
       blocks.filter((b) => b.type === "category-grid").length > 1
     )
       add("CONTENT_REPEATED");
+  }
+  if (page.blocks.some((b) => b.design)) {
+    const discovery = page.blocks.filter((b) =>
+      ["category-grid", "product-grid"].includes(b.type),
+    );
+    if (discovery.length > 1) add("CONTENT_REPEATED", discovery[1].key);
+    const frames = page.blocks
+      .filter((b) => b.type !== "image" && !pendingDetail(b.body))
+      .map((b) => b.design?.frame);
+    if (type === "home" && new Set(frames.filter(Boolean)).size < 3)
+      add("CONTENT_RHYTHM_REQUIRED");
+    for (const b of page.blocks) {
+      if (!b.design) add("CONTENT_SECTION_DESIGN_REQUIRED", b.key);
+      if (
+        ["split", "story"].includes(b.design?.frame ?? "") &&
+        b.type === "split" &&
+        !b.assetId
+      )
+        add("CONTENT_IMAGE_REQUIRED", b.key);
+      if (
+        b.design?.frame === "gallery" &&
+        !["product-grid", "category-grid", "image"].includes(b.type) &&
+        !(b.items ?? []).some((i) => i.assetId)
+      )
+        add("CONTENT_IMAGE_REQUIRED", b.key);
+    }
   }
   return issues;
 }

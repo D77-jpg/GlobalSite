@@ -899,6 +899,7 @@ function PlanEditor({
       },
     ],
     [nodes, setNodes] = useState<Row[]>(defaults),
+    [strategy, setStrategy] = useState<Row | undefined>(site.plan?.strategy),
     [selectedNode, selectNode] = useState<string>(defaults[0]?.key),
     [dirty, setDirty] = useState(false),
     [drag, setDrag] = useState(""),
@@ -925,6 +926,79 @@ function PlanEditor({
           t={t}
         />
       </div>
+      {strategy && (
+        <details className="strategy-review" open>
+          <summary>{t("businessStrategy")}</summary>
+          <p className="muted">{t("strategyPilot")}</p>
+          <label>
+            {t("strategyOffering")}
+            <textarea
+              disabled={!canEdit}
+              maxLength={240}
+              value={strategy.offering}
+              onChange={(e) => {
+                setStrategy({ ...strategy, offering: e.target.value });
+                setDirty(true);
+              }}
+            />
+          </label>
+          <div className="catalog-grid">
+            <section>
+              <h3>{t("strategyDecisions")}</h3>
+              <ul>
+                {strategy.decisionFactors.map((v: string) => (
+                  <li key={v}>{v}</li>
+                ))}
+              </ul>
+            </section>
+            <section>
+              <h3>{t("strategyVisual")}</h3>
+              <ul>
+                {strategy.visualPriorities.map((v: string) => (
+                  <li key={v}>{v}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
+          <h3>{t("strategyNavigation")}</h3>
+          <div className="catalog-grid">
+            {strategy.navigation.map((g: Row, i: number) => (
+              <label key={i}>
+                {g.nodeKeys
+                  .map((k: string) => nodes.find((n) => n.key === k)?.title)
+                  .filter(Boolean)
+                  .join(" / ")}
+                <input
+                  disabled={!canEdit}
+                  value={g.label}
+                  maxLength={24}
+                  onChange={(e) => {
+                    setStrategy({
+                      ...strategy,
+                      navigation: strategy.navigation.map(
+                        (r: Row, j: number) =>
+                          j === i ? { ...r, label: e.target.value } : r,
+                      ),
+                    });
+                    setDirty(true);
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+          {strategy.questions.length > 0 && (
+            <>
+              <h3>{t("strategyQuestions")}</h3>
+              <ul>
+                {strategy.questions.map((q: string) => (
+                  <li key={q}>{q}</li>
+                ))}
+              </ul>
+              <Link to="?tab=interview">{t("generateInterview")}</Link>
+            </>
+          )}
+        </details>
+      )}
       <p className="muted">{t("dragHint")}</p>
       {site.plan?.clusters?.length > 0 && (
         <details className="studio-clusters">
@@ -1292,6 +1366,21 @@ function PlanEditor({
                   await api("/sites/" + site.id + "/plan", "PUT", {
                     revision: site.planRevision,
                     nodes: nodes.map(({ depth: _depth, ...n }) => n),
+                    ...(strategy
+                      ? {
+                          strategy: {
+                            ...strategy,
+                            navigation: strategy.navigation
+                              .map((g: Row) => ({
+                                ...g,
+                                nodeKeys: g.nodeKeys.filter((k: string) =>
+                                  nodes.some((n) => n.key === k),
+                                ),
+                              }))
+                              .filter((g: Row) => g.nodeKeys.length),
+                          },
+                        }
+                      : {}),
                     keywords: site.plan?.keywords ?? [],
                     clusters: site.plan?.clusters ?? [],
                   }),

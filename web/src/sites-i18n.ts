@@ -99,6 +99,39 @@ export const siteMessages = {
     "当前审查已由管理员确认",
     "This review has been confirmed by an administrator",
   ],
+  businessStrategy: ["业务与设计策略", "Business and design strategy"],
+  strategyOffering: [
+    "业务定位（不是已确认事实）",
+    "Offering (guidance, not confirmed evidence)",
+  ],
+  strategyDecisions: ["客户如何做选择", "Buyer decision factors"],
+  strategyNavigation: ["网站导航", "Website navigation"],
+  strategyVisual: ["视觉重点", "Visual priorities"],
+  strategyQuestions: ["集中补充的信息", "Information to clarify"],
+  strategyPilot: [
+    "先验证首页与代表性详情页，通过截图审查后再扩展整站。",
+    "Validate the homepage and representative detail with screenshot review before expanding.",
+  ],
+  CONTENT_BUSINESS_REQUIREMENTS: [
+    "业务策略包含不适用的工业采购栏目，请重新规划。",
+    "The business strategy includes unsupported manufacturing requirements. Reassess the buying journey.",
+  ],
+  PILOT_REVIEW_REQUIRED: [
+    "请先审查并批准首页与代表性详情页，再生成其余页面。",
+    "Review and approve the homepage and representative detail before expanding.",
+  ],
+  CONTENT_RHYTHM_REQUIRED: [
+    "区块布局过于重复，请调整页面节奏。",
+    "Vary section frames to create a clearer page rhythm.",
+  ],
+  CONTENT_SECTION_DESIGN_REQUIRED: [
+    "区块缺少布局规则，请重新生成。",
+    "A section is missing its layout direction.",
+  ],
+  CONTENT_IMAGE_REQUIRED: [
+    "该布局缺少必要图片，请补充素材或更换布局。",
+    "Add the required image or select a layout that works without it.",
+  ],
   QUALITY_BLOCKED: [
     "审查仍有阻断问题，请先修改页面并重新审查。",
     "Blocking review issues remain. Refine the pages and run a new review.",

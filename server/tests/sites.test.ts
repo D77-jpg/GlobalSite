@@ -1332,7 +1332,7 @@ test("queued agents freeze reviewed design skills and new content uses brand pre
   const site = await planSite(await newSite());
   const queued = await queue(site);
   const run = await tenant(() => m.AgentRun.findById(queued.body.data.id));
-  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v3");
+  assert.equal(run!.inputSnapshot.skillProfile.version, "brand-site-v4");
   const { unitPrompt } = await import("../src/services/site-agents.service");
   const prompt = unitPrompt(run, run!.steps[0]);
   assert(prompt.system.includes(run!.inputSnapshot.skillProfile.guidance));
@@ -1602,19 +1602,35 @@ test("review captures are private, metered once, and refine creates a new unappr
   assert.equal(
     (
       await tenant(() =>
-        processSiteAgent(refinedTask, async (_s, input, _o, save) => {
-          assert((input as any).review.findings.length);
-          const result = {
-            output: {
-              page: draft(
-                "Explore the range and send a purchasing brief describing your product interest and destination market.",
+        processSiteAgent(
+          refinedTask,
+          async (_s, input, _o, save) => {
+            assert((input as any).review.findings.length);
+            const result = {
+              output: {
+                page: draft(
+                  "Explore the range and send a purchasing brief describing your product interest and destination market.",
+                ),
+              },
+              tokens: 25,
+            };
+            await save(result);
+            return result;
+          },
+          async (_snapshot, _path, key) => {
+            const artifactKey = await storeArtifact(
+              Buffer.from(
+                zipSync(
+                  Object.fromEntries(
+                    [375, 768, 1440].map((w) => [w + ".jpg", jpeg]),
+                  ),
+                ),
               ),
-            },
-            tokens: 25,
-          };
-          await save(result);
-          return result;
-        }),
+              key!,
+            );
+            return { artifactKey, metrics };
+          },
+        ),
       )
     ).status,
     "done",
@@ -1623,6 +1639,24 @@ test("review captures are private, metered once, and refine creates a new unappr
     .data;
   assert.equal(updated.revision, page.revision + 1);
   assert.notEqual(updated.status, "approved");
+  const comparison = (
+    await a.client.request("GET", "/agent-runs/" + refined.body.data.id)
+  ).body.data.steps[0].output;
+  assert.equal(comparison.requiresNewReview, true);
+  assert.deepEqual(
+    comparison.comparison.map((p: any) => p.phase),
+    ["before", "after"],
+  );
+  for (const phase of ["before", "after"]) {
+    const url =
+      "/agent-runs/" +
+      refined.body.data.id +
+      "/screenshots/home/375?phase=" +
+      phase;
+    assert.equal((await a.client.request("GET", url)).status, 200);
+    assert.equal((await b.client.request("GET", url)).status, 404);
+  }
+
   assert.equal(
     (
       await a.client.request(
@@ -1956,7 +1990,7 @@ test("design proposals run once in Worker, stay private, select atomically and e
   ).body.data.items[0];
   assert.equal(homePage.status, "draft"); // Selection never grants approval.
   assert.equal(homePage.presentation.visualStyle, "organic");
-  assert.equal((await a.client.request("GET", url)).status, 409);
+  assert.equal((await a.client.request("GET", url)).status, 200);
   const content = (await queue(chosen, "content")).body.data;
   assert(content.id);
   assert.equal(
@@ -2181,5 +2215,512 @@ test("new B2B design rejects palette-only alternatives and requires a shared ren
     saved.body.data.issues.some(
       (v: any) => v.code === "CONTENT_DESIGN_REQUIRED",
     ),
+  );
+});
+
+test("business strategy pairs home/detail atomically, isolates previews and blocks expansion until pilot review", async () => {
+  const strategy = {
+    version: "v1",
+    offering: "Artwork selection for interior projects",
+    buyingJourney: "visual-selection",
+    decisionFactors: ["Composition", "Placement"],
+    navigation: [
+      { label: "Art for Interiors", nodeKeys: ["interiors"] },
+      { label: "Contact", nodeKeys: ["contact"] },
+    ],
+    productSections: ["specs"],
+    visualPriorities: ["Artwork shape", "Room context"],
+    questions: ["Which dimensions are confirmed?"],
+  };
+  let site = await newSite({ templateId: "adaptive" });
+  const response = await a.client.request(
+    "PUT",
+    "/sites/" + site.id + "/plan",
+    {
+      revision: site.planRevision,
+      strategy,
+      nodes: [
+        home,
+        {
+          ...home,
+          key: "interiors",
+          path: "/interiors",
+          title: "Art for Interiors",
+          type: "solution",
+        },
+        {
+          ...home,
+          key: "contact",
+          path: "/contact",
+          title: "Contact",
+          type: "contact",
+        },
+      ],
+      keywords: [],
+      clusters: [],
+    },
+  );
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  site = (
+    await a.client.request("POST", "/sites/" + site.id + "/plan/confirm", {
+      revision: response.body.data.planRevision,
+    })
+  ).body.data;
+  assert.equal(site.plan.strategy.buyingJourney, "visual-selection");
+  let queued = await queue(site, "design");
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  const data: any = proposals();
+  for (const [i, d] of data.directions.entries()) {
+    for (const b of d.page.blocks)
+      b.design = {
+        purpose: "selection",
+        frame:
+          b.type === "product-grid"
+            ? i
+              ? "gallery"
+              : "index"
+            : b.type === "process"
+              ? "steps"
+              : "band",
+        ratio: "natural",
+        fit: "contain",
+        focus: "center",
+        density: "compact",
+      };
+    d.detail = { nodeKey: "interiors", page: structuredClone(d.page) };
+  }
+  const task = await taskFor(queued.body.data.id);
+  data.directions[0].page.blocks.find(
+    (b: any) => b.type === "features",
+  ).design.frame = "gallery";
+  const invalid = structuredClone(data);
+  invalid.directions[0].page.blocks.push({
+    ...invalid.directions[0].page.blocks[0],
+    key: "qa",
+    type: "faq",
+    body: "",
+    items: [],
+    faq: [{ question: "How do I choose?", answer: "Too short.", detail: "" }],
+    design: {
+      purpose: "context",
+      frame: "table",
+      ratio: "natural",
+      fit: "contain",
+      focus: "center",
+      density: "compact",
+    },
+  });
+  const directionProvider =
+    (data: any) =>
+    async (_system: any, input: any, _operation: any, save: any) => {
+      const result = {
+        output: input.designPageKind
+          ? (() => {
+              const d = data.directions.find(
+                (d: any) => d.key === input.proposalKey,
+              );
+              return {
+                label: d.label,
+                rationale: d.rationale,
+                page: input.designPageKind === "home" ? d.page : d.detail.page,
+              };
+            })()
+          : {
+              proposal: data.directions.find(
+                (d: any) => d.key === input.proposalKey,
+              ),
+            },
+        tokens: 25,
+      };
+      await save(result);
+      return result;
+    };
+  assert.equal(
+    (
+      await tenant(async () =>
+        processSiteAgent(task, directionProvider(invalid)),
+      )
+    ).status,
+    "pending",
+  );
+  const rejected = await tenant(() => m.AgentRun.findById(queued.body.data.id));
+  assert.equal(typeof rejected!.steps[0].candidateCipher, "object");
+  assert(
+    !JSON.stringify(rejected!.steps[0].candidateCipher).includes("Too short"),
+  );
+  assert(
+    !JSON.stringify(
+      (await a.client.request("GET", "/agent-runs/" + queued.body.data.id))
+        .body,
+    ).includes("Too short"),
+  );
+
+  assert(
+    rejected!.steps[0].validationFeedback.some(
+      (f: any) => f.qualityCode === "CONTENT_FAQ_DIRECT_ANSWER_REQUIRED",
+    ),
+  );
+
+  const { AppError } = await import("../src/errors");
+  let primaryCalls = 0,
+    alternateCalls = 0;
+  const resumableProvider = async (
+    system: any,
+    input: any,
+    operation: any,
+    save: any,
+  ) => {
+    if (input.candidateToRepair) {
+      const stored = await m.AgentRun.findById(queued.body.data.id);
+      assert(!stored!.steps.some((u: any) => u.draftCandidate));
+      assert(!JSON.stringify(stored).includes("Too short"));
+    }
+    if (input.proposalKey === "primary") primaryCalls++;
+    else if (++alternateCalls === 1) throw new AppError(502, "AI_TRANSIENT");
+    return directionProvider(data)(system, input, operation, save);
+  };
+  assert.equal(
+    (await tenant(() => processSiteAgent(task, resumableProvider))).status,
+    "pending",
+  );
+  const partial = await tenant(() => m.AgentRun.findById(queued.body.data.id));
+  assert.equal(partial!.steps[0].status, "succeeded");
+  // Exhaust only the failed direction, then explicitly create a new design task
+  // that reuses the paid, completed primary result without rewriting old history.
+  for (const expected of ["pending", "dead"]) {
+    assert.equal(
+      (
+        await tenant(async () =>
+          processSiteAgent(task, await providerFor({ proposal: null })),
+        )
+      ).status,
+      expected,
+    );
+  }
+  const sourceId = queued.body.data.id;
+  const exhausted = await tenant(() => m.AgentRun.findById(sourceId));
+  assert.equal(exhausted!.status, "failed");
+  assert.equal(
+    exhausted!.steps.find((u: any) => u.key === "alternate-home").attempts,
+    3,
+  );
+  queued = await queue(site, "design", randomUUID(), { reuseRunId: sourceId });
+  assert.equal(queued.status, 202, JSON.stringify(queued.body));
+  assert.equal(queued.body.data.steps[0].status, "succeeded");
+  const remainingTask = await taskFor(queued.body.data.id);
+  assert.equal(
+    (
+      await tenant(() =>
+        processSiteAgent(
+          remainingTask,
+          async (system, input: any, operation, save) => {
+            assert.equal(input.proposalKey, "alternate");
+            alternateCalls++;
+            return directionProvider(data)(system, input, operation, save);
+          },
+        ),
+      )
+    ).status,
+    "done",
+  );
+  assert.equal(primaryCalls, 2);
+  assert.equal(alternateCalls, 3);
+  assert.equal(
+    (await tenant(() => m.AgentRun.findById(sourceId)))!.steps.find(
+      (u: any) => u.key === "alternate-home",
+    ).attempts,
+    3,
+  );
+  const complete = (
+    await a.client.request("GET", "/agent-runs/" + queued.body.data.id)
+  ).body.data;
+  assert.equal(complete.steps[0].output.directions.length, 2);
+  assert.equal(
+    complete.steps[0].output.directions[0].page.blocks.find(
+      (b: any) => b.type === "features",
+    ).design.frame,
+    "index",
+  );
+
+  const preview =
+    "/sites/" +
+    site.id +
+    "/design-proposals/" +
+    queued.body.data.id +
+    "/primary/preview?page=detail";
+  assert.equal((await a.client.request("GET", preview)).status, 200);
+  assert.equal((await b.client.request("GET", preview)).status, 404);
+  const selected = await a.client.request(
+    "POST",
+    "/sites/" + site.id + "/design-direction",
+    { revision: site.revision, runId: queued.body.data.id, key: "primary" },
+  );
+  assert.equal(selected.status, 200, JSON.stringify(selected.body));
+  assert.equal(selected.body.data.designDirection.detailNodeKey, "interiors");
+  const pages = (await a.client.request("GET", "/sites/" + site.id + "/pages"))
+    .body.data.items;
+  assert.equal(pages.length, 2);
+  assert(pages.every((p: any) => p.status === "draft"));
+  assert(pages.every((p: any) => p.blocks.every((b: any) => b.design)));
+  assert.equal(
+    (await queue(selected.body.data, "content")).body.error.code,
+    "PILOT_REVIEW_REQUIRED",
+  );
+  // Exact selection replay never saves another pair.
+  assert.equal(
+    (
+      await a.client.request(
+        "POST",
+        "/sites/" + site.id + "/design-direction",
+        { revision: site.revision, runId: queued.body.data.id, key: "primary" },
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    await tenant(() => m.SitePage.countDocuments({ siteId: site.id })),
+    2,
+  );
+  const switched = await a.client.request(
+    "POST",
+    "/sites/" + site.id + "/design-direction",
+    {
+      revision: selected.body.data.revision,
+      runId: queued.body.data.id,
+      key: "alternate",
+    },
+  );
+  assert.equal(switched.status, 200, JSON.stringify(switched.body));
+  const switchedBack = await a.client.request(
+    "POST",
+    "/sites/" + site.id + "/design-direction",
+    {
+      revision: switched.body.data.revision,
+      runId: queued.body.data.id,
+      key: "primary",
+    },
+  );
+  assert.equal(switchedBack.status, 200, JSON.stringify(switchedBack.body));
+  selected.body.data = switchedBack.body.data;
+  for (const p of pages)
+    Object.assign(
+      p,
+      (await a.client.request("GET", "/pages/" + p.id)).body.data,
+    );
+  await tenant(() =>
+    m.AgentAiProvider.updateMany(
+      { name: "default" },
+      { $set: { supportsVision: false, enabled: false } },
+    ),
+  );
+  const metrics = [375, 768, 1440].map((width) => ({
+    width,
+    overflow: false,
+    brokenImages: 0,
+    height: 900,
+    words: 300,
+    headings: ["Pilot"],
+    blankSections: 0,
+  }));
+  for (const page of pages) {
+    const review = await queue(selected.body.data, "review", randomUUID(), {
+      pageKey: page.nodeKey,
+    });
+    assert.equal(review.status, 202);
+    const report = await tenant(async () =>
+      processSiteAgent(
+        await taskFor(review.body.data.id),
+        await providerFor({
+          summary: "Inspect the pilot screenshots and buying path.",
+          findings: [],
+        }),
+        async () => ({ artifactKey: randomUUID(), metrics }),
+      ),
+    );
+    assert.equal(report.status, "done");
+    assert.equal(
+      (
+        await a.client.request(
+          "POST",
+          "/agent-runs/" + review.body.data.id + "/accept-review",
+          {},
+        )
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await a.client.request("POST", "/pages/" + page.id + "/approve", {
+          revision: page.revision,
+        })
+      ).status,
+      200,
+    );
+  }
+  const expansion = await queue(selected.body.data, "content");
+  assert.equal(expansion.status, 202, JSON.stringify(expansion.body));
+  assert.deepEqual(
+    expansion.body.data.steps.map((s: any) => s.key),
+    ["contact"],
+  );
+  await a.client.request(
+    "POST",
+    "/agent-runs/" + expansion.body.data.id + "/cancel",
+    {},
+  );
+  const current = (await a.client.request("GET", "/pages/" + pages[0].id)).body
+    .data;
+  const {
+    id: _id,
+    status: _status,
+    revision: _revision,
+    siteId: _siteId,
+    nodeKey: _nodeKey,
+    path: _path,
+    type: _type,
+    productId: _productId,
+    issues: _issues,
+    hash: _hash,
+    reviewStatus: _reviewStatus,
+    ...rest
+  } = current;
+  const edited = {
+    title: rest.title,
+    metaDescription: rest.metaDescription,
+    presentation: rest.presentation,
+    refs: rest.refs,
+    blocks: rest.blocks.map((b: any, i: number) =>
+      i === 0 ? { ...b, heading: "Revised selection" } : b,
+    ),
+  };
+  assert.equal(
+    (
+      await a.client.request("PATCH", "/pages/" + current.id, {
+        revision: current.revision,
+        data: edited,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await queue(selected.body.data, "content")).body.error.code,
+    "PILOT_REVIEW_REQUIRED",
+  );
+  assert.equal(
+    (
+      await a.client.request(
+        "POST",
+        "/sites/" + site.id + "/design-direction",
+        {
+          revision: selected.body.data.revision,
+          runId: queued.body.data.id,
+          key: "alternate",
+        },
+      )
+    ).status,
+    409,
+  );
+});
+
+test("stale representative detail prevents the entire paired selection transaction", async () => {
+  const site = await planSite(await newSite(), [
+    home,
+    {
+      ...home,
+      key: "details",
+      path: "/details",
+      title: "Details",
+      type: "solution",
+    },
+  ]);
+  const queued = await queue(site, "design");
+  const { processSiteAgent } = await import(
+    "../src/services/site-agents.service"
+  );
+  const data: any = proposals();
+  for (const d of data.directions)
+    d.detail = { nodeKey: "details", page: d.page };
+  assert.equal(
+    (
+      await tenant(async () =>
+        processSiteAgent(
+          await taskFor(queued.body.data.id),
+          await providerFor(data),
+        ),
+      )
+    ).status,
+    "done",
+  );
+  await a.client.request("POST", "/sites/" + site.id + "/pages", {
+    nodeKey: "details",
+  });
+  const select = await a.client.request(
+    "POST",
+    "/sites/" + site.id + "/design-direction",
+    { revision: site.revision, runId: queued.body.data.id, key: "primary" },
+  );
+  assert.equal(select.status, 409);
+  assert.equal(select.body.error.code, "SOURCE_CHANGED");
+  assert.equal(
+    await tenant(() =>
+      m.SitePage.countDocuments({ siteId: site.id, nodeKey: "home" }),
+    ),
+    0,
+  );
+});
+
+test("visual-led planning rejects irrelevant manufacturing requirements with metered feedback", async () => {
+  const site = await newSite({ templateId: "adaptive" });
+  const strategy = {
+    version: "v1",
+    offering: "Artwork selection",
+    buyingJourney: "visual-selection",
+    decisionFactors: ["Subject", "Placement"],
+    navigation: [{ label: "Contact", nodeKeys: ["contact"] }],
+    productSections: ["specs", "moq"],
+    visualPriorities: ["Artwork", "Room context"],
+    questions: [],
+  };
+  const plan = {
+    nodes: [
+      home,
+      {
+        ...home,
+        key: "contact",
+        path: "/contact",
+        title: "Contact",
+        type: "contact",
+      },
+    ],
+    keywords: [],
+    clusters: [],
+    strategy,
+  };
+  const q = await queue(site, "research");
+  const { processSiteAgent, unitPrompt } = await import(
+    "../src/services/site-agents.service"
+  );
+  const task = await taskFor(q.body.data.id);
+  assert.equal(
+    (await tenant(async () => processSiteAgent(task, await providerFor(plan))))
+      .status,
+    "pending",
+  );
+  const failed = await tenant(() => m.AgentRun.findById(q.body.data.id));
+  assert.equal(
+    failed!.steps[0].validationFeedback[0].qualityCode,
+    "CONTENT_BUSINESS_REQUIREMENTS",
+  );
+  assert.equal(failed!.tokens, 21);
+  const prompt = unitPrompt(failed, failed!.steps[0]);
+  assert.equal(prompt.input.businessStrategy, null);
+  assert.equal(prompt.input.requiredProductSections, null);
+  plan.strategy.productSections = ["specs", "material"];
+  assert.equal(
+    (await tenant(async () => processSiteAgent(task, await providerFor(plan))))
+      .status,
+    "done",
   );
 });

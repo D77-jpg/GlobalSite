@@ -510,6 +510,7 @@ export const SiteBlock = entity<any>(
     key: String,
     type: String,
     items: Schema.Types.Mixed,
+    design: Schema.Types.Mixed,
     layout: String,
     tone: String,
     heading: String,
