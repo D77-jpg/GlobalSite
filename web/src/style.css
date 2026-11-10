@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 :root {
-  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-family:
+    ui-sans-serif, "Segoe UI Variable", "Segoe UI", "Microsoft YaHei", sans-serif;
   color: #243834;
   background: #f6f8f6;
   font-synthesis: none;

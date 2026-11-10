@@ -254,7 +254,7 @@ body {
 }
 .ws-palette::backdrop,
 .ws-drawer::backdrop {
-  background: #0a1b1755;
+  background: rgba(28, 27, 23, 0.36);
 }
 .ws-palette {
   position: fixed;
@@ -262,7 +262,7 @@ body {
   margin: 0 auto;
   width: min(510px, 92vw);
   border-radius: 12px;
-  box-shadow: 0 24px 75px #071d2338;
+  box-shadow: 0 24px 60px rgba(28, 27, 23, 0.16);
 }
 .ws-search-field {
   display: flex;

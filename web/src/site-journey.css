@@ -23,7 +23,7 @@
   font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.02em;
-  color: #42715c;
+  color: var(--brand, #1f6a4a);
 }
 .site-creation h1 {
   font-size: clamp(26px, 3vw, 36px);
@@ -64,9 +64,9 @@
   font-weight: 650;
 }
 .creation-steps li[aria-current="step"] > span {
-  background: #174d38;
+  background: var(--brand, #1f6a4a);
   color: white;
-  border-color: #174d38;
+  border-color: var(--brand, #1f6a4a);
 }
 .site-creation fieldset {
   border: 0;
@@ -80,7 +80,7 @@
   gap: 0 22px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: clamp(20px, 4vw, 36px);
 }
 .creation-surface h2 {
@@ -140,7 +140,7 @@
   position: absolute;
   top: 13px;
   right: 12px;
-  accent-color: #174d38;
+  accent-color: var(--brand, #1f6a4a);
 }
 .creation-layouts label > span {
   display: flex;
@@ -152,9 +152,9 @@
   font-size: 13px;
 }
 .creation-layouts label:has(input:checked) > span {
-  border-color: #397354;
-  background: #f0f7f2;
-  color: #174d38;
+  border-color: var(--brand, #1f6a4a);
+  background: var(--ws-tint, #eef4f0);
+  color: #143528;
 }
 .creation-footer {
   display: flex;
@@ -223,8 +223,8 @@
   min-width: 0;
 }
 .creation-product-list label:has(input:checked) {
-  background: #f0f7f2;
-  border-color: #397354;
+  background: var(--ws-tint, #eef4f0);
+  border-color: var(--brand, #1f6a4a);
 }
 .creation-product-list span {
   min-width: 0;
@@ -236,7 +236,7 @@
   margin-top: 5px;
 }
 .creation-product-list input {
-  accent-color: #174d38;
+  accent-color: var(--brand, #1f6a4a);
   flex-shrink: 0;
 }
 .creation-product-list svg {
@@ -287,7 +287,7 @@
   border-top: 1px solid var(--line);
 }
 .guide-steps li.is-current {
-  background: #f3f7f4;
+  background: var(--ws-tint, #eef4f0);
   border-radius: 9px;
   border-color: transparent;
 }
@@ -303,16 +303,16 @@
   color: var(--muted);
 }
 .is-current .guide-index {
-  background: #174d38;
+  background: var(--brand, #1f6a4a);
   color: white;
-  border-color: #174d38;
+  border-color: var(--brand, #1f6a4a);
 }
 .is-done .guide-index {
-  color: #247047;
-  background: #eaf4ec;
+  color: var(--brand, #1f6a4a);
+  background: var(--ws-tint, #eef4f0);
 }
 .guide-step-state {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .guide-steps h3 {
@@ -332,7 +332,7 @@
   font-size: 12px;
 }
 .guide-next {
-  background: #f7f9f7;
+  background: #f7f6f3;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 24px;
@@ -473,9 +473,9 @@
   cursor: pointer;
 }
 .site-creation button.primary {
-  background: #174d38;
+  background: var(--primary, #1c1f24);
   color: white;
-  border-color: #174d38;
+  border-color: var(--primary, #1c1f24);
   font-weight: 600;
 }
 .site-creation button.secondary {
