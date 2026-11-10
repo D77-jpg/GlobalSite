@@ -10138,6 +10138,11 @@ paths:
       security:
         - cookieAuth: []
       parameters:
+        - in: query
+          name: phase
+          schema:
+            enum: [before, after]
+          description: Refinement screenshot comparison; omit for legacy review screenshots.
         - name: id
           in: path
           required: true
@@ -10287,6 +10292,12 @@ paths:
       security:
         - cookieAuth: []
       parameters:
+        - in: query
+          name: page
+          schema:
+            enum: [home, detail]
+            default: home
+          description: Representative detail preview for paired proposals; legacy proposals support home only.
         - name: id
           in: path
           required: true
@@ -13411,6 +13422,8 @@ components:
     SitePlanInput:
       type: object
       properties:
+        strategy:
+          $ref: "#/components/schemas/SiteBusinessStrategy"
         revision:
           type: integer
           minimum: 1
@@ -13550,6 +13563,8 @@ components:
     SiteBlockInput:
       type: object
       properties:
+        design:
+          $ref: "#/components/schemas/SiteSectionDesign"
         key:
           type: string
           minLength: 1
@@ -13759,6 +13774,10 @@ components:
     SiteAgentInput:
       type: object
       properties:
+        reuseRunId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+          description: Design only. Explicitly reuse completed pages or legacy completed directions from a failed/cancelled same-site run with unchanged source and page revisions, generating only remaining directions. Original attempt and usage records remain intact.
         step:
           enum:
             - interview
@@ -13893,6 +13912,8 @@ components:
           anyOf:
             - type: object
               properties:
+                strategy:
+                  $ref: "#/components/schemas/SiteBusinessStrategy"
                 nodes:
                   type: array
                   items:
@@ -13933,6 +13954,10 @@ components:
             - density
             - rationale
           properties:
+            detailNodeKey:
+              type: string
+              pattern: ^[a-z][a-z0-9-]*$
+              maxLength: 60
             runId:
               type: string
               pattern: ^[a-f0-9]{24}$
@@ -14581,6 +14606,122 @@ components:
         - reviewMode
         - screenshots
       additionalProperties: false
+
+    SiteBusinessStrategy:
+      type: object
+      description: Private, human-reviewed business interpretation, never confirmed supplier evidence. Optional for legacy plans. New paired proposals inherit the confirmed plan. Pilot home and representative detail must pass current screenshot review before full generation.
+      additionalProperties: false
+      required:
+        [
+          version,
+          offering,
+          buyingJourney,
+          decisionFactors,
+          navigation,
+          productSections,
+          visualPriorities,
+          questions,
+        ]
+      properties:
+        version: { const: v1 }
+        offering: { type: string, minLength: 1, maxLength: 240 }
+        buyingJourney:
+          {
+            enum:
+              [
+                visual-selection,
+                technical-selection,
+                configured-sourcing,
+                consultation,
+              ],
+          }
+        decisionFactors:
+          {
+            type: array,
+            minItems: 2,
+            maxItems: 6,
+            items: { type: string, minLength: 1, maxLength: 160 },
+          }
+        navigation:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [label, nodeKeys]
+            properties:
+              label: { type: string, minLength: 1, maxLength: 24 }
+              nodeKeys:
+                {
+                  type: array,
+                  minItems: 1,
+                  maxItems: 12,
+                  items:
+                    {
+                      type: string,
+                      pattern: "^[a-z][a-z0-9-]*$",
+                      maxLength: 60,
+                    },
+                }
+        productSections:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          items:
+            {
+              enum:
+                [
+                  specs,
+                  material,
+                  application,
+                  certifications,
+                  oem,
+                  moq,
+                  samples,
+                  packaging,
+                ],
+            }
+          description: Must include specs. Technical selection also requires material and application; configured sourcing requires material, oem, moq and samples. This controls applicable questions, never permits unsourced claims.
+        visualPriorities:
+          {
+            type: array,
+            minItems: 2,
+            maxItems: 6,
+            items: { type: string, minLength: 1, maxLength: 180 },
+          }
+        questions:
+          {
+            type: array,
+            maxItems: 8,
+            items: { type: string, minLength: 1, maxLength: 240 },
+          }
+    SiteSectionDesign:
+      type: object
+      description: Bounded per-section layout intent, with no generated CSS, script or remote assets. Optional legacy field.
+      additionalProperties: false
+      required: [purpose, frame, ratio, fit, focus, density]
+      properties:
+        purpose:
+          {
+            enum:
+              [discovery, selection, context, process, evidence, conversion],
+          }
+        frame: { enum: [gallery, index, story, split, steps, table, band] }
+        ratio: { enum: [natural, landscape, portrait, square] }
+        fit: { enum: [contain, cover] }
+        focus: { enum: [center, top, left, right] }
+        density: { enum: [compact, comfortable] }
+    SitePairedProposal:
+      type: object
+      description: New design outputs attach a representative detail draft to each existing home direction. Selection atomically saves both as unapproved drafts, checking both page revisions. Legacy home-only directions remain readable.
+      required: [nodeKey, page]
+      additionalProperties: false
+      properties:
+        nodeKey: { type: string, pattern: "^[a-z][a-z0-9-]*$", maxLength: 60 }
+        page: { $ref: "#/components/schemas/SitePageInput" }
+
 
 x-s3-catalog:
   status: implemented

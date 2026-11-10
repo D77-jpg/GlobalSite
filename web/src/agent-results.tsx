@@ -382,6 +382,47 @@ export function AgentResults({
               ))}
             </div>
           )}
+          {output.comparison?.length > 0 && (
+            <section className="result-comparison">
+              <h4>
+                {locale === "zh"
+                  ? "修订前后对照"
+                  : "Before and after refinement"}
+              </h4>
+              <p>
+                {locale === "zh"
+                  ? "修订已保存为新草稿，请重新审查后批准。"
+                  : "Changes are saved as a new draft. Review again before approval."}
+              </p>
+              <div className="comparison-columns">
+                {output.comparison.map((phase: Row) => (
+                  <div key={phase.phase}>
+                    <h5>
+                      {phase.phase === "before"
+                        ? locale === "zh"
+                          ? "修订前"
+                          : "Before"
+                        : locale === "zh"
+                          ? "修订后"
+                          : "After"}
+                    </h5>
+                    {phase.screenshots
+                      .filter(
+                        (shot: Row) =>
+                          shot.width === 375 || shot.width === 1440,
+                      )
+                      .map((shot: Row) => (
+                        <Screenshot
+                          key={shot.width}
+                          shot={shot}
+                          locale={locale}
+                        />
+                      ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           {output.pageId && (
             <CurrentPage
               key={output.pageId}

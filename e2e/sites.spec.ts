@@ -169,7 +169,7 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     .click();
   await expect(page).toHaveURL(/tab=design/);
   const generate = page.getByRole("button", {
-    name: "生成两种首页方案",
+    name: "生成两套设计提案",
     exact: true,
   });
   await expect(generate).toBeDisabled();

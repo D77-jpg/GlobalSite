@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { previewDesign, selectDesign } from "../services/site-design.service";
 import { ensure } from "../errors";
 import { reviewScreenshot } from "../services/site-review.service";
@@ -136,9 +137,23 @@ r.get(
     const key = String(req.params.key),
       width = Number(req.params.width);
     const unit = run.steps.find((s: any) => s.key === key);
+    const phase =
+      req.query.phase === undefined
+        ? undefined
+        : z.enum(["before", "after"]).parse(req.query.phase);
+    const capture =
+      run.step === "refine"
+        ? phase === "before"
+          ? unit?.beforeCapture
+          : phase === "after"
+            ? unit?.afterCapture
+            : undefined
+        : !phase
+          ? unit?.capture
+          : undefined;
     ensure(
-      run.step === "review" &&
-        unit?.capture?.artifactKey &&
+      ["review", "refine"].includes(run.step) &&
+        capture?.artifactKey &&
         [375, 768, 1440].includes(width),
       404,
       "NOT_FOUND",
@@ -149,7 +164,7 @@ r.get(
         "X-Robots-Tag": "noindex,nofollow",
         "Content-Type": "image/jpeg",
       })
-      .send(await reviewScreenshot(unit.capture.artifactKey, width));
+      .send(await reviewScreenshot(capture.artifactKey, width));
   }),
 );
 r.get(
@@ -197,6 +212,9 @@ r.get(
         id(req),
         objectId.parse(req.params.runId),
         v.selectDesignInput.shape.key.parse(req.params.key),
+        req.query.page === undefined
+          ? "home"
+          : z.enum(["home", "detail"]).parse(req.query.page),
       ),
     );
   }),

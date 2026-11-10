@@ -1049,3 +1049,20 @@
 .product-shell .agent-studio .task-result-tabs button:hover {
   background: none;
 }
+
+.comparison-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.comparison-columns > div {
+  min-width: 0;
+}
+.result-comparison h5 {
+  margin: 16px 0 8px;
+}
+@media (max-width: 700px) {
+  .comparison-columns {
+    grid-template-columns: 1fr;
+  }
+}

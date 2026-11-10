@@ -102,14 +102,24 @@ export function procurementCoverage(site: any, products: any[], facts: any[]) {
   need(null, "company.name", /^company\.name$/);
   need(null, "company.email", /^company\.(email|privacyEmail)$/);
   need(null, "company.address", /^company\.address$/, "recommended");
+  const sections: string[] | undefined = site.plan?.strategy?.productSections;
+  let total = 3 + (products.length ? 0 : 1);
   for (const p of products) {
     const id = String(p._id ?? p.id);
-    need(id, "product.material", /material/i);
-    need(id, "product.moq", /moq|minimumOrder/i);
-    need(id, "product.leadTime", /lead.?time|delivery/i);
-    need(id, "product.specifications", /spec|dimension|size/i);
-    need(id, "product.packaging", /packaging/i, "recommended");
-    need(id, "product.samples", /sample/i, "recommended");
+    const fields: [string, string, RegExp, "required" | "recommended"][] = [
+      ["material", "product.material", /material/i, "required"],
+      ["moq", "product.moq", /moq|minimumOrder/i, "required"],
+      ["samples", "product.leadTime", /lead.?time|delivery/i, "required"],
+      ["specs", "product.specifications", /spec|dimension|size/i, "required"],
+      ["packaging", "product.packaging", /packaging/i, "recommended"],
+      ["samples", "product.samples", /sample/i, "recommended"],
+    ];
+    const applicable = fields.filter(
+      ([section]) => !sections || sections.includes(section),
+    );
+    total += applicable.length + 1;
+    for (const [, type, pattern, severity] of applicable)
+      need(id, type, pattern, severity);
     if (!p.assetIds?.length)
       gaps.push({
         subjectId: id,
@@ -119,7 +129,7 @@ export function procurementCoverage(site: any, products: any[], facts: any[]) {
   }
   if (!products.length)
     gaps.push({ subjectId: null, type: "products", severity: "required" });
-  const total = 3 + products.length * 7 + (products.length ? 0 : 1);
+
   return {
     configured: !!site.buyerProfile,
     canPublish: !gaps.some((g) => g.severity === "required"),

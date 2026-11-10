@@ -10,12 +10,12 @@ type Row = Record<string, any>;
 const text = {
   zh: {
     title: "先选定网站的设计方向",
-    sub: "Agent 会结合业务目标、产品与已确认资料，生成两种首页方案。选择后再生成整站。",
+    sub: "Agent 会结合业务目标、产品与已确认资料，生成两种首页与代表性详情页提案。先审查试点，再扩展整站。",
     selected: "已选定设计方向",
-    selectedSub: "后续页面会沿用这套视觉规则。首页已保存为待审核草稿。",
+    selectedSub: "后续页面会沿用这套视觉规则。试点页面已保存为待审核草稿。",
     edit: "想调整哪些地方？",
     hint: "例如图片更突出、布局更紧凑、偏工业风。这里描述设计偏好，企业数据请在事实库确认。",
-    generate: "生成两种首页方案",
+    generate: "生成两套设计提案",
     regenerate: "按意见重新生成",
     consent: "同意将本站选用资料发送给组织配置的 AI 服务商，并计入 AI 额度。",
     choose: "采用这个方向",
@@ -32,19 +32,20 @@ const text = {
     saved: "设计方向已保存。",
     disabled: "先确认网站结构，再生成设计提案。",
     plan: "查看网站结构",
-    confirm: "确认后会保存首页草稿，并撤回受影响内容的旧审核结果。",
-    generateHint: "此操作使用 AI 额度，生成两种真实首页草稿。",
+    confirm: "确认后会保存提案草稿，并撤回受影响内容的旧审核结果。",
+    generateHint:
+      "包含首页与代表性详情页；完成的页面会保存，任务使用组织 AI 额度。",
     issues: "项内容检查待处理，采用后仍需审核。",
   },
   en: {
     title: "Choose your website's design direction",
-    sub: "Your agent uses business goals, products and confirmed sources to propose two homepages. Choose a direction before generating the full site.",
+    sub: "Your agent uses business goals, products and confirmed sources to propose two homepage and representative detail proposals. Review the pilot before expanding the site.",
     selected: "Design direction selected",
     selectedSub:
-      "New pages will follow these visual rules. The homepage has been saved as a draft for review.",
+      "New pages will follow these visual rules. The pilot pages have been saved as drafts for review.",
     edit: "What would you like to change?",
     hint: "For example, larger imagery, a denser layout or an industrial feel. Confirm business claims in the fact library.",
-    generate: "Generate two homepage proposals",
+    generate: "Generate two design proposals",
     regenerate: "Generate revised proposals",
     consent:
       "I agree to send selected site sources to the organization's AI provider and use AI credits.",
@@ -63,8 +64,9 @@ const text = {
     disabled: "Confirm the sitemap before generating design proposals.",
     plan: "Review sitemap",
     confirm:
-      "Selecting a direction saves a homepage draft and resets affected content approvals.",
-    generateHint: "This uses AI credits to generate two homepage drafts.",
+      "Selecting a direction saves proposal drafts and resets affected content approvals.",
+    generateHint:
+      "Includes homepage and representative detail drafts. Completed pages are saved; the task uses organization AI credits.",
     issues:
       "content checks need attention. Review them after selecting this draft.",
   },
@@ -73,13 +75,21 @@ function MiniPreview({
   html,
   expanded,
   title,
+  device,
 }: {
   html: string;
   expanded: boolean;
   title: string;
+  device: "desktop" | "mobile";
 }) {
   return (
-    <div className={"proposal-canvas" + (expanded ? " expanded" : "")}>
+    <div
+      className={
+        "proposal-canvas" +
+        (expanded ? " expanded" : "") +
+        (device === "mobile" ? " mobile" : "")
+      }
+    >
       <iframe
         title={title}
         sandbox="allow-same-origin"
@@ -110,7 +120,10 @@ export function SiteDesign({
     [html, setHtml] = useState<Record<string, string>>({}),
     [issues, setIssues] = useState<Record<string, number>>({}),
     [previewErrors, setPreviewErrors] = useState<Record<string, string>>({}),
-    [expanded, setExpanded] = useState("");
+    [expanded, setExpanded] = useState(""),
+    [previewPage, setPreviewPage] = useState<"home" | "detail">("home"),
+    [confirmChoice, setConfirmChoice] = useState(""),
+    [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const posting = useRef(false);
   const previewEpoch = useRef(0);
   const designRuns = runs.filter((r) => r.step === "design"),
@@ -118,9 +131,7 @@ export function SiteDesign({
     active = designRuns.find((r) => r.active),
     selected = run?.id === site.designDirection?.runId;
   const directions: Row[] =
-    run?.status === "succeeded" && !selected
-      ? (run.steps[0]?.output?.directions ?? [])
-      : [];
+    run?.status === "succeeded" ? (run.steps[0]?.output?.directions ?? []) : [];
   const base = "/sites/" + site.id;
   const failed = (e: unknown) =>
     e instanceof ApiError
@@ -128,20 +139,31 @@ export function SiteDesign({
         ? c.stale
         : t(e.code)
       : c.error;
-  async function loadPreview(key: string, runId: string) {
+  async function loadPreview(
+    key: string,
+    runId: string,
+    pageKind = previewPage,
+  ) {
+    const cacheKey = key + ":" + pageKind;
     const epoch = previewEpoch.current;
-    setPreviewErrors((v) => ({ ...v, [key]: "" }));
+    setPreviewErrors((v) => ({ ...v, [cacheKey]: "" }));
     try {
       const d = await api<{ html: string; issues: unknown[] }>(
-        base + "/design-proposals/" + runId + "/" + key + "/preview",
+        base +
+          "/design-proposals/" +
+          runId +
+          "/" +
+          key +
+          "/preview?page=" +
+          pageKind,
       );
       if (epoch === previewEpoch.current) {
-        setHtml((v) => ({ ...v, [key]: d.html }));
-        setIssues((v) => ({ ...v, [key]: d.issues.length }));
+        setHtml((v) => ({ ...v, [cacheKey]: d.html }));
+        setIssues((v) => ({ ...v, [cacheKey]: d.issues.length }));
       }
     } catch (e) {
       if (epoch === previewEpoch.current)
-        setPreviewErrors((v) => ({ ...v, [key]: failed(e) }));
+        setPreviewErrors((v) => ({ ...v, [cacheKey]: failed(e) }));
     }
   }
   useEffect(() => {
@@ -150,20 +172,35 @@ export function SiteDesign({
     setIssues({});
     setPreviewErrors({});
     setExpanded("");
+    setPreviewPage("home");
     let live = true;
-    if (run?.status === "succeeded" && !selected)
-      for (const d of run.steps[0]?.output?.directions ?? []) {
+    if (run?.status === "succeeded")
+      for (const d of (run.steps[0]?.output?.directions ?? []).flatMap(
+        (d: Row) =>
+          ["home", ...(d.detail ? ["detail"] : [])].map((pageKind) => ({
+            ...d,
+            pageKind,
+          })),
+      )) {
+        const cacheKey = d.key + ":" + d.pageKind;
         void api<{ html: string; issues: unknown[] }>(
-          base + "/design-proposals/" + run.id + "/" + d.key + "/preview",
+          base +
+            "/design-proposals/" +
+            run.id +
+            "/" +
+            d.key +
+            "/preview?page=" +
+            d.pageKind,
         )
           .then((p) => {
             if (live) {
-              setHtml((v) => ({ ...v, [d.key]: p.html }));
-              setIssues((v) => ({ ...v, [d.key]: p.issues.length }));
+              setHtml((v) => ({ ...v, [cacheKey]: p.html }));
+              setIssues((v) => ({ ...v, [cacheKey]: p.issues.length }));
             }
           })
           .catch((e) => {
-            if (live) setPreviewErrors((v) => ({ ...v, [d.key]: failed(e) }));
+            if (live)
+              setPreviewErrors((v) => ({ ...v, [cacheKey]: failed(e) }));
           });
       }
     return () => {
@@ -193,7 +230,7 @@ export function SiteDesign({
   }
   async function choose(key: string) {
     if (posting.current) return;
-    if (!window.confirm(c.confirm)) return;
+
     posting.current = true;
     setBusy(true);
     setError("");
@@ -203,6 +240,7 @@ export function SiteDesign({
         runId: run.id,
         key,
       });
+      setConfirmChoice("");
       onSave();
     } catch (e) {
       setError(failed(e));
@@ -235,6 +273,56 @@ export function SiteDesign({
           </Link>
         </div>
       )}
+      {site.designDirection?.detailNodeKey && (
+        <section className="pilot-review">
+          <h3>
+            {locale === "zh"
+              ? "先审查首页与详情页"
+              : "Review the pilot pages first"}
+          </h3>
+          <p>
+            {locale === "zh"
+              ? "打开截图检查排版、图片与询价路径，确认审查并批准这两页后，再生成其余页面。"
+              : "Inspect layout, imagery and inquiry flow in the screenshots. Accept the reviews and approve both pages before expanding."}
+          </p>
+          <div className="catalog-actions">
+            {[
+              site.plan.nodes.find((n: Row) => n.type === "home")?.key,
+              site.designDirection.detailNodeKey,
+            ]
+              .filter(Boolean)
+              .map((key) => (
+                <button
+                  key={key}
+                  disabled={
+                    !canEdit || busy || !consent || runs.some((r) => r.active)
+                  }
+                  onClick={async () => {
+                    setBusy(true);
+                    setError("");
+                    try {
+                      await api(
+                        base + "/agent-runs",
+                        "POST",
+                        { step: "review", pageKey: key, consent: true },
+                        { "Idempotency-Key": crypto.randomUUID() },
+                      );
+                      onSave();
+                    } catch (e) {
+                      setError(failed(e));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {locale === "zh" ? "审查" : "Review"}{" "}
+                  {site.plan.nodes.find((n: Row) => n.key === key)?.title}
+                </button>
+              ))}
+            <Link to="?tab=runs">{c.tasks}</Link>
+          </div>
+        </section>
+      )}
       {!site.planConfirmed && (
         <p className="notice">
           {c.disabled} <Link to="?tab=planning">{c.plan}</Link>
@@ -253,6 +341,75 @@ export function SiteDesign({
           <Link to="?tab=runs">{c.tasks}</Link>
         </p>
       )}
+      {directions.some((d) => d.detail) && (
+        <div
+          className="proposal-view-tabs"
+          role="group"
+          aria-label={locale === "zh" ? "提案页面" : "Proposal page"}
+        >
+          {(["home", "detail"] as const).map((kind) => (
+            <button
+              key={kind}
+              className="secondary"
+              aria-pressed={previewPage === kind}
+              onClick={() => setPreviewPage(kind)}
+            >
+              {kind === "home"
+                ? locale === "zh"
+                  ? "首页"
+                  : "Homepage"
+                : locale === "zh"
+                  ? "代表性详情页"
+                  : "Representative detail"}
+            </button>
+          ))}
+        </div>
+      )}
+      {directions.length > 0 && (
+        <div
+          className="proposal-view-tabs"
+          role="group"
+          aria-label={locale === "zh" ? "预览设备" : "Preview device"}
+        >
+          {(["desktop", "mobile"] as const).map((kind) => (
+            <button
+              key={kind}
+              className="secondary"
+              aria-pressed={device === kind}
+              onClick={() => setDevice(kind)}
+            >
+              {kind === "desktop"
+                ? locale === "zh"
+                  ? "桌面预览"
+                  : "Desktop preview"
+                : locale === "zh"
+                  ? "手机预览"
+                  : "Phone preview"}
+            </button>
+          ))}
+        </div>
+      )}
+      {confirmChoice && (
+        <div
+          role="alertdialog"
+          aria-label={c.choose}
+          className="proposal-confirm"
+        >
+          <p>{c.confirm}</p>
+          <div className="catalog-actions">
+            <button disabled={busy} onClick={() => void choose(confirmChoice)}>
+              {c.choose}
+            </button>
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => setConfirmChoice("")}
+            >
+              {locale === "zh" ? "取消" : "Cancel"}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="design-proposals">
         {directions.map((d) => (
           <article
@@ -263,13 +420,21 @@ export function SiteDesign({
               <h3>{d.label}</h3>
               <p>{d.rationale}</p>
             </header>
-            {html[d.key] ? (
+            {html[d.key + ":" + previewPage] ? (
               <MiniPreview
-                html={html[d.key]}
-                title={d.label}
+                device={device}
+                html={html[d.key + ":" + previewPage]}
+                title={
+                  d.label +
+                  (previewPage === "detail"
+                    ? locale === "zh"
+                      ? " · 详情页"
+                      : " · Detail"
+                    : "")
+                }
                 expanded={expanded === d.key}
               />
-            ) : previewErrors[d.key] ? (
+            ) : previewErrors[d.key + ":" + previewPage] ? (
               <p role="alert">
                 {c.stale}{" "}
                 <button onClick={() => void loadPreview(d.key, run.id)}>
@@ -279,31 +444,81 @@ export function SiteDesign({
             ) : (
               <p role="status">{c.loading}</p>
             )}
-            {issues[d.key] > 0 && (
+            {issues[d.key + ":" + previewPage] > 0 && (
               <p className="proposal-issues" role="status">
-                {issues[d.key]} {c.issues}
+                {issues[d.key + ":" + previewPage]} {c.issues}
               </p>
             )}
             <footer>
               <button
                 className="secondary"
-                disabled={!html[d.key]}
+                disabled={!html[d.key + ":" + previewPage]}
                 onClick={() => setExpanded(expanded === d.key ? "" : d.key)}
               >
                 {expanded === d.key ? c.close : c.preview}
               </button>
               {canEdit && (
                 <button
-                  disabled={busy || !!active || !html[d.key]}
-                  onClick={() => void choose(d.key)}
+                  disabled={
+                    busy ||
+                    !!active ||
+                    !html[d.key + ":" + previewPage] ||
+                    (selected && site.designDirection?.key === d.key)
+                  }
+                  onClick={() => setConfirmChoice(d.key)}
                 >
-                  {c.choose}
+                  {selected && site.designDirection?.key === d.key
+                    ? c.chosen
+                    : c.choose}
                 </button>
               )}
             </footer>
           </article>
         ))}
       </div>
+      {canEdit &&
+        run?.status === "failed" &&
+        run.steps.some(
+          (u: Row) =>
+            u.status === "succeeded" && (u.output?.proposal || u.output?.page),
+        ) && (
+          <div className="pilot-review">
+            <p>
+              {locale === "zh"
+                ? "已完成的方向会保留，只为未完成的方向生成新提案。"
+                : "Keep the completed direction and generate only the unfinished direction."}
+            </p>
+            <button
+              disabled={busy || !!active || !consent}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  await api(
+                    base + "/agent-runs",
+                    "POST",
+                    {
+                      step: "design",
+                      reuseRunId: run.id,
+                      consent: true,
+                      instructions,
+                    },
+                    { "Idempotency-Key": crypto.randomUUID() },
+                  );
+                  onSave();
+                } catch (e) {
+                  setError(failed(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {locale === "zh"
+                ? "保留成果，生成剩余方向"
+                : "Keep results and generate remaining direction"}
+            </button>
+          </div>
+        )}
       {canEdit && (
         <div className="design-composer">
           <label>

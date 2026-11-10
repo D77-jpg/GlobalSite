@@ -173,6 +173,18 @@ export function validatePlan(input: unknown, site: any) {
       p = data.nodes.find((x) => x.key === p)!.parentKey;
     }
   }
+  if (data.strategy) {
+    const assigned = data.strategy.navigation.flatMap((g) => g.nodeKeys);
+    ensure(
+      new Set(assigned).size === assigned.length &&
+        assigned.every(
+          (k) =>
+            keys.has(k) && data.nodes.find((n) => n.key === k)?.type !== "home",
+        ),
+      400,
+      "PLAN_INVALID",
+    );
+  }
   return data;
 }
 export async function savePlan(id: string, input: unknown, actor: string) {
@@ -188,7 +200,14 @@ export async function savePlan(id: string, input: unknown, actor: string) {
       "STEP_BUSY",
     );
     const plan = validatePlan(
-      { nodes: d.nodes, keywords: d.keywords, clusters: d.clusters },
+      {
+        nodes: d.nodes,
+        keywords: d.keywords,
+        clusters: d.clusters,
+        ...((d.strategy ?? s.plan?.strategy)
+          ? { strategy: d.strategy ?? s.plan.strategy }
+          : {}),
+      },
       s,
     );
     result = await Site.findOneAndUpdate(
@@ -286,6 +305,7 @@ export async function sources(id: string) {
 export function blockDto(b: any) {
   return {
     ...(b.items ? { items: b.items } : {}),
+    ...(b.design ? { design: b.design } : {}),
     ...(b.layout ? { layout: b.layout } : {}),
     ...(b.tone ? { tone: b.tone } : {}),
     key: b.key,
@@ -341,6 +361,11 @@ export async function pageView(
       productIds: site.productIds.map(String),
       type: page.type,
       brandName: site.name,
+      navigationLabels:
+        page.type === "home"
+          ? site.plan?.strategy?.navigation.map((g: any) => g.label)
+          : [],
+      requiredProductSections: site.plan?.strategy?.productSections,
       requireComposition: !!site.designDirection?.composition,
       paths: site.plan?.nodes.map((n: any) => n.path),
     });
@@ -711,8 +736,10 @@ export async function preview(
             (await sourceRows(site)).facts.map(factDto),
             {
               productIds: site.productIds.map(String),
-              type: "home",
+              type: draft.node.type,
+              productId: draft.node.productId,
               brandName: site.name,
+              requiredProductSections: site.plan?.strategy?.productSections,
               requireComposition: !!site.designDirection?.composition,
               paths: site.plan.nodes.map((n: any) => n.path),
             },
@@ -751,7 +778,7 @@ export async function preview(
       id,
       path: draft.node.path,
       type: draft.node.type,
-      productId: null,
+      productId: draft.node.productId ?? null,
     });
     // Planned routes provide navigation and product discovery in the private concept.
     // They are render-only metadata and never create or approve pages.

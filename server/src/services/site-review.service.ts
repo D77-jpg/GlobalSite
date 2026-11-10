@@ -154,3 +154,40 @@ export async function assetImages(ids: string[]) {
   }
   return images;
 }
+
+// Measurements support a critique; they never claim subjective visual excellence.
+export function measuredFindings(metrics: any[]) {
+  const findings: {
+    blockKey: string | null;
+    code: "layout" | "repetition" | "imagery";
+    severity: "warning" | "error";
+    recommendation: string;
+  }[] = [];
+  if (metrics.some((m) => m.discoverySections > 1))
+    findings.push({
+      blockKey: null,
+      code: "repetition",
+      severity: "warning",
+      recommendation:
+        "Review repeated product/category discovery sections; keep one clear browsing decision instead of repeating the same range.",
+    });
+  if (metrics.some((m) => m.repeatedHeadings?.length))
+    findings.push({
+      blockKey: null,
+      code: "repetition",
+      severity: "warning",
+      recommendation:
+        "Repeated section headings reduce information hierarchy. Give each section a distinct buyer decision or merge it.",
+    });
+  for (const section of metrics.find((m) => m.width === 1440)?.sections ?? []) {
+    if (section.height > 1800 && section.words < 100)
+      findings.push({
+        blockKey: section.id?.replace(/^block-/, "") || null,
+        code: "layout",
+        severity: "warning",
+        recommendation:
+          "This section is unusually tall for its information. Reduce media scale or choose a compact index/gallery frame, then inspect desktop and phone screenshots.",
+      });
+  }
+  return findings.slice(0, 6);
+}

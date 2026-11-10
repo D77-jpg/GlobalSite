@@ -124,12 +124,12 @@ test("presentation cannot bypass the fact gate and content remains escaped", () 
 });
 test("reviewed skill profile is bounded, versioned and shipped locally", () => {
   const profile = siteSkillProfile();
-  assert.equal(profile.version, "brand-site-v3");
+  assert.equal(profile.version, "brand-site-v4");
   assert.match(profile.hash, /^[a-f0-9]{64}$/);
   assert(
     profile.guidance.includes("copywriting") &&
       profile.guidance.includes("instant-site") &&
       profile.guidance.includes("frontend-design"),
   );
-  assert(Buffer.byteLength(profile.guidance) <= 12000);
+  assert(Buffer.byteLength(profile.guidance) <= 17000);
 });

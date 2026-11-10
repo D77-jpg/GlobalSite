@@ -545,3 +545,269 @@
 .composed-site .block-process .process-grid li {
   border-top-color: var(--accent);
 }
+
+/* S23: trusted, per-section art direction. No model CSS or layout code. */
+.composed-site .directed-section {
+  --section-gap: clamp(24px, 4vw, 64px);
+}
+.composed-site .directed-section.spacing-compact {
+  padding-block: clamp(28px, 4vw, 56px);
+  --section-gap: 24px;
+}
+.composed-site .directed-section.spacing-comfortable {
+  padding-block: clamp(40px, 6vw, 88px);
+}
+.composed-site .directed-section img {
+  object-position: center;
+}
+.composed-site .directed-section.fit-contain img {
+  object-fit: contain;
+  background: transparent;
+}
+.composed-site .directed-section.fit-cover img {
+  object-fit: cover;
+}
+.composed-site .directed-section.focus-top img {
+  object-position: center top;
+}
+.composed-site .directed-section.focus-left img {
+  object-position: left center;
+}
+.composed-site .directed-section.focus-right img {
+  object-position: right center;
+}
+.composed-site .directed-section.media-square img {
+  aspect-ratio: 1;
+  width: 100%;
+  height: auto;
+}
+.composed-site .directed-section.media-landscape img {
+  aspect-ratio: 3/2;
+  width: 100%;
+  height: auto;
+}
+.composed-site .directed-section.media-portrait img {
+  aspect-ratio: 4/5;
+  width: 100%;
+  height: auto;
+}
+.composed-site .directed-section.media-natural img {
+  aspect-ratio: auto;
+  height: auto;
+  max-height: none;
+}
+.composed-site .frame-gallery .product-grid,
+.composed-site .frame-gallery .category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 48px 28px;
+  align-items: start;
+}
+.composed-site .frame-gallery .product-card {
+  display: block;
+  margin: 0;
+  width: auto;
+}
+.composed-site .frame-gallery .product-visual {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  padding: 0;
+}
+.composed-site .frame-gallery .product-copy {
+  padding: 18px 0 0;
+}
+.composed-site .frame-gallery .category-grid > a {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.composed-site .frame-gallery .category-grid img {
+  width: 100%;
+}
+.composed-site .frame-gallery .category-grid small {
+  max-width: 42ch;
+  line-height: 1.6;
+}
+.composed-site .frame-index .product-grid,
+.composed-site .frame-index .category-grid,
+.composed-site .frame-index .feature-grid {
+  display: block;
+}
+.composed-site .frame-index .product-card,
+.composed-site .frame-index .category-grid > a,
+.composed-site .frame-index .feature-grid > article {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 24px;
+  border-top: 1px solid var(--line, #d8d5d0);
+  padding: 24px 0;
+}
+.composed-site .frame-index .product-visual {
+  width: 120px;
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 1;
+  padding: 0;
+}
+.composed-site .frame-index .category-grid > a > img {
+  width: 120px;
+  grid-row: 1/5;
+}
+.composed-site .frame-index .product-copy {
+  padding: 0;
+}
+.composed-site .frame-story .feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--section-gap);
+}
+.composed-site .frame-story .feature-grid > article {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  column-gap: var(--section-gap);
+  align-items: center;
+}
+.composed-site .frame-story .feature-grid > article > img {
+  grid-row: 1/5;
+}
+.composed-site .frame-story .feature-grid > article:nth-child(even) > img {
+  grid-column: 2;
+}
+.composed-site
+  .frame-story
+  .feature-grid
+  > article:nth-child(even)
+  > :not(img) {
+  grid-column: 1;
+}
+.composed-site .frame-steps .process-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.composed-site .frame-table .table-scroll {
+  border-block: 1px solid var(--line, #d8d5d0);
+}
+.composed-site .frame-band {
+  padding-inline: clamp(24px, 4vw, 56px);
+}
+.composed-site .directed-section.block-split:not(:has(figure)) {
+  display: block;
+}
+.composed-site .directed-section .section-intro {
+  margin-bottom: 28px;
+}
+@media (max-width: 900px) {
+  .composed-site .frame-gallery .product-grid,
+  .composed-site .frame-gallery .category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 20px;
+  }
+  .composed-site .frame-story .feature-grid > article {
+    column-gap: 24px;
+  }
+}
+@media (max-width: 560px) {
+  .composed-site .frame-gallery .product-grid,
+  .composed-site .frame-gallery .category-grid {
+    gap: 28px 16px;
+  }
+  .composed-site .frame-gallery .product-copy p,
+  .composed-site .frame-gallery .category-grid small {
+    font-size: 14px;
+  }
+  .composed-site .frame-index .product-card,
+  .composed-site .frame-index .category-grid > a,
+  .composed-site .frame-index .feature-grid > article {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .composed-site .frame-index .product-visual,
+  .composed-site .frame-index .category-grid > a > img {
+    width: 84px;
+  }
+  .composed-site .frame-story .feature-grid > article {
+    display: block;
+  }
+  .composed-site .frame-story .feature-grid > article > img {
+    margin-bottom: 20px;
+  }
+  .composed-site .frame-steps .process-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1200px) {
+  .composed-site
+    .frame-gallery
+    .category-grid:has(> a:nth-child(7)):not(:has(> a:nth-child(9))),
+  .composed-site
+    .frame-gallery
+    .product-grid:has(> article:nth-child(7)):not(
+      :has(> article:nth-child(9))
+    ) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Explicit grid placement prevents legacy picture/label rules from collapsing indexes. */
+.composed-site.b2b-site .frame-gallery .category-grid > a {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.composed-site.b2b-site .frame-gallery .category-grid > a > :is(picture, img) {
+  grid-column: 1/-1;
+  width: 100%;
+}
+.composed-site.b2b-site .frame-gallery .category-grid > a > span:first-of-type {
+  grid-column: 1;
+  grid-row: 2;
+}
+.composed-site.b2b-site .frame-gallery .category-grid > a > span[aria-hidden] {
+  grid-column: 2;
+  grid-row: 2;
+}
+.composed-site.b2b-site .frame-index .category-grid > a {
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: center;
+}
+.composed-site.b2b-site .frame-index .category-grid > a > :is(picture, img) {
+  grid-column: 1;
+  grid-row: 1/3;
+  width: 120px;
+}
+.composed-site.b2b-site .frame-index .category-grid > a > picture img {
+  width: 100%;
+  margin: 0;
+}
+.composed-site.b2b-site .frame-index .category-grid > a > span:first-of-type {
+  grid-column: 2;
+  grid-row: 1;
+}
+.composed-site.b2b-site .frame-index .category-grid > a > span[aria-hidden] {
+  grid-column: 3;
+  grid-row: 1/3;
+}
+.composed-site.b2b-site .frame-index .category-grid > a > small {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 0;
+}
+/* Per-section crop intent takes precedence over generic composition hero defaults. */
+.composed-site.b2b-site .hero.directed-section.fit-contain .hero-visual img {
+  object-fit: contain;
+}
+.composed-site.b2b-site .hero.directed-section.fit-cover .hero-visual img {
+  object-fit: cover;
+}
+@media (max-width: 560px) {
+  .composed-site.b2b-site .frame-index .category-grid > a {
+    grid-template-columns: 84px minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+  .composed-site.b2b-site .frame-index .category-grid > a > :is(picture, img) {
+    width: 84px;
+  }
+}

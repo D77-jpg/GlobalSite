@@ -1,3 +1,4 @@
+import { sectionClasses } from "./section-design.service";
 import type { Snapshot } from "./static-template.service";
 const e = (v: unknown) =>
   String(v ?? "").replace(
@@ -58,6 +59,8 @@ export function productCards(
   p: any,
   heading = "Explore the product range",
   body = "",
+  design?: unknown,
+  selection?: string[],
 ) {
   const products = s.pages.filter((v) => v.type === "product"),
     categories = s.pages.filter((v) => v.type === "category");
@@ -67,7 +70,13 @@ export function productCards(
           v.path.startsWith(p.path.replace(/\/$/, "") + "/"),
         )
       : products;
-  const rows = selected.length ? selected : products;
+  const available = selected.length ? selected : products;
+  const rows = selection?.length
+    ? selection
+        .map((path) => available.find((v) => v.path === path))
+        .filter(Boolean)
+    : available;
+  if (!rows.length) return "";
   const lineSheet =
     p.type === "home" &&
     !s.site.designDirection?.composition &&
@@ -76,6 +85,7 @@ export function productCards(
   return (
     '<section class="b2b-section catalog-section' +
     (lineSheet ? " line-sheet" : "") +
+    sectionClasses(design) +
     '" id="collection"><div class="section-heading"><div><p class="section-kicker">PRODUCT RANGE</p><h2>' +
     e(heading) +
     "</h2>" +
@@ -152,7 +162,21 @@ export function productCards(
 }
 export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
   if (["text", "image", "specs", "faq"].includes(b.type)) return null;
-  if (b.type === "product-grid") return productCards(s, p, b.heading, b.body);
+  if (b.type === "product-grid")
+    return productCards(
+      s,
+      p,
+      b.heading,
+      b.body,
+      b.design,
+      b.design
+        ? b.items
+            ?.map((i: any) => i.href)
+            .filter(
+              (href: any) => typeof href === "string" && href.startsWith("/"),
+            )
+        : undefined,
+    );
   const a = b.assetId ? s.assets[b.assetId] : null,
     items = (b.items ?? []).filter((i: any) => !pendingDetail(i.body));
   const picture = (id: string, alt: string) =>
@@ -194,8 +218,17 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
   if (b.type === "category-grid") {
     const categories = s.pages.filter((v) => v.type === "category");
     const products = s.pages.filter((v) => v.type === "product");
-    const destinations =
+    const available =
       categories.length < 2 && products.length ? products : categories;
+    const listed = (b.items ?? [])
+      .filter((i: any) => i.href)
+      .map((i: any) => available.find((v) => v.path === i.href))
+      .filter(Boolean);
+    const destinations =
+      b.design && listed.length
+        ? ([...new Map(listed.map((p: any) => [p.path, p])).values()] as any[])
+        : available;
+    if (!destinations.length) return "";
     content =
       '<div class="category-grid">' +
       destinations
@@ -339,6 +372,7 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
     e(b.layout ?? "cards") +
     " tone-" +
     e(b.tone ?? "light") +
+    sectionClasses(b.design) +
     '" id="block-' +
     e(b.key) +
     '">' +
