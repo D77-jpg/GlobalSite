@@ -1,4 +1,5 @@
 import { trustedPreview } from "./trusted-preview";
+import { diffPageDraft } from "./page-diff";
 import { RunList } from "./agent-tasks";
 export { RunList } from "./agent-tasks";
 import { SiteDesign } from "./site-design";
@@ -1895,6 +1896,16 @@ function PageEditor({
       ),
     });
   const displayedIssues = liveIssues ?? page.issues;
+  const draftChanges = diffPageDraft(
+    {
+      title: page.title,
+      metaDescription: page.metaDescription,
+      ...(page.presentation ? { presentation: page.presentation } : {}),
+      refs: page.refs,
+      blocks: page.blocks,
+    },
+    data,
+  );
   const selectedBlock = data.blocks.some((b: Row) => b.key === editingBlock)
     ? editingBlock
     : data.blocks[0]?.key;
@@ -1943,6 +1954,38 @@ function PageEditor({
     >
       <Notice t={t} error={a.error} saved={a.saved} />
       <IssueList issues={displayedIssues} t={t} />
+      {draftChanges.length > 0 && (
+        <details className="studio-diff-box">
+          <summary>
+            {t("unsavedChanges")} ({draftChanges.length})
+          </summary>
+          <ul>
+            {draftChanges.map((item, idx) => (
+              <li key={idx}>
+                <strong>
+                  {t(
+                    item.kind === "meta"
+                      ? "diffMeta"
+                      : item.kind === "presentation"
+                        ? "diffPresentation"
+                        : item.kind === "block-added"
+                          ? "diffAdded"
+                          : item.kind === "block-removed"
+                            ? "diffRemoved"
+                            : item.kind === "block-moved"
+                              ? "diffMoved"
+                              : "diffEdited",
+                  )}
+                </strong>
+                <span>
+                  {item.target}
+                  {item.detail ? " · " + item.detail : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <nav className="studio-jumps" aria-label={t("editorJump")}>
         <Layers3 size={15} />
         <a href="#editor-meta">{t("metaFields")}</a>

@@ -1,30 +1,69 @@
-import { SiteCreation } from "./site-journey";
 import { WorkspaceFrame } from "./workspace-frame";
-import { AgentWorkbench } from "./agent-workbench";
-import { CrmConnectionPage } from "./crm";
-import {
-  InquiriesPage,
-  InquiryDetailPage,
-  InquirySettingsPage,
-} from "./inquiries";
-import { PublishPage } from "./publishing";
-import {
-  LatestSitePreview,
-  SitesPage,
-  SiteWorkspace,
-  PageReview,
-} from "./sites";
-import {
-  ProductsPage,
-  ProductEditor,
-  ImportPage,
-  AssetsPage,
-  FactsPage,
-  WebsitePage,
-} from "./catalog";
 import "./catalog.css";
 import { safeReturnTo } from "./navigation";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  Suspense,
+  createContext,
+  lazy,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+const SiteCreation = lazy(() =>
+  import("./site-journey").then((m) => ({ default: m.SiteCreation })),
+);
+const AgentWorkbench = lazy(() =>
+  import("./agent-workbench").then((m) => ({ default: m.AgentWorkbench })),
+);
+const CrmConnectionPage = lazy(() =>
+  import("./crm").then((m) => ({ default: m.CrmConnectionPage })),
+);
+const InquiriesPage = lazy(() =>
+  import("./inquiries").then((m) => ({ default: m.InquiriesPage })),
+);
+const InquiryDetailPage = lazy(() =>
+  import("./inquiries").then((m) => ({ default: m.InquiryDetailPage })),
+);
+const InquirySettingsPage = lazy(() =>
+  import("./inquiries").then((m) => ({ default: m.InquirySettingsPage })),
+);
+const PublishPage = lazy(() =>
+  import("./publishing").then((m) => ({ default: m.PublishPage })),
+);
+const LatestSitePreview = lazy(() =>
+  import("./sites").then((m) => ({ default: m.LatestSitePreview })),
+);
+const SitesPage = lazy(() =>
+  import("./sites").then((m) => ({ default: m.SitesPage })),
+);
+const SiteWorkspace = lazy(() =>
+  import("./sites").then((m) => ({ default: m.SiteWorkspace })),
+);
+const PageReview = lazy(() =>
+  import("./sites").then((m) => ({ default: m.PageReview })),
+);
+const ProductsPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.ProductsPage })),
+);
+const ProductEditor = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.ProductEditor })),
+);
+const ImportPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.ImportPage })),
+);
+const AssetsPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.AssetsPage })),
+);
+const FactsPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.FactsPage })),
+);
+const WebsitePage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.WebsitePage })),
+);
+const MissionOverview = lazy(() =>
+  import("./overview").then((m) => ({ default: m.MissionOverview })),
+);
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -58,7 +97,6 @@ import "./account-workspace.css";
 import "./product-ui.css";
 import "./workspace-layouts.css";
 import "./surface.css";
-import { MissionOverview } from "./overview";
 type Me = {
   user: { id: string; name: string; email: string; twoFactorEnabled: boolean };
   organizationId: string;
@@ -1268,7 +1306,7 @@ function Workspace() {
   );
 }
 function WorkspaceRoutes({ me }: { me: Me }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const org = useData<OrganizationSummary>("/organization");
   return (
     <WorkspaceFrame
@@ -1278,7 +1316,8 @@ function WorkspaceRoutes({ me }: { me: Me }) {
       organizationName={org.data?.name}
       languageButton={<LocaleButton />}
     >
-      <Routes>
+      <Suspense fallback={<p role="status">{t("loading")}</p>}>
+        <Routes>
         <Route index element={<Overview org={org} />} />
         <Route
           path="agent"
@@ -1360,6 +1399,7 @@ function WorkspaceRoutes({ me }: { me: Me }) {
         <Route path="accept-invitation" element={<AcceptInvite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </WorkspaceFrame>
   );
 }

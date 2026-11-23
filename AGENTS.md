@@ -161,3 +161,7 @@
 - 见 docs/design/S26-可视化编辑与审批流.md。POST /api/v1/pages/:id/preview-draft 在内存中校验并渲染未保存草稿，不修改数据库状态或页面审批，iframe 仍仅加载 trustedPreview 打包样式。
 - saveSite 仅在结构性字段（name/templateId/targetMarkets/language/productIds/businessBrief/buyerProfile）变化时清空 confirmedPlanHash 与 designDirection；仅修改 brandChannels/brandColor/logoId 时保留。
 - POST /api/v1/facts/batch-confirm 与 POST /api/v1/sites/:id/pages/batch-approve 仅限管理员，逐条执行原修订锁、审计与完整 validatePage 事实/组合门禁，禁止绕过门禁。
+
+## S27 管理台前端架构与设计系统
+- 见 docs/design/S27-前端架构与设计系统.md。工作台各功能页面保持 React.lazy 路由懒加载与 vite manualChunks 分包，避免重新引入 >500 kB 单体主包。
+- 页面草稿变更对比由纯函数 web/src/page-diff.ts 计算并保持单元测试覆盖；采购缺口就地补充仅创建 candidate 事实，不绕过管理员确认门禁。
