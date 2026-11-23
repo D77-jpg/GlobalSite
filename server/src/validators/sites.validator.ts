@@ -60,9 +60,64 @@ export const pageBrief = z
     sections: z.array(z.string().max(60)).max(16),
   })
   .strict();
+export const siteLanguage = z.enum([
+  "en",
+  "es",
+  "fr",
+  "de",
+  "ja",
+  "ar",
+  "ru",
+  "zh",
+]);
+export type SiteLanguage = z.infer<typeof siteLanguage>;
+const safeChannelUrl = (hosts: string[]) =>
+  z
+    .string()
+    .trim()
+    .url()
+    .max(240)
+    .refine((value) => {
+      try {
+        const u = new URL(value);
+        return (
+          u.protocol === "https:" &&
+          !u.username &&
+          !u.password &&
+          hosts.includes(u.hostname.toLowerCase())
+        );
+      } catch {
+        return false;
+      }
+    });
+export const brandChannels = z
+  .object({
+    whatsapp: z
+      .string()
+      .trim()
+      .regex(/^\+?[1-9]\d{6,15}$/)
+      .max(20)
+      .optional(),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^[+0-9()\s.-]{6,32}$/)
+      .max(32)
+      .optional(),
+    email: z.string().trim().email().max(160).optional(),
+    wechat: z.string().trim().min(2).max(60).optional(),
+    linkedin: safeChannelUrl(["linkedin.com", "www.linkedin.com"]).optional(),
+    youtube: safeChannelUrl([
+      "youtube.com",
+      "www.youtube.com",
+      "youtu.be",
+    ]).optional(),
+  })
+  .strict();
 export const siteInput = z
   .object({
     buyerProfile: buyerProfile.optional(),
+    brandChannels: brandChannels.optional(),
     businessBrief: z.string().trim().max(2000).optional(),
     name: z.string().trim().min(1).max(120),
     templateId: z.enum([
@@ -72,7 +127,7 @@ export const siteInput = z
       "packaging-bags",
     ]),
     targetMarkets: z.array(z.string().trim().min(1).max(80)).min(1).max(10),
-    language: z.literal("en"),
+    language: siteLanguage.default("en"),
     brandColor: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     logoId: objectId.nullable(),
     productIds: z.array(objectId).max(50),
@@ -269,6 +324,10 @@ export const block = z
       "downloads",
       "cta",
       "comparison",
+      "gallery",
+      "metrics",
+      "certifications",
+      "showcase",
     ]),
     design: sectionDesign.optional(),
     items: z.array(blockItem).max(12).optional(),
@@ -286,10 +345,23 @@ export const block = z
 export const composition = z
   .object({
     version: z.literal("v1"),
-    typography: z.enum(["sans", "editorial", "technical"]),
-    palette: z.enum(["graphite", "cobalt", "clay", "forest", "violet"]),
+    typography: z.enum(["sans", "editorial", "technical", "luxury", "geometric"]),
+    palette: z.enum([
+      "graphite",
+      "cobalt",
+      "clay",
+      "forest",
+      "violet",
+      "obsidian",
+      "ivory",
+      "ocean",
+      "brand",
+    ]),
     navigation: z.enum(["catalogue", "capabilities", "solutions"]),
     productLayout: z.enum(["cards", "rows", "gallery"]),
+    surface: z.enum(["light", "warm", "contrast"]).optional(),
+    headerStyle: z.enum(["classic", "editorial", "minimal"]).optional(),
+    radius: z.enum(["sharp", "subtle", "rounded"]).optional(),
   })
   .strict();
 export const presentation = z

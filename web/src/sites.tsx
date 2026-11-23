@@ -319,6 +319,16 @@ export function SitesPage({ locale, role }: Props) {
     </Frame>
   );
 }
+const languageLabels: Record<string, string> = {
+  en: "English",
+  es: "Español",
+  fr: "Français",
+  de: "Deutsch",
+  ja: "日本語",
+  ar: "العربية (RTL)",
+  ru: "Русский",
+  zh: "简体中文",
+};
 function SiteForm({
   site,
   t,
@@ -335,7 +345,17 @@ function SiteForm({
     [ids, setIds] = useState<string[]>(site?.productIds ?? []),
     { register, handleSubmit } = useForm<any>({
       defaultValues: site
-        ? { ...site, targetMarkets: site.targetMarkets.join(", ") }
+        ? {
+            ...site,
+            targetMarkets: site.targetMarkets.join(", "),
+            language: site.language ?? "en",
+            channelWhatsapp: site.brandChannels?.whatsapp ?? "",
+            channelPhone: site.brandChannels?.phone ?? "",
+            channelEmail: site.brandChannels?.email ?? "",
+            channelWechat: site.brandChannels?.wechat ?? "",
+            channelLinkedin: site.brandChannels?.linkedin ?? "",
+            channelYoutube: site.brandChannels?.youtube ?? "",
+          }
         : {
             name: "",
             templateId: "machinery",
@@ -344,6 +364,12 @@ function SiteForm({
             brandColor: "#126a54",
             logoId: "",
             status: "draft",
+            channelWhatsapp: "",
+            channelPhone: "",
+            channelEmail: "",
+            channelWechat: "",
+            channelLinkedin: "",
+            channelYoutube: "",
           },
     });
   return (
@@ -351,14 +377,25 @@ function SiteForm({
       className="catalog-panel"
       onSubmit={handleSubmit((v) =>
         a.run(async () => {
+          const channels = Object.fromEntries(
+            Object.entries({
+              whatsapp: (v.channelWhatsapp ?? "").trim(),
+              phone: (v.channelPhone ?? "").trim(),
+              email: (v.channelEmail ?? "").trim(),
+              wechat: (v.channelWechat ?? "").trim(),
+              linkedin: (v.channelLinkedin ?? "").trim(),
+              youtube: (v.channelYoutube ?? "").trim(),
+            }).filter(([, val]) => val.length > 0),
+          );
           const data = {
             name: v.name,
             businessBrief: v.businessBrief ?? site?.businessBrief ?? "",
             templateId: v.templateId,
             targetMarkets: split(v.targetMarkets),
-            language: "en",
+            language: v.language || site?.language || "en",
             brandColor: site?.brandColor ?? "#126a54",
             ...(site?.buyerProfile ? { buyerProfile: site.buyerProfile } : {}),
+            ...(Object.keys(channels).length ? { brandChannels: channels } : {}),
             logoId: v.logoId || null,
             productIds: ids,
             status: v.status,
@@ -384,6 +421,16 @@ function SiteForm({
               {...register("name")}
             />
             <small>{t("nameHint")}</small>
+          </label>
+          <label>
+            {t("language")}
+            <select aria-label={t("language")} {...register("language")}>
+              {Object.entries(languageLabels).map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             {t("businessBrief")}
@@ -420,6 +467,36 @@ function SiteForm({
             </label>
           )}
         </div>
+        <details>
+          <summary>{t("brandChannels")}</summary>
+          <p className="muted">{t("brandChannelsHint")}</p>
+          <div className="catalog-grid">
+            <label>
+              {t("whatsapp")}
+              <input maxLength={20} {...register("channelWhatsapp")} />
+            </label>
+            <label>
+              {t("directPhone")}
+              <input maxLength={32} {...register("channelPhone")} />
+            </label>
+            <label>
+              {t("directEmail")}
+              <input type="email" maxLength={160} {...register("channelEmail")} />
+            </label>
+            <label>
+              {t("wechat")}
+              <input maxLength={60} {...register("channelWechat")} />
+            </label>
+            <label>
+              {t("linkedin")}
+              <input type="url" maxLength={240} {...register("channelLinkedin")} />
+            </label>
+            <label>
+              {t("youtube")}
+              <input type="url" maxLength={240} {...register("channelYoutube")} />
+            </label>
+          </div>
+        </details>
         <details open>
           <summary>
             {t("products")} ({ids.length}/50)
@@ -526,7 +603,11 @@ export function SiteWorkspace({ locale, role }: Props) {
     <Frame
       title={site.name}
       banner
-      sub={site.targetMarkets.join(", ") + " · English"}
+      sub={
+        site.targetMarkets.join(", ") +
+        " · " +
+        (languageLabels[site.language] ?? site.language ?? "English")
+      }
       t={t}
       error={load.error}
       actions={
@@ -1318,6 +1399,10 @@ function PlanEditor({
                           "evidence",
                           "case-study",
                           "downloads",
+                          "gallery",
+                          "metrics",
+                          "certifications",
+                          "showcase",
                           "faq",
                           "cta",
                         ].map((k) => (
@@ -2122,6 +2207,10 @@ function PageEditor({
                         "downloads",
                         "cta",
                         "comparison",
+                        "gallery",
+                        "metrics",
+                        "certifications",
+                        "showcase",
                       ].map((k) => (
                         <option key={k} value={k}>
                           {t(k)}

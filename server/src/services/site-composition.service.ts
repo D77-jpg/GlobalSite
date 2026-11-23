@@ -136,11 +136,19 @@ export function compositionBrief(site: any, node?: any) {
     ],
   };
 }
-const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+const words = (s: string) => {
+  const cjk = (s.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu) ?? []).length;
+  const nonCjk = s
+    .replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return nonCjk + Math.ceil(cjk / 2);
+};
 const normalized = (s: string) =>
   s
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 function bodyText(b: PageInput["blocks"][number]) {
   return [

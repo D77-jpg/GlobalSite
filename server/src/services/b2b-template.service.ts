@@ -1,5 +1,7 @@
 import { sectionClasses } from "./section-design.service";
+import { getStorefrontCopy } from "./storefront-i18n.service";
 import type { Snapshot } from "./static-template.service";
+
 const e = (v: unknown) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -8,10 +10,12 @@ const e = (v: unknown) =>
         c
       ]!,
   );
+
 export const pendingDetail = (v: string) =>
   /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
     v?.trim() ?? "",
   );
+
 function productImage(s: Snapshot, v: any) {
   const source = s.products?.find((x) => x.id === v.productId);
   const id =
@@ -30,38 +34,51 @@ function productImage(s: Snapshot, v: any) {
         '">'
     : "";
 }
+
 export function productGuide(s: Snapshot, p: any) {
+  const copy = getStorefrontCopy(s.site.language);
   const links = p.blocks.filter(
     (b: any) =>
       (b.type === "specs" && b.table?.rows?.length) ||
       (b.type === "faq" && b.faq?.length) ||
+      (b.type === "gallery" && b.items?.some((i: any) => i.assetId && s.assets[i.assetId])) ||
       (b.type === "downloads" &&
         b.items?.some((i: any) => s.assets[i.assetId]?.path.endsWith(".pdf"))),
   );
   if (!links.length) return "";
   return (
-    '<nav class="product-guide" aria-label="Product information">' +
+    '<nav class="product-guide" aria-label="' +
+    e(copy.productInfoNav) +
+    '">' +
     links
       .map(
         (b: any) =>
           '<a href="#block-' +
           e(b.key) +
           '">' +
-          e(b.heading || (b.type === "faq" ? "Questions" : "Specifications")) +
+          e(
+            b.heading ||
+              (b.type === "faq" ? copy.questions : copy.specifications),
+          ) +
           "</a>",
       )
       .join("") +
-    '<a href="#inquiry">Inquire about this product</a></nav>'
+    '<a href="#inquiry">' +
+    e(copy.inquireAboutProduct) +
+    "</a></nav>"
   );
 }
+
 export function productCards(
   s: Snapshot,
   p: any,
-  heading = "Explore the product range",
+  heading?: string,
   body = "",
   design?: unknown,
   selection?: string[],
 ) {
+  const copy = getStorefrontCopy(s.site.language);
+  const resolvedHeading = heading || copy.exploreRangeHeading;
   const products = s.pages.filter((v) => v.type === "product"),
     categories = s.pages.filter((v) => v.type === "category");
   const selected =
@@ -86,12 +103,23 @@ export function productCards(
     '<section class="b2b-section catalog-section' +
     (lineSheet ? " line-sheet" : "") +
     sectionClasses(design) +
-    '" id="collection"><div class="section-heading"><div><p class="section-kicker">PRODUCT RANGE</p><h2>' +
-    e(heading) +
+    '" id="collection"><div class="section-heading"><div><p class="section-kicker">' +
+    e(copy.productRangeKicker) +
+    "</p><h2>" +
+    e(resolvedHeading) +
     "</h2>" +
     (body && !pendingDetail(body) ? "<p>" + e(body) + "</p>" : "") +
-    '</div><a class="text-link" href="/catalogue.html" download>Download catalogue ↗</a></div>' +
-    '<div class="catalog-tools" data-catalog-tools hidden><label>Find a product<input type="search" data-product-search placeholder="Search product names"></label><label>Category<select data-category-filter><option value="">All categories</option>' +
+    '</div><a class="text-link" href="/catalogue.html" download>' +
+    e(copy.downloadCatalogue) +
+    '</a></div><div class="catalog-tools" data-catalog-tools hidden><label>' +
+    e(copy.findProduct) +
+    '<input type="search" data-product-search placeholder="' +
+    e(copy.searchPlaceholder) +
+    '"></label><label>' +
+    e(copy.categoryLabel) +
+    '<select data-category-filter><option value="">' +
+    e(copy.allCategories) +
+    "</option>" +
     categories
       .map(
         (c) =>
@@ -125,7 +153,7 @@ export function productCards(
           e(
             category?.presentation?.navigationLabel ??
               category?.title.split("|")[0] ??
-              "Collection",
+              copy.navDefaults.category,
           ) +
           '</p><h3><a href="' +
           e(v.path) +
@@ -151,17 +179,25 @@ export function productCards(
             : "") +
           '<div class="card-actions"><a class="text-link" href="' +
           e(v.path) +
-          '">View details ↗</a><button type="button" class="quote-add" data-quote-add="' +
+          '">' +
+          e(copy.viewDetails) +
+          '</a><button type="button" class="quote-add" data-quote-add="' +
           e(v.productId) +
-          '">Add to inquiry</button></div></div></article>'
+          '">' +
+          e(copy.addToInquiry) +
+          "</button></div></div></article>"
         );
       })
       .join("") +
-    "</div><p data-no-products hidden>No matching products. Try another category or search.</p></section>"
+    '</div><p data-no-products hidden>' +
+    e(copy.noMatchingProducts) +
+    "</p></section>"
   );
 }
+
 export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
   if (["text", "image", "specs", "faq"].includes(b.type)) return null;
+  const copy = getStorefrontCopy(s.site.language);
   if (b.type === "product-grid")
     return productCards(
       s,
@@ -193,22 +229,7 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       : "";
   const heading =
     '<div class="section-intro"><p class="section-kicker">' +
-    e(
-      (
-        {
-          process: "HOW TO WORK WITH US",
-          customization: "YOUR PRODUCT BRIEF",
-          evidence: "DOCUMENTED DETAILS",
-          "case-study": "PROJECT STORY",
-          downloads: "BUYING RESOURCES",
-          comparison: "COMPARE OPTIONS",
-          "category-grid": "EXPLORE BY CATEGORY",
-          features: "PRODUCT CONSIDERATIONS",
-          split: "A CLOSER LOOK",
-          cta: "NEXT STEP",
-        } as Record<string, string>
-      )[b.type] ?? "",
-    ) +
+    e(copy.blockKickers[b.type] ?? "") +
     "</p><h2>" +
     e(b.heading) +
     "</h2>" +
@@ -265,6 +286,137 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         })
         .join("") +
       "</div>";
+  } else if (b.type === "gallery") {
+    const photos = items.filter(
+      (i: any) => i.assetId && s.assets[i.assetId] && !s.assets[i.assetId].path.endsWith(".pdf"),
+    );
+    if (!photos.length) return "";
+    content =
+      '<div class="media-gallery" data-lightbox-group="' +
+      e(b.key) +
+      '">' +
+      photos
+        .map((i: any, idx: number) => {
+          const asset = s.assets[i.assetId];
+          const alt = i.alt || i.title || b.heading;
+          const caption = [i.title, i.body].filter(Boolean).join(" — ");
+          return (
+            '<figure class="gallery-item"><button type="button" class="gallery-trigger" data-lightbox-trigger data-lightbox-group="' +
+            e(b.key) +
+            '" data-lightbox-index="' +
+            idx +
+            '" data-lightbox-src="' +
+            e(asset.path) +
+            '" data-lightbox-alt="' +
+            e(alt) +
+            '" data-lightbox-caption="' +
+            e(caption) +
+            '" aria-label="' +
+            e(copy.inspectImage + ": " + alt) +
+            '">' +
+            picture(i.assetId, alt) +
+            "</button>" +
+            (i.title || i.body
+              ? "<figcaption>" +
+                (i.title ? "<strong>" + e(i.title) + "</strong>" : "") +
+                (i.body ? "<span>" + e(i.body) + "</span>" : "") +
+                "</figcaption>"
+              : "") +
+            "</figure>"
+          );
+        })
+        .join("") +
+      "</div>";
+  } else if (b.type === "metrics") {
+    const verified = items.filter((i: any) => i.refs?.length || b.refs?.length);
+    if (!verified.length) return "";
+    content =
+      '<dl class="metrics-strip">' +
+      verified
+        .map(
+          (i: any) =>
+            '<div class="metric-card"><dt>' +
+            e(i.title) +
+            "</dt><dd>" +
+            e(i.body) +
+            "</dd></div>",
+        )
+        .join("") +
+      "</dl>";
+  } else if (b.type === "certifications") {
+    const verified = items.filter((i: any) => i.refs?.length || b.refs?.length);
+    if (!verified.length) return "";
+    content =
+      '<div class="cert-wall">' +
+      verified
+        .map((i: any) => {
+          const asset = i.assetId ? s.assets[i.assetId] : null;
+          const isPdf =
+            asset &&
+            (asset.path.endsWith(".pdf") || asset.mime === "application/pdf");
+          return (
+            '<article class="cert-card">' +
+            (asset && !isPdf
+              ? '<div class="cert-media">' +
+                picture(i.assetId, i.alt || i.title) +
+                "</div>"
+              : "") +
+            '<div class="cert-copy"><span class="cert-badge">' +
+            e(copy.verifiedFactBadge) +
+            "</span><h3>" +
+            e(i.title) +
+            "</h3><p>" +
+            e(i.body) +
+            "</p>" +
+            (isPdf
+              ? '<a class="text-link" download href="' +
+                e(asset.path) +
+                '">' +
+                e(copy.downloadDocument) +
+                "</a>"
+              : i.href
+                ? '<a class="text-link" href="' +
+                  e(i.href) +
+                  '">' +
+                  e(copy.exploreDetails) +
+                  "</a>"
+                : "") +
+            "</div></article>"
+          );
+        })
+        .join("") +
+      "</div>";
+  } else if (b.type === "showcase") {
+    if (!items.length) return "";
+    content =
+      '<div class="showcase-grid">' +
+      items
+        .map(
+          (i: any, idx: number) =>
+            '<article class="showcase-card' +
+            (idx === 0 ? " showcase-lead" : "") +
+            '">' +
+            (i.assetId && s.assets[i.assetId]
+              ? '<div class="showcase-visual">' +
+                picture(i.assetId, i.alt || i.title) +
+                "</div>"
+              : "") +
+            '<div class="showcase-copy"><h3>' +
+            e(i.title) +
+            "</h3><p>" +
+            e(i.body) +
+            "</p>" +
+            (i.href
+              ? '<a class="text-link" href="' +
+                e(i.href) +
+                '">' +
+                e(copy.exploreDetails) +
+                "</a>"
+              : "") +
+            "</div></article>",
+        )
+        .join("") +
+      "</div>";
   } else if (b.type === "split")
     content =
       (a ? "<figure>" + picture(b.assetId, b.alt) + "</figure>" : "") +
@@ -281,7 +433,7 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '<a class="cta" href="' +
       e(items[0]?.href ?? "#inquiry") +
       '">' +
-      e(items[0]?.title ?? "Discuss your requirements") +
+      e(items[0]?.title ?? copy.discussRequirements) +
       "</a></div>";
   else if (b.type === "comparison")
     content =
@@ -311,16 +463,28 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         )
         .map(
           (i: any) =>
-            '<article><span class="resource-type">PDF DOCUMENT</span><h3>' +
+            '<article><span class="resource-type">' +
+            e(copy.pdfDocument) +
+            "</span><h3>" +
             e(i.title) +
             "</h3><p>" +
             e(i.body) +
             '</p><a class="text-link" download href="' +
             e(s.assets[i.assetId].path) +
-            '">Download document ↗</a></article>',
+            '">' +
+            e(copy.downloadDocument) +
+            "</a></article>",
         )
         .join("") +
-      '<article><span class="resource-type">PRODUCT CATALOGUE</span><h3>Browse the current range</h3><p>Save the product catalogue for your purchasing brief.</p><a class="text-link" href="/catalogue.html" download>Download catalogue ↗</a></article></div>';
+      '<article><span class="resource-type">' +
+      e(copy.productCatalogueTag) +
+      "</span><h3>" +
+      e(copy.browseCurrentRange) +
+      "</h3><p>" +
+      e(copy.saveCatalogueNote) +
+      '</p><a class="text-link" href="/catalogue.html" download>' +
+      e(copy.downloadCatalogue) +
+      "</a></article></div>";
   else
     content =
       "<" +
@@ -349,7 +513,9 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
             (i.href
               ? '<a class="text-link" href="' +
                 e(i.href) +
-                '">Explore details ↗</a>'
+                '">' +
+                e(copy.exploreDetails) +
+                "</a>"
               : "") +
             "</" +
             (b.type === "process" ? "li" : "article") +
@@ -361,7 +527,13 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       ">";
   if (
     !content ||
-    (["evidence", "case-study", "customization"].includes(b.type) &&
+    ([
+      "evidence",
+      "case-study",
+      "customization",
+      "metrics",
+      "certifications",
+    ].includes(b.type) &&
       !items.some((i: any) => i.refs?.length || b.refs?.length))
   )
     return "";
@@ -381,13 +553,79 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
     "</section>"
   );
 }
-export function catalogueHtml(s: Snapshot) {
+
+export function brandDock(s: Snapshot) {
+  const ch = s.site.brandChannels;
+  if (!ch) return "";
+  const copy = getStorefrontCopy(s.site.language);
+  const actions: string[] = [];
+  if (ch.whatsapp) {
+    const digits = String(ch.whatsapp).replace(/[^\d]/g, "");
+    if (digits.length >= 7) {
+      actions.push(
+        '<a class="dock-btn dock-whatsapp" href="https://wa.me/' +
+          e(digits) +
+          '" target="_blank" rel="noopener noreferrer">' +
+          e(copy.chatWhatsapp) +
+          "</a>",
+      );
+    }
+  }
+  if (ch.wechat) {
+    actions.push(
+      '<details class="dock-wechat"><summary class="dock-btn">' +
+        e(copy.wechatLabel) +
+        '</summary><div class="dock-popover"><strong>' +
+        e(copy.wechatLabel) +
+        "</strong><code>" +
+        e(ch.wechat) +
+        "</code></div></details>",
+    );
+  }
+  if (ch.phone) {
+    actions.push(
+      '<a class="dock-btn" href="tel:' +
+        e(String(ch.phone).replace(/\s+/g, "")) +
+        '">' +
+        e(copy.callUs) +
+        "</a>",
+    );
+  }
+  if (ch.email) {
+    actions.push(
+      '<a class="dock-btn" href="mailto:' +
+        e(ch.email) +
+        '">' +
+        e(copy.emailUs) +
+        "</a>",
+    );
+  }
+  if (!actions.length) return "";
   return (
-    '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
-    e(s.site.name) +
-    ' product catalogue</title><meta name="description" content="Product range and confirmed purchasing information."><link rel="stylesheet" href="/assets/site.css"></head><body class="b2b-site"><main><header class="catalogue-header"><h1>' +
-    e(s.site.name) +
-    " product catalogue</h1><p>Use product names and links when preparing an inquiry. Commercial terms require written confirmation.</p></header>" +
+    '<aside class="brand-dock" aria-label="' +
+    e(copy.quickContact) +
+    '">' +
+    actions.join("") +
+    "</aside>"
+  );
+}
+
+export function catalogueHtml(s: Snapshot) {
+  const copy = getStorefrontCopy(s.site.language);
+  return (
+    '<!DOCTYPE html><html lang="' +
+    e(copy.lang) +
+    '" dir="' +
+    e(copy.dir) +
+    '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
+    e(s.site.name + " " + copy.catalogueTitleSuffix) +
+    '</title><meta name="description" content="' +
+    e(copy.catalogueSubtitle) +
+    '"><link rel="stylesheet" href="/assets/site.css"></head><body class="b2b-site"><main><header class="catalogue-header"><h1>' +
+    e(s.site.name + " " + copy.catalogueTitleSuffix) +
+    "</h1><p>" +
+    e(copy.catalogueSubtitle) +
+    "</p></header>" +
     s.pages
       .filter((p) => p.type === "product")
       .map(
@@ -403,7 +641,9 @@ export function catalogueHtml(s: Snapshot) {
             .filter((b: any) => b.type === "specs" && b.table?.rows.length)
             .map(
               (b: any) =>
-                "<table><caption>Confirmed specifications</caption><tbody>" +
+                "<table><caption>" +
+                e(copy.confirmedSpecsCaption) +
+                "</caption><tbody>" +
                 b.table.rows
                   .map(
                     (r: string[]) =>
@@ -421,17 +661,29 @@ export function catalogueHtml(s: Snapshot) {
     "</main></body></html>"
   );
 }
+
 export function quoteBar(s: Snapshot, p: any) {
   if (!s.site.buyerProfile) return "";
+  const copy = getStorefrontCopy(s.site.language);
   return (
     '<aside class="quote-bar" ' +
     (p.productId ? "" : "hidden ") +
-    'aria-label="Inquiry shortlist"><a href="#inquiry">Inquiry list <span data-quote-count>0</span></a><span data-quote-status role="status"></span>' +
+    'aria-label="' +
+    e(copy.inquiryShortlist) +
+    '"><a href="#inquiry">' +
+    e(copy.inquiryList) +
+    ' <span data-quote-count>0</span></a><span data-quote-status role="status"></span>' +
     (p.productId
       ? '<button type="button" data-quote-add="' +
         e(p.productId) +
-        '">Add this product</button>'
+        '">' +
+        e(copy.addThisProduct) +
+        "</button>"
       : "") +
-    '<button type="button" data-quote-review>Review inquiry</button><button type="button" data-quote-clear>Clear list</button></aside>'
+    '<button type="button" data-quote-review>' +
+    e(copy.reviewInquiry) +
+    '</button><button type="button" data-quote-clear>' +
+    e(copy.clearList) +
+    "</button></aside>"
   );
 }

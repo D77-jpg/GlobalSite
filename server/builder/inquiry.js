@@ -80,6 +80,13 @@
   } catch {
     /* optional session storage */
   }
+  const i18n = {
+    add: document.body?.dataset?.i18nAdd || "Add to inquiry",
+    added: document.body?.dataset?.i18nAdded || "Added to inquiry",
+    selected: document.body?.dataset?.i18nSelected || "Your selected products",
+    remove: document.body?.dataset?.i18nRemove || "Remove",
+    products: document.body?.dataset?.i18nProducts || "products",
+  };
   function drawQuote() {
     quote = [...new Set(quote)].filter((id) => allowed.has(id));
     try {
@@ -95,8 +102,8 @@
       .forEach((n) => (n.textContent = String(quote.length)));
     document.querySelectorAll("[data-quote-add]").forEach((n) => {
       n.textContent = quote.includes(n.dataset.quoteAdd)
-        ? "Added to inquiry"
-        : "Add to inquiry";
+        ? i18n.added
+        : i18n.add;
       n.setAttribute(
         "aria-pressed",
         String(quote.includes(n.dataset.quoteAdd)),
@@ -110,7 +117,7 @@
       list.replaceChildren();
       if (quote.length) {
         const title = document.createElement("h3");
-        title.textContent = "Your selected products";
+        title.textContent = i18n.selected;
         list.append(title);
       }
       quote.forEach((id) => {
@@ -119,8 +126,8 @@
           remove = document.createElement("button");
         label.textContent = allowed.get(id);
         remove.type = "button";
-        remove.textContent = "Remove";
-        remove.setAttribute("aria-label", "Remove " + allowed.get(id));
+        remove.textContent = i18n.remove;
+        remove.setAttribute("aria-label", i18n.remove + " " + allowed.get(id));
         remove.onclick = () => {
           quote = quote.filter((v) => v !== id);
           const box = [
@@ -186,7 +193,7 @@
     });
     document
       .querySelectorAll("[data-filter-status]")
-      .forEach((n) => (n.textContent = visible + " products"));
+      .forEach((n) => (n.textContent = visible + " " + i18n.products));
     document
       .querySelectorAll("[data-no-products]")
       .forEach((n) => (n.hidden = visible > 0));
@@ -423,3 +430,71 @@ function closeStoreMenus(event) {
 }
 document.addEventListener("click", closeStoreMenus);
 document.addEventListener("keydown", closeStoreMenus);
+
+// Progressive-enhancement lightbox for visual gallery blocks; degrades cleanly without JS.
+(() => {
+  const dialog = document.querySelector("[data-lightbox]");
+  if (!dialog || typeof dialog.showModal !== "function") return;
+  const stage = dialog.querySelector("[data-lightbox-stage]");
+  const closeBtn = dialog.querySelector("[data-lightbox-close]");
+  const prevBtn = dialog.querySelector("[data-lightbox-prev]");
+  const nextBtn = dialog.querySelector("[data-lightbox-next]");
+  let group = [];
+  let index = 0;
+  let lastTrigger = null;
+
+  function render() {
+    const item = group[index];
+    if (!item || !stage) return;
+    stage.replaceChildren();
+    const img = document.createElement("img");
+    img.src = item.dataset.lightboxSrc || "";
+    img.alt = item.dataset.lightboxAlt || "";
+    stage.append(img);
+    if (item.dataset.lightboxCaption) {
+      const cap = document.createElement("figcaption");
+      cap.textContent = item.dataset.lightboxCaption;
+      stage.append(cap);
+    }
+    const multi = group.length > 1;
+    if (prevBtn) prevBtn.hidden = !multi;
+    if (nextBtn) nextBtn.hidden = !multi;
+  }
+
+  function step(delta) {
+    if (!group.length) return;
+    index = (index + delta + group.length) % group.length;
+    render();
+  }
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target?.closest?.("[data-lightbox-trigger]");
+    if (!trigger) return;
+    const key = trigger.dataset.lightboxGroup || "";
+    group = Array.from(
+      document.querySelectorAll(
+        '[data-lightbox-trigger][data-lightbox-group="' +
+          CSS.escape(key) +
+          '"]',
+      ),
+    );
+    index = Math.max(0, group.indexOf(trigger));
+    lastTrigger = trigger;
+    render();
+    dialog.showModal();
+  });
+
+  closeBtn?.addEventListener("click", () => dialog.close());
+  prevBtn?.addEventListener("click", () => step(-1));
+  nextBtn?.addEventListener("click", () => step(1));
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") step(-1);
+    else if (event.key === "ArrowRight") step(1);
+  });
+  dialog.addEventListener("close", () => {
+    lastTrigger?.focus?.();
+  });
+})();

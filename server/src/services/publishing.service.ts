@@ -566,6 +566,7 @@ export async function validVersion(
         productIds: s.site.productIds,
         type: p.type,
         brandName: s.site.name,
+        language: s.site.language,
         requireComposition: !!s.site.designDirection?.composition,
         paths: s.pages.map((p) => p.path),
       }).length,

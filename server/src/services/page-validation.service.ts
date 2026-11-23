@@ -77,6 +77,7 @@ export function validatePage(
     productIds: string[];
     type: string;
     brandName?: string;
+    language?: string;
     paths?: string[];
     requireComposition?: boolean;
   },
@@ -126,7 +127,8 @@ export function validatePage(
         )
       )
         add("UNSOURCED_CONTACT", field, key, email);
-    if (/\p{Script=Han}/u.test(value)) add("CONTENT_NOT_ENGLISH", field, key);
+    if ((context.language ?? "en") === "en" && /\p{Script=Han}/u.test(value))
+      add("CONTENT_NOT_ENGLISH", field, key);
     const sanitized = value
       .normalize("NFKC")
       .replace(/\bB2[BC]\b/gi, "business")
@@ -316,12 +318,24 @@ export function validatePage(
       if (item.assetId && b.type !== "downloads" && !item.alt.trim())
         add("IMAGE_ALT_REQUIRED", "blocks." + b.key + ".items." + i, b.key);
       if (
-        ["evidence", "case-study", "customization"].includes(b.type) &&
+        [
+          "evidence",
+          "case-study",
+          "customization",
+          "metrics",
+          "certifications",
+        ].includes(b.type) &&
         !refs.length
       )
         add("UNSOURCED_DETAIL", "blocks." + b.key + ".items." + i, b.key);
       if (
-        ["evidence", "case-study", "customization"].includes(b.type) &&
+        [
+          "evidence",
+          "case-study",
+          "customization",
+          "metrics",
+          "certifications",
+        ].includes(b.type) &&
         refs.length &&
         !refs.some((r) => {
           const f = factMap.get(r.factId);
@@ -351,9 +365,10 @@ export function validatePage(
       );
       const count = f.answer.trim().split(/\s+/).filter(Boolean).length;
       if (
-        count < 40 ||
-        count > 60 ||
-        /^(in this (article|guide)|let us|let's|it depends)/i.test(f.answer)
+        (context.language ?? "en") === "en" &&
+        (count < 40 ||
+          count > 60 ||
+          /^(in this (article|guide)|let us|let's|it depends)/i.test(f.answer))
       )
         add(
           "FAQ_DIRECT_ANSWER_REQUIRED",

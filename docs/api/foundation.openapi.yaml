@@ -13546,7 +13546,15 @@ components:
           maxItems: 10
           minItems: 1
         language:
-          const: en
+          enum:
+            - en
+            - es
+            - fr
+            - de
+            - ja
+            - ar
+            - ru
+            - zh
         brandColor:
           type: string
           pattern: ^#[a-fA-F0-9]{6}$
@@ -13567,6 +13575,8 @@ components:
             - archived
         buyerProfile:
           $ref: "#/components/schemas/SiteBuyerProfile"
+        brandChannels:
+          $ref: "#/components/schemas/SiteBrandChannels"
         businessBrief:
           type: string
           maxLength: 2000
@@ -13662,6 +13672,10 @@ components:
             - downloads
             - cta
             - comparison
+            - gallery
+            - metrics
+            - certifications
+            - showcase
         heading:
           type: string
           maxLength: 160
@@ -13718,6 +13732,35 @@ components:
         - alt
         - refs
       additionalProperties: false
+    SiteBrandChannels:
+      type: object
+      description: Optional admin-configured direct contact and social channels rendered in footer and floating quick-contact dock. Never AI-invented.
+      additionalProperties: false
+      properties:
+        whatsapp:
+          type: string
+          pattern: ^\+?[1-9]\d{6,15}$
+          maxLength: 20
+        phone:
+          type: string
+          pattern: ^[+0-9()\s.-]{6,32}$
+          maxLength: 32
+        email:
+          type: string
+          format: email
+          maxLength: 160
+        wechat:
+          type: string
+          minLength: 2
+          maxLength: 60
+        linkedin:
+          type: string
+          format: uri
+          maxLength: 240
+        youtube:
+          type: string
+          format: uri
+          maxLength: 240
     SiteComposition:
       type: object
       description: >-
@@ -13730,13 +13773,19 @@ components:
         version:
           enum: [v1]
         typography:
-          enum: [sans, editorial, technical]
+          enum: [sans, editorial, technical, luxury, geometric]
         palette:
-          enum: [graphite, cobalt, clay, forest, violet]
+          enum: [graphite, cobalt, clay, forest, violet, obsidian, ivory, ocean, brand]
         navigation:
           enum: [catalogue, capabilities, solutions]
         productLayout:
           enum: [cards, rows, gallery]
+        surface:
+          enum: [light, warm, contrast]
+        headerStyle:
+          enum: [classic, editorial, minimal]
+        radius:
+          enum: [sharp, subtle, rounded]
     SitePresentation:
       type: object
       description: >-
@@ -13960,7 +14009,15 @@ components:
             maxLength: 200
           maxItems: 50
         language:
-          const: en
+          enum:
+            - en
+            - es
+            - fr
+            - de
+            - ja
+            - ar
+            - ru
+            - zh
         brandColor:
           type: string
           minLength: 1
@@ -14018,6 +14075,8 @@ components:
           type: string
         buyerProfile:
           $ref: "#/components/schemas/SiteBuyerProfile"
+        brandChannels:
+          $ref: "#/components/schemas/SiteBrandChannels"
         designDirection:
           type: object
           additionalProperties: false

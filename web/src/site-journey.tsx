@@ -23,7 +23,9 @@ const copy = {
     basics: "业务与目标",
     products: "选用产品",
     name: "站点名称",
-    nameHint: "填写对外使用的英文品牌或企业名称",
+    nameHint: "填写对外展示的品牌或企业名称",
+    language: "网站语言",
+    languageHint: "独立站页面文案、导航、询盘表单与目录将按所选语言输出",
     markets: "目标市场",
     marketHint: "多个市场用逗号分隔，例如 United States, Germany",
     audience: "面向哪些客户",
@@ -103,7 +105,9 @@ const copy = {
     basics: "Business & goals",
     products: "Select products",
     name: "Site name",
-    nameHint: "Use your public English brand or company name",
+    nameHint: "Use your public brand or company name",
+    language: "Website language",
+    languageHint: "Navigation, copy, inquiry form and catalogue will match this language",
     markets: "Target markets",
     marketHint: "Separate markets with commas, e.g. United States, Germany",
     audience: "Who are your buyers?",
@@ -227,6 +231,7 @@ export function SiteCreation({
   const form = useForm({
     defaultValues: {
       name: "",
+      language: "en",
       targetMarkets: "United States",
       audience: "",
       needs: "",
@@ -236,6 +241,7 @@ export function SiteCreation({
   if (role === "viewer") return <Navigate to="/sites" replace />;
   async function submit(value: {
     name: string;
+    language: string;
     targetMarkets: string;
     audience: string;
     needs: string;
@@ -257,7 +263,7 @@ export function SiteCreation({
           .split(/[,，]/)
           .map((v) => v.trim())
           .filter(Boolean),
-        language: "en",
+        language: value.language || "en",
         brandColor: "#126a54",
         logoId: null,
         productIds: ids,
@@ -328,6 +334,20 @@ export function SiteCreation({
                     placeholder={c.nameHint}
                     {...form.register("name")}
                   />
+                </label>
+                <label>
+                  {c.language}
+                  <select {...form.register("language")}>
+                    <option value="en">English</option>
+                    <option value="es">Español (Spanish)</option>
+                    <option value="fr">Français (French)</option>
+                    <option value="de">Deutsch (German)</option>
+                    <option value="ja">日本語 (Japanese)</option>
+                    <option value="ar">العربية (Arabic · RTL)</option>
+                    <option value="ru">Русский (Russian)</option>
+                    <option value="zh">简体中文 (Chinese)</option>
+                  </select>
+                  <small>{c.languageHint}</small>
                 </label>
                 <label>
                   {c.markets}

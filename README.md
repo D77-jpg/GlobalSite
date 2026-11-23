@@ -126,3 +126,7 @@ Docker 镜像包含锁定版本的 Chromium。直接用 Node 启动 Worker 时�
 ### AI 底座、生图配置与并发引擎（S24）
 
 支持配置任意经 SSRF 校验的公开 HTTPS OpenAI 兼容文本/视觉/生图服务商（支持常用服务商预设及可选专用视觉模型，以及 `AI_ALLOWED_HOSTS` 白名单），移除生图硬编码中转；Worker 拆分为快/重双车道并发（`WORKER_FAST_CONCURRENCY` / `WORKER_HEAVY_CONCURRENCY`），避免长耗时建站任务阻塞邮件、询盘与 CRM 同步；Agent 任务页接入鉴权 SSE 实时进度流并支持自动降级轮询。详见 [S24 设计](docs/design/S24-AI底座与并发引擎.md)。
+
+### 旗舰级官网引擎与多语种建站（S25）
+
+独立站支持 8 种语言（`en / es / fr / de / ja / ar(RTL) / ru / zh`）全链路本地化；扩展受控旗舰配色、字体、表面与页头/圆角轴；新增多图灯箱画廊（`gallery`）、强事实门禁数据条（`metrics`）、资质认证墙（`certifications`）与杂志专题区块（`showcase`），以及管理员直连渠道悬浮栏（WhatsApp/微信/电话/邮箱/社媒）。详见 [S25 设计](docs/design/S25-旗舰官网引擎与多语种.md)。

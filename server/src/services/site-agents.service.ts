@@ -1,3 +1,4 @@
+import { getStorefrontCopy } from "./storefront-i18n.service";
 import { resolveAgentPage } from "./section-design.service";
 import { encrypt, decrypt } from "./credential-crypto";
 import {
@@ -624,6 +625,7 @@ export async function acceptQualityReview(id: string, actor: string) {
           productIds: site.productIds,
           type: unit.node?.type ?? "home",
           brandName: site.name,
+          language: site.language,
           requiredProductSections: site.plan?.strategy?.productSections,
           requireComposition: !!site.designDirection?.composition,
           paths: site.plan?.nodes.map((n: any) => n.path),
@@ -1143,6 +1145,7 @@ export function unitPrompt(run: any, unit: any) {
             productIds: site.productIds,
             type: unit.node?.type ?? "home",
             brandName: site.name,
+            language: site.language,
             requiredProductSections: site.plan?.strategy?.productSections,
             requireComposition: !!site.designDirection?.composition,
             paths: site.plan?.nodes.map((n: any) => n.path),
@@ -1200,6 +1203,7 @@ export function unitPrompt(run: any, unit: any) {
               home: validatePage(d.page, s.facts, {
                 type: "home",
                 productIds: site.productIds,
+                language: site.language,
                 paths: site.plan.nodes.map((n: any) => n.path),
               }),
               detail: d.detail
@@ -1207,6 +1211,7 @@ export function unitPrompt(run: any, unit: any) {
                     type: unit.detailNode?.type ?? "product",
                     productId: unit.detailNode?.productId,
                     productIds: site.productIds,
+                    language: site.language,
                     requiredProductSections:
                       site.plan?.strategy?.productSections,
                     paths: site.plan.nodes.map((n: any) => n.path),
@@ -1250,6 +1255,7 @@ export function unitPrompt(run: any, unit: any) {
             type: unit.node.type,
             productId: unit.node.productId,
             productIds: site.productIds,
+            language: site.language,
             requiredProductSections: site.plan?.strategy?.productSections,
             paths: site.plan.nodes.map((n: any) => n.path),
           }),
@@ -1283,6 +1289,15 @@ export function unitPrompt(run: any, unit: any) {
   return {
     system:
       basePrompt +
+      (site.language && site.language !== "en"
+        ? "\nTarget website language: " +
+          getStorefrontCopy(site.language).languageName +
+          " (" +
+          site.language +
+          "). Write ALL public website copy (titles, headings, navigation labels, descriptions, body text, FAQs and CTAs) naturally in " +
+          getStorefrontCopy(site.language).languageName +
+          ". Keep JSON object keys, schema enums, URL slugs and internal fact refs strictly in English."
+        : "") +
       "\nReviewed brand/design skills:\n" +
       (s.skillProfile ?? siteSkillProfile()).guidance +
       "\n" +
@@ -1354,6 +1369,7 @@ function prepareDesignPage(run: any, unit: any, input: unknown) {
     requiredProductSections: site.plan.strategy.productSections,
     paths: site.plan.nodes.map((n: any) => n.path),
     brandName: site.name,
+    language: site.language,
   });
   if (issues.length)
     throw new z.ZodError(
@@ -1480,6 +1496,7 @@ async function applyUnit(
         productIds: site.productIds.map(String),
         type: unit.node?.type ?? "home",
         brandName: site.name,
+        language: site.language,
         requiredProductSections: site.plan?.strategy?.productSections,
         requireComposition: !!site.designDirection?.composition,
         paths: site.plan?.nodes.map((n: any) => n.path),
@@ -1620,6 +1637,7 @@ async function applyUnit(
                 requiredProductSections: site.plan.strategy.productSections,
                 paths: site.plan.nodes.map((n: any) => n.path),
                 brandName: site.name,
+                language: site.language,
               });
               if (problems.length)
                 throw new z.ZodError(

@@ -1,5 +1,6 @@
 import { catalogueHtml } from "./b2b-template.service";
 import { renderPrivacy, privacyPath } from "./inquiry-template.service";
+import { getStorefrontCopy } from "./storefront-i18n.service";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -172,9 +173,22 @@ export async function buildStatic(
         "\n" +
         (await fs.readFile(path.join(builder, "composition.css"), "utf8")),
     );
+    const copy404 = getStorefrontCopy(snapshot.site.language);
     await fs.writeFile(
       path.join(root, "public/404.html"),
-      '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta name="description" content="The requested page could not be found."><title>Page not found</title><link rel="stylesheet" href="/assets/site.css"></head><body><main><h1>Page not found</h1><p><a href="/">Return to the homepage</a></p></main></body></html>',
+      '<!DOCTYPE html><html lang="' +
+        e(copy404.lang) +
+        '" dir="' +
+        e(copy404.dir) +
+        '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta name="description" content="' +
+        e(copy404.notFoundDesc) +
+        '"><title>' +
+        e(copy404.notFoundTitle) +
+        '</title><link rel="stylesheet" href="/assets/site.css"></head><body><main><h1>' +
+        e(copy404.notFoundTitle) +
+        '</h1><p><a href="/">' +
+        e(copy404.returnHome) +
+        "</a></p></main></body></html>",
     );
     const urls = snapshot.pages.map(
       (p) =>

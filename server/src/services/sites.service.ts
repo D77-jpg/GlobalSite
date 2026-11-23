@@ -34,6 +34,7 @@ export function siteDto(s: any) {
     id: String(s._id),
     revision: s.revision,
     ...(s.buyerProfile ? { buyerProfile: s.buyerProfile } : {}),
+    ...(s.brandChannels ? { brandChannels: s.brandChannels } : {}),
     ...(s.designDirection ? { designDirection: s.designDirection } : {}),
     ...(s.businessBrief ? { businessBrief: s.businessBrief } : {}),
     name: s.name,
@@ -361,6 +362,7 @@ export async function pageView(
       productIds: site.productIds.map(String),
       type: page.type,
       brandName: site.name,
+      language: site.language,
       navigationLabels:
         page.type === "home"
           ? site.plan?.strategy?.navigation.map((g: any) => g.label)
@@ -739,6 +741,7 @@ export async function preview(
               type: draft.node.type,
               productId: draft.node.productId,
               brandName: site.name,
+              language: site.language,
               requiredProductSections: site.plan?.strategy?.productSections,
               requireComposition: !!site.designDirection?.composition,
               paths: site.plan.nodes.map((n: any) => n.path),

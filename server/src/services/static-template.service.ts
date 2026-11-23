@@ -1,16 +1,19 @@
 import { sectionClasses } from "./section-design.service";
 import { composition as compositionSchema } from "../validators/sites.validator";
+import { getStorefrontCopy } from "./storefront-i18n.service";
 import {
   renderB2BBlock,
   productCards,
   productGuide,
   quoteBar,
+  brandDock,
 } from "./b2b-template.service";
 import {
   renderInquiry,
   renderConsent,
   privacyPath,
 } from "./inquiry-template.service";
+
 export const e = (v: unknown) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -19,6 +22,7 @@ export const e = (v: unknown) =>
         c
       ]!,
   );
+
 export type Snapshot = {
   site: any;
   pages: any[];
@@ -37,8 +41,10 @@ export type Snapshot = {
   createdAt: string;
   inquiry?: any;
 };
-export const templateVersion = "b2b-site-v7";
+
+export const templateVersion = "b2b-site-v8";
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
+
 function image(s: Snapshot, id: string, alt: string, hero = false) {
   const a = s.assets[id];
   if (!a) return "";
@@ -56,15 +62,17 @@ function image(s: Snapshot, id: string, alt: string, hero = false) {
     ' decoding="async">'
   );
 }
+
 function section(s: Snapshot, b: any, p?: any) {
   const rich = renderB2BBlock(s, p, b);
   if (rich !== null) return rich;
+  const copy = getStorefrontCopy(s.site.language);
   let html = "";
   if (b.type === "image") html = image(s, b.assetId, b.alt);
   else if (b.type === "specs" && b.table)
     html =
       '<div class="table-scroll"><table><caption>' +
-      e(b.heading || "Specifications") +
+      e(b.heading || copy.specifications) +
       "</caption><thead><tr>" +
       b.table.columns
         .map((c: string) => '<th scope="col">' + e(c) + "</th>")
@@ -98,12 +106,13 @@ function section(s: Snapshot, b: any, p?: any) {
     '" id="block-' +
     e(b.key) +
     '"><h2>' +
-    e(b.heading || "Details") +
+    e(b.heading || copy.detailsHeading) +
     "</h2>" +
     html +
     "</section>"
   );
 }
+
 function fact(s: Snapshot, type: string) {
   return s.facts.find(
     (f) =>
@@ -113,7 +122,9 @@ function fact(s: Snapshot, type: string) {
         (type === "foundedYear" && f.type === "company.founded")),
   )?.value;
 }
+
 export function renderStaticPage(s: Snapshot, p: any) {
+  const copy = getStorefrontCopy(s.site.language);
   const canonical = new URL(
     p.path.endsWith("/") ? p.path : p.path + "/",
     s.settings.canonicalBaseUrl,
@@ -210,19 +221,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
   const cleanTitle = (v: any) => String(v.title).split(/[|—–]/)[0].trim();
   const label = (v: any) =>
     v.presentation?.navigationLabel ??
-    (
-      {
-        customization: "Private label",
-        resources: "Resources",
-        solution: "Solutions",
-        category: "Collection",
-        about: "Our story",
-        faq: "FAQs",
-        contact: "Contact",
-        factory: "Our process",
-        certifications: "Documents",
-      } as Record<string, string>
-    )[v.type] ??
+    copy.navDefaults[v.type] ??
     cleanTitle(v);
   const categories = s.pages.filter((v) => v.type === "category");
   const products = s.pages.filter((v) => v.type === "product");
@@ -247,7 +246,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     "<span>" +
     e(text) +
     "</span></a>";
-  const catalogueLink = link("/catalogue.html", "View full catalogue");
+  const catalogueLink = link("/catalogue.html", copy.viewFullCatalogue);
   const ranges = categories.length > 1 ? categories : products;
   const rangeLinks = ranges
     .slice(0, 6)
@@ -267,7 +266,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
     })
     .join("");
   const rangeMenu =
-    '<details class="range-menu"><summary>Products</summary><div class="range-panel"><div class="range-index">' +
+    '<details class="range-menu"><summary>' +
+    e(copy.products) +
+    '</summary><div class="range-panel"><div class="range-index">' +
     catalogueLink +
     (categories.length === 1
       ? link(categories[0].path, label(categories[0]))
@@ -277,8 +278,8 @@ export function renderStaticPage(s: Snapshot, p: any) {
     "</div></div></details>";
   const buyingLinks = buyingPages.map((v) => link(v.path, label(v)));
   for (const [type, title] of [
-    ["process", "How to order"],
-    ["faq", "Buyer FAQs"],
+    ["process", copy.howToOrder],
+    ["faq", copy.buyerFaqs],
   ]) {
     const block = home?.blocks.find(
       (v: any) =>
@@ -312,23 +313,23 @@ export function renderStaticPage(s: Snapshot, p: any) {
     ? [
         group(
           composition.navigation === "capabilities"
-            ? "Capabilities"
-            : "Products",
+            ? copy.capabilities
+            : copy.products,
           categories.length ? categories : products,
           catalogueLink,
         ),
         group(
-          "Solutions",
+          copy.solutions,
           s.pages.filter((v) => ["solution", "customization"].includes(v.type)),
         ),
         group(
-          "Company",
+          copy.company,
           s.pages.filter((v) =>
             ["about", "factory", "certifications"].includes(v.type),
           ),
         ),
         group(
-          "Resources",
+          copy.resources,
           s.pages.filter((v) => ["resources", "faq"].includes(v.type)),
         ),
         contact ? link(contact.path, label(contact)) : "",
@@ -381,11 +382,17 @@ export function renderStaticPage(s: Snapshot, p: any) {
     )
       ? s.site.buyerProfile
         ? productCards(s, p)
-        : '<section class="collection section" id="collection"><div class="section-heading"><div><p class="section-kicker">The collection</p><h2>Explore the everyday essentials</h2></div>' +
+        : '<section class="collection section" id="collection"><div class="section-heading"><div><p class="section-kicker">' +
+          e(copy.collectionKicker) +
+          "</p><h2>" +
+          e(copy.collectionHeading) +
+          "</h2></div>" +
           (catalog && p.path !== catalog.path
             ? '<a class="text-link" href="' +
               e(catalog.path) +
-              '">View collection</a>'
+              '">' +
+              e(copy.viewCollection) +
+              "</a>"
             : "") +
           '</div><div class="product-grid">' +
           products
@@ -423,7 +430,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
                   : "") +
                 '<a class="text-link" href="' +
                 e(v.path) +
-                '">Explore product<span aria-hidden="true"> ↗</span></a></div></article>'
+                '">' +
+                e(copy.exploreProduct) +
+                '<span aria-hidden="true"> ↗</span></a></div></article>'
               );
             })
             .join("") +
@@ -439,14 +448,18 @@ export function renderStaticPage(s: Snapshot, p: any) {
     (!b.table || !b.table.rows?.length);
   const pendingBlocks = p.blocks.filter(pending);
   const detailRequest = pendingBlocks.length
-    ? '<section class="section information-request"><details><summary>Product information on request</summary><p>Contact our team for confirmed product details before placing an order.</p><ul>' +
+    ? '<section class="section information-request"><details><summary>' +
+      e(copy.infoOnRequest) +
+      "</summary><p>" +
+      e(copy.infoOnRequestNote) +
+      "</p><ul>" +
       pendingBlocks
         .map(
           (b: any) =>
             '<li id="block-' +
             e(b.key) +
             '">' +
-            e(b.heading || "Product details") +
+            e(b.heading || copy.detailsHeading) +
             "</li>",
         )
         .join("") +
@@ -493,8 +506,8 @@ export function renderStaticPage(s: Snapshot, p: any) {
     e(
       presentation.primaryActionLabel ??
         (p.type === "home" || p.type === "category"
-          ? "Explore collection"
-          : "Request details"),
+          ? copy.exploreCollection
+          : copy.requestDetails),
     ) +
     "</a>" +
     (s.site.buyerProfile &&
@@ -503,9 +516,15 @@ export function renderStaticPage(s: Snapshot, p: any) {
     presentation.primaryActionTarget === "inquiry"
       ? '<a class="secondary-link" href="' +
         e(catalog.path) +
-        '">Explore the collection ↗</a>'
+        '">' +
+        e(copy.exploreCollectionArrow) +
+        "</a>"
       : p.type === "home" && about
-        ? '<a class="secondary-link" href="' + e(about.path) + '">Our story</a>'
+        ? '<a class="secondary-link" href="' +
+          e(about.path) +
+          '">' +
+          e(copy.ourStory) +
+          "</a>"
         : "") +
     "</div></div>" +
     (firstImage
@@ -521,8 +540,61 @@ export function renderStaticPage(s: Snapshot, p: any) {
     ? new URL(s.assets[firstImage.assetId].path, s.settings.canonicalBaseUrl)
         .href
     : null;
+  const hasGallery = p.blocks.some(
+    (b: any) =>
+      b.type === "gallery" &&
+      (b.items ?? []).some((i: any) => i.assetId && s.assets[i.assetId]),
+  );
+  const lightbox = hasGallery
+    ? '<dialog class="gs-lightbox" data-lightbox aria-label="' +
+      e(copy.inspectImage) +
+      '"><div class="lightbox-frame"><button type="button" class="lightbox-close" data-lightbox-close aria-label="' +
+      e(copy.closeLightbox) +
+      '">×</button><button type="button" class="lightbox-nav lightbox-prev" data-lightbox-prev aria-label="' +
+      e(copy.prevImage) +
+      '">‹</button><figure class="lightbox-stage" data-lightbox-stage></figure><button type="button" class="lightbox-nav lightbox-next" data-lightbox-next aria-label="' +
+      e(copy.nextImage) +
+      '">›</button></div></dialog>'
+    : "";
+  const ch = s.site.brandChannels ?? {};
+  const socialLinks = [
+    ch.linkedin
+      ? '<a href="' +
+        e(ch.linkedin) +
+        '" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a>'
+      : "",
+    ch.youtube
+      ? '<a href="' +
+        e(ch.youtube) +
+        '" target="_blank" rel="noopener noreferrer">YouTube ↗</a>'
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
+  const footerContact = [
+    fact(s, "address"),
+    fact(s, "email") || ch.email,
+    fact(s, "phone") || ch.phone,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const compositionClasses = composition
+    ? " composed-site type-" +
+      composition.typography +
+      " palette-" +
+      composition.palette +
+      " products-" +
+      composition.productLayout +
+      (composition.surface ? " surface-" + composition.surface : "") +
+      (composition.headerStyle ? " header-" + composition.headerStyle : "") +
+      (composition.radius ? " radius-" + composition.radius : "")
+    : "";
   return (
-    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' +
+    '<!DOCTYPE html><html lang="' +
+    e(copy.lang) +
+    '" dir="' +
+    e(copy.dir) +
+    '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' +
     e(p.title) +
     '</title><meta name="description" content="' +
     e(p.metaDescription) +
@@ -546,7 +618,17 @@ export function renderStaticPage(s: Snapshot, p: any) {
     brandColor +
     '}</style><script type="application/ld+json">' +
     json(schema) +
-    '</script></head><body class="theme-' +
+    '</script></head><body data-i18n-add="' +
+    e(copy.addToInquiry) +
+    '" data-i18n-added="' +
+    e(copy.addedToInquiry) +
+    '" data-i18n-selected="' +
+    e(copy.selectedProducts) +
+    '" data-i18n-remove="' +
+    e(copy.remove) +
+    '" data-i18n-products="' +
+    e(copy.productsCount) +
+    '" class="theme-' +
     e(s.site.templateId) +
     (s.site.buyerProfile
       ? " b2b-site page-" +
@@ -558,29 +640,34 @@ export function renderStaticPage(s: Snapshot, p: any) {
             "comfortable",
         )
       : "") +
-    (composition
-      ? " composed-site type-" +
-        composition.typography +
-        " palette-" +
-        composition.palette +
-        " products-" +
-        composition.productLayout
-      : "") +
+    compositionClasses +
     " style-" +
     e(style) +
-    '"><a class="skip" href="#main">Skip to content</a><header class="site-header"><div class="header-inner">' +
+    '"><a class="skip" href="#main">' +
+    e(copy.skipToContent) +
+    '</a><header class="site-header"><div class="header-inner">' +
     brand +
-    '<nav class="desktop-nav" aria-label="Main navigation">' +
+    '<nav class="desktop-nav" aria-label="' +
+    e(copy.mainNav) +
+    '">' +
     nav +
     '</nav><a class="header-action" href="' +
     e(s.site.buyerProfile ? "#inquiry" : collectionHref) +
     '">' +
-    (s.site.buyerProfile ? "Request a quote" : "View collection") +
-    '</a><details class="mobile-navigation"><summary>Menu<span aria-hidden="true"> ☰</span></summary><nav aria-label="Mobile navigation">' +
+    e(s.site.buyerProfile ? copy.requestQuote : copy.viewCollection) +
+    '</a><details class="mobile-navigation"><summary>' +
+    e(copy.menu) +
+    '<span aria-hidden="true"> ☰</span></summary><nav aria-label="' +
+    e(copy.mobileNav) +
+    '">' +
     nav +
     '</nav></details></div></header><main id="main">' +
     (s.site.buyerProfile && p.path !== "/"
-      ? '<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true"> / </span><span>' +
+      ? '<nav class="breadcrumbs" aria-label="' +
+        e(copy.breadcrumb) +
+        '"><a href="/">' +
+        e(copy.home) +
+        '</a><span aria-hidden="true"> / </span><span>' +
         e(cleanTitle(p)) +
         "</span></nav>"
       : "") +
@@ -594,19 +681,27 @@ export function renderStaticPage(s: Snapshot, p: any) {
     detailRequest +
     renderInquiry(s, p) +
     quoteBar(s, p) +
+    brandDock(s) +
+    lightbox +
     '</main><footer><div class="footer-brand"><strong>' +
     e(s.site.name) +
     "</strong><p>" +
-    e(
-      [fact(s, "address"), fact(s, "email"), fact(s, "phone")]
-        .filter(Boolean)
-        .join(" · "),
-    ) +
-    '</p></div><nav aria-label="Footer navigation">' +
+    e(footerContact) +
+    "</p>" +
+    (socialLinks ? '<div class="footer-social">' + socialLinks + "</div>" : "") +
+    '</div><nav aria-label="' +
+    e(copy.footerNav) +
+    '">' +
     footerNav +
     '<a href="' +
     e(privacyPath(s)) +
-    '">Privacy Policy</a><button type="button" data-cookie-settings>Privacy choices</button></nav><a class="back-top" href="#main">Back to top</a></footer>' +
+    '">' +
+    e(copy.privacyPolicy) +
+    '</a><button type="button" data-cookie-settings>' +
+    e(copy.privacyChoices) +
+    '</button></nav><a class="back-top" href="#main">' +
+    e(copy.backToTop) +
+    "</a></footer>" +
     renderConsent(s) +
     "</body></html>"
   );

@@ -455,6 +455,7 @@ export const Site = entity<any>(
   {
     name: { type: String, required: true },
     buyerProfile: Schema.Types.Mixed,
+    brandChannels: Schema.Types.Mixed,
     designDirection: Schema.Types.Mixed,
     businessBrief: String,
     templateId: String,
