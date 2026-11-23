@@ -38,6 +38,10 @@ r.put(
   ),
 );
 r.get(
+  "/inquiries/summary",
+  wrap(async (req, res) => ok(res, await inquiries.inquirySummary(req.query))),
+);
+r.get(
   "/inquiries",
   wrap(async (req, res) => ok(res, await inquiries.listInquiries(req.query))),
 );

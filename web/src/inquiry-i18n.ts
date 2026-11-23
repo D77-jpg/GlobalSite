@@ -204,4 +204,17 @@ export const inquiryMessages = {
   utm_campaign: ["UTM 活动", "UTM campaign"],
   utm_term: ["UTM 关键词", "UTM term"],
   utm_content: ["UTM 内容", "UTM content"],
+  summaryTotal: ["有效询盘", "Unique inquiries"],
+  summaryNew: ["待跟进", "New"],
+  summaryResponseRate: ["跟进处理率", "Response rate"],
+  summarySpam: ["垃圾拦截", "Spam blocked"],
+  summaryTopSources: ["主要来源", "Top sources"],
+  autoReplySection: ["访客自动确认邮件", "Visitor auto-reply email"],
+  autoReplyEnable: ["收到非垃圾询盘后自动发送回执邮件", "Send automatic receipt email for non-spam inquiries"],
+  autoReplyHint: [
+    "自动回执仅包含确认模板与回执号，不回显访客原文；未配置 SMTP 时不会阻断询盘存档。",
+    "Auto-replies include only your confirmation text and receipt ID (never echoing visitor text). Missing SMTP never blocks inquiry archiving.",
+  ],
+  autoReplySubject: ["自动回复邮件主题（留空使用默认）", "Auto-reply subject (optional)"],
+  autoReplyBody: ["自动回复邮件正文（留空使用默认）", "Auto-reply message (optional)"],
 } as const;

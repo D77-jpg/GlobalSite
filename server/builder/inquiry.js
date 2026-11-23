@@ -35,6 +35,61 @@
   } catch {
     choice = null;
   }
+  let analyticsLoaded = false;
+  function loadOptionalAnalytics() {
+    if (analyticsLoaded) return;
+    if (
+      document.querySelector('meta[name="robots"][content*="noindex"]') ||
+      document.querySelector("[data-gs-inquiry][data-preview-token]")
+    )
+      return;
+    const body = document.body;
+    if (!body) return;
+    const ga4 = body.dataset.ga4Id || "";
+    const gtm = body.dataset.gtmId || "";
+    const pixel = body.dataset.metaPixelId || "";
+    if (!ga4 && !gtm && !pixel) return;
+    analyticsLoaded = true;
+    if (/^G-[A-Z0-9]{6,16}$/.test(ga4)) {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function gtag() {
+        window.dataLayer.push(arguments);
+      };
+      window.gtag("js", new Date());
+      window.gtag("config", ga4, { anonymize_ip: true });
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(ga4);
+      document.head.append(s);
+    }
+    if (/^GTM-[A-Z0-9]{4,12}$/.test(gtm)) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = "https://www.googletagmanager.com/gtm.js?id=" + encodeURIComponent(gtm);
+      document.head.append(s);
+    }
+    if (/^[0-9]{8,20}$/.test(pixel)) {
+      if (!window.fbq) {
+        const fbq = function () {
+          if (fbq.callMethod) fbq.callMethod.apply(fbq, arguments);
+          else fbq.queue.push(arguments);
+        };
+        fbq.queue = [];
+        fbq.loaded = true;
+        fbq.version = "2.0";
+        window.fbq = fbq;
+      }
+      window.fbq("init", pixel);
+      window.fbq("track", "PageView");
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = "https://connect.facebook.net/en_US/fbevents.js";
+      document.head.append(s);
+    }
+  }
+  if (choice?.value === "optional") loadOptionalAnalytics();
   if (panel && !["necessary", "optional"].includes(choice?.value))
     panel.hidden = false;
   const buttons = document.querySelectorAll("[data-cookie-choice]");
@@ -49,8 +104,10 @@
           at: new Date().toISOString(),
         }),
       );
-      if (value === "optional" && !storage.get(visitKey))
-        storage.set(visitKey, started);
+      if (value === "optional") {
+        if (!storage.get(visitKey)) storage.set(visitKey, started);
+        loadOptionalAnalytics();
+      }
       if (value !== "optional") storage.remove(visitKey);
       if (panel) panel.hidden = true;
     }),

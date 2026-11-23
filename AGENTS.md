@@ -165,3 +165,9 @@
 ## S27 管理台前端架构与设计系统
 - 见 docs/design/S27-前端架构与设计系统.md。工作台各功能页面保持 React.lazy 路由懒加载与 vite manualChunks 分包，避免重新引入 >500 kB 单体主包。
 - 页面草稿变更对比由纯函数 web/src/page-diff.ts 计算并保持单元测试覆盖；采购缺口就地补充仅创建 candidate 事实，不绕过管理员确认门禁。
+
+## S28 外贸增长运营、多渠道发布与对象存储
+- 见 docs/design/S28-外贸增长发布与存储.md。GA4/GTM/Meta Pixel 仅通过静态属性传递并在 inquiry.js 中严格遵守访客 optional Cookie 同意后加载，禁止静默预载或在预览页加载；301/302 重定向规则须经路径白名单校验后输出 public/_redirects；自定义 OG 图片受本组织资产与 removeAsset 引用保护。
+- 访客询盘自动确认邮件运行于 inquiry.autoreply（fast 车道），仅发送管理员模板与 receiptId，禁止回显访客原始留言，保留 attemptedAt 防重与未知 SMTP 停重发机制；GET /api/v1/inquiries/summary 保持组织隔离且仅输出脱敏来源标签。
+- 部署 Webhook（POST /api/v1/site-versions/:id/webhook）仅限管理员触发已通过 validVersion 门禁的版本，目标 URL 须通过 publicUrl() SSRF 校验并禁用重定向，可选加密密钥以 HMAC-SHA256 签名。
+- S3/R2 对象存储通过零外部依赖的 object-storage.service.ts（AWS SigV4）适配，STORAGE_DRIVER 默认 local 保持向后兼容，s3 模式严格按 ${prefix}/${organizationId}/${key} 隔离并保留 storage_bytes 计量。

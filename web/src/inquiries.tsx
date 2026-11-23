@@ -160,6 +160,18 @@ function InquiryInbox({
     ),
     [cursor, setCursor] = useState(""),
     form = useForm<Row>({ defaultValues: filters }),
+    summaryQuery = new URLSearchParams(
+      Object.entries({
+        siteId: filters.siteId,
+        from: filters.from
+          ? new Date(filters.from + "T00:00:00").toISOString()
+          : "",
+        to: filters.to
+          ? new Date(filters.to + "T23:59:59.999").toISOString()
+          : "",
+      }).filter(([, v]) => Boolean(v)),
+    ).toString(),
+    summary = useLoad("/inquiries/summary" + (summaryQuery ? "?" + summaryQuery : "")),
     load = useLoad("/inquiries?" + query + (cursor ? "&cursor=" + cursor : ""));
   function filter(d: Row) {
     setFilters(d);
@@ -187,6 +199,37 @@ function InquiryInbox({
         </a>
       </header>
       <Notice error={load.error} t={t} />
+      {summary.data && (
+        <section className="funnel-strip" aria-label={t("inbox")}>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summaryTotal")}</span>
+            <strong className="funnel-value">{summary.data.nonDuplicate}</strong>
+          </div>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summaryNew")}</span>
+            <strong className="funnel-value">{summary.data.byStatus?.new ?? 0}</strong>
+          </div>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summaryResponseRate")}</span>
+            <strong className="funnel-value">{summary.data.responseRate}%</strong>
+          </div>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summarySpam")}</span>
+            <strong className="funnel-value">{summary.data.byStatus?.spam ?? 0}</strong>
+          </div>
+          {!!summary.data.topSources?.length && (
+            <div className="funnel-card funnel-sources">
+              <span className="funnel-label">{t("summaryTopSources")}</span>
+              <span className="funnel-source-list">
+                {summary.data.topSources
+                  .slice(0, 3)
+                  .map((s: Row) => `${s.source} (${s.count})`)
+                  .join(" · ")}
+              </span>
+            </div>
+          )}
+        </section>
+      )}
       <form
         className="catalog-panel inquiry-filters"
         onSubmit={form.handleSubmit(filter)}
@@ -698,6 +741,9 @@ function InquirySettingsPageBody({ locale, role, id }: Props & { id: string }) {
                   : d.turnstileSecret
                     ? { turnstileSecret: d.turnstileSecret }
                     : {}),
+                autoReplyEnabled: !!d.autoReplyEnabled,
+                autoReplySubject: d.autoReplySubject?.trim() || null,
+                autoReplyBody: d.autoReplyBody?.trim() || null,
               },
             );
             setData(next);
@@ -767,6 +813,28 @@ function InquirySettingsPageBody({ locale, role, id }: Props & { id: string }) {
               onChange={(e) => setDisable(e.target.checked)}
             />
             {t("disableTurnstile")}
+          </label>
+          <h2>{t("autoReplySection")}</h2>
+          <p>{t("autoReplyHint")}</p>
+          <label className="inquiry-check">
+            <input type="checkbox" {...form.register("autoReplyEnabled")} />
+            {t("autoReplyEnable")}
+          </label>
+          <label>
+            {t("autoReplySubject")}
+            <input
+              maxLength={140}
+              {...form.register("autoReplySubject")}
+              autoComplete="off"
+            />
+          </label>
+          <label>
+            {t("autoReplyBody")}
+            <textarea
+              rows={3}
+              maxLength={2000}
+              {...form.register("autoReplyBody")}
+            />
           </label>
           <button disabled={busy || !data}>{t("save")}</button>
         </fieldset>

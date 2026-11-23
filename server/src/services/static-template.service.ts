@@ -536,10 +536,18 @@ export function renderStaticPage(s: Snapshot, p: any) {
   const brandColor = /^#[0-9a-f]{6}$/i.test(s.site.brandColor)
     ? s.site.brandColor
     : "#49694c";
-  const ogImage = firstImage
-    ? new URL(s.assets[firstImage.assetId].path, s.settings.canonicalBaseUrl)
-        .href
-    : null;
+  const seo = s.settings?.seoAnalytics ?? {};
+  const customOg =
+    seo.ogImageAssetId && s.assets[seo.ogImageAssetId]
+      ? new URL(s.assets[seo.ogImageAssetId].path, s.settings.canonicalBaseUrl)
+          .href
+      : null;
+  const ogImage =
+    customOg ??
+    (firstImage
+      ? new URL(s.assets[firstImage.assetId].path, s.settings.canonicalBaseUrl)
+          .href
+      : null);
   const hasGallery = p.blocks.some(
     (b: any) =>
       b.type === "gallery" &&
@@ -614,11 +622,27 @@ export function renderStaticPage(s: Snapshot, p: any) {
         e(ogImage) +
         '">'
       : "") +
+    (seo.googleSiteVerification
+      ? '<meta name="google-site-verification" content="' +
+        e(seo.googleSiteVerification) +
+        '">'
+      : "") +
+    (seo.bingSiteVerification
+      ? '<meta name="msvalidate.01" content="' +
+        e(seo.bingSiteVerification) +
+        '">'
+      : "") +
     '<link rel="preload" href="/assets/fonts/varela-round.ttf" as="font" type="font/ttf" crossorigin><link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
     brandColor +
     '}</style><script type="application/ld+json">' +
     json(schema) +
-    '</script></head><body data-i18n-add="' +
+    '</script></head><body' +
+    (seo.ga4MeasurementId
+      ? ' data-ga4-id="' + e(seo.ga4MeasurementId) + '"'
+      : "") +
+    (seo.gtmContainerId ? ' data-gtm-id="' + e(seo.gtmContainerId) + '"' : "") +
+    (seo.metaPixelId ? ' data-meta-pixel-id="' + e(seo.metaPixelId) + '"' : "") +
+    ' data-i18n-add="' +
     e(copy.addToInquiry) +
     '" data-i18n-added="' +
     e(copy.addedToInquiry) +

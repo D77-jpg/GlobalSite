@@ -30,6 +30,9 @@ export const inquirySettingsInput = z
       .regex(/^[a-zA-Z0-9_-]{10,100}$/)
       .nullable(),
     turnstileSecret: z.string().min(20).max(1024).nullable().optional(),
+    autoReplyEnabled: z.boolean().optional(),
+    autoReplySubject: z.string().trim().max(140).nullable().optional(),
+    autoReplyBody: z.string().trim().max(2000).nullable().optional(),
   })
   .strict();
 export async function gatewayRoute(
@@ -66,6 +69,9 @@ function dto(row: any, route: any) {
     turnstileSiteKey: row?.turnstileSiteKey ?? null,
     turnstileConfigured: !!row?.secret,
     gatewayUrl: new URL("/api/inquiry-gateway/v1", config.origin).href,
+    autoReplyEnabled: row?.autoReplyEnabled ?? false,
+    autoReplySubject: row?.autoReplySubject ?? null,
+    autoReplyBody: row?.autoReplyBody ?? null,
   };
 }
 export async function inquirySettings(siteId: string) {
@@ -98,7 +104,14 @@ export async function saveInquirySettings(
       "NOT_FOUND",
     );
     await gatewayRoute(siteId, session);
-    const { turnstileSecret, revision, ...values } = data,
+    const {
+        turnstileSecret,
+        revision,
+        autoReplyEnabled,
+        autoReplySubject,
+        autoReplyBody,
+        ...values
+      } = data,
       secret =
         typeof turnstileSecret === "string"
           ? encrypt(
@@ -118,7 +131,25 @@ export async function saveInquirySettings(
     );
     await InquirySettings.updateOne(
       { siteId },
-      { $set: { ...values, revision: revision + 1, secret } },
+      {
+        $set: {
+          ...values,
+          autoReplyEnabled:
+            autoReplyEnabled !== undefined
+              ? autoReplyEnabled
+              : (old?.autoReplyEnabled ?? false),
+          autoReplySubject:
+            autoReplySubject !== undefined
+              ? autoReplySubject || null
+              : (old?.autoReplySubject ?? null),
+          autoReplyBody:
+            autoReplyBody !== undefined
+              ? autoReplyBody || null
+              : (old?.autoReplyBody ?? null),
+          revision: revision + 1,
+          secret,
+        },
+      },
       { upsert: true, session },
     );
     await AuditLog.create(

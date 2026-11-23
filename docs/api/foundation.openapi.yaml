@@ -8274,6 +8274,83 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DeploymentInput'
+  /site-versions/{id}/webhook:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /site-versions/{id}/webhook
+      description: 管理员触发已配置的可信 HTTPS 部署 Webhook，携带 HMAC-SHA256 签名与不可变版本元数据。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      delivered:
+                        type: boolean
+                      statusCode:
+                        type: integer
+                      versionId:
+                        type: string
+                      triggeredAt:
+                        type: string
+                    required:
+                      - delivered
+                      - statusCode
+                      - versionId
+                      - triggeredAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /sites/{id}/domain-check:
     post:
       tags:
@@ -8726,6 +8803,58 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InquirySettingsInput'
+  /inquiries/summary:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /inquiries/summary
+      description: 返回当前组织（可选按 siteId / 时间范围筛选）的询盘状态漏斗、近 30 日趋势与脱敏来源统计。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquirySummary'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /inquiries:
     get:
       tags:
@@ -11204,6 +11333,16 @@ components:
           type: boolean
         gatewayUrl:
           type: string
+        autoReplyEnabled:
+          type: boolean
+        autoReplySubject:
+          type:
+            - string
+            - 'null'
+        autoReplyBody:
+          type:
+            - string
+            - 'null'
       required:
         - revision
         - publicId
@@ -11248,6 +11387,76 @@ components:
           type:
             - string
             - 'null'
+        autoReplyEnabled:
+          type: boolean
+        autoReplySubject:
+          type:
+            - string
+            - 'null'
+        autoReplyBody:
+          type:
+            - string
+            - 'null'
+    InquirySummary:
+      type: object
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+        nonDuplicate:
+          type: integer
+        responseRate:
+          type: number
+        byStatus:
+          type: object
+          additionalProperties: false
+          properties:
+            new:
+              type: integer
+            following:
+              type: integer
+            resolved:
+              type: integer
+            spam:
+              type: integer
+          required:
+            - new
+            - following
+            - resolved
+            - spam
+        byDay:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+            required:
+              - date
+              - count
+        topSources:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              source:
+                type: string
+              count:
+                type: integer
+            required:
+              - source
+              - count
+      required:
+        - total
+        - nonDuplicate
+        - responseRate
+        - byStatus
+        - byDay
+        - topSources
     InquirySource:
       type: object
       additionalProperties: false
@@ -11632,6 +11841,54 @@ components:
       additionalProperties: false
       properties: {}
       required: []
+    SeoAnalyticsConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        ga4MeasurementId:
+          type:
+            - string
+            - 'null'
+        gtmContainerId:
+          type:
+            - string
+            - 'null'
+        metaPixelId:
+          type:
+            - string
+            - 'null'
+        googleSiteVerification:
+          type:
+            - string
+            - 'null'
+        bingSiteVerification:
+          type:
+            - string
+            - 'null'
+        ogImageAssetId:
+          type:
+            - string
+            - 'null'
+          pattern: ^[a-f0-9]{24}$
+        redirects:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              status:
+                enum:
+                  - 301
+                  - 302
+            required:
+              - from
+              - to
+              - status
     PublishSettings:
       type: object
       additionalProperties: false
@@ -11666,6 +11923,14 @@ components:
           type:
             - string
             - 'null'
+        deployWebhookUrl:
+          type:
+            - string
+            - 'null'
+        webhookConfigured:
+          type: boolean
+        seoAnalytics:
+          $ref: '#/components/schemas/SeoAnalyticsConfig'
       required:
         - revision
         - canonicalBaseUrl
@@ -11712,6 +11977,16 @@ components:
           type:
             - string
             - 'null'
+        deployWebhookUrl:
+          type:
+            - string
+            - 'null'
+        webhookSecret:
+          type:
+            - string
+            - 'null'
+        seoAnalytics:
+          $ref: '#/components/schemas/SeoAnalyticsConfig'
     BuildIssue:
       type: object
       additionalProperties: false
@@ -11885,6 +12160,41 @@ components:
             - 'null'
         checkedAt:
           type: string
+        diagnostics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              step:
+                enum:
+                  - dns
+                  - cloudflare
+                  - https
+              ok:
+                type: boolean
+              detailCode:
+                type: string
+            required:
+              - step
+              - ok
+              - detailCode
+        recommendedRecord:
+          type:
+            - object
+            - 'null'
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+            name:
+              type: string
+            target:
+              type: string
+          required:
+            - type
+            - name
+            - target
       required:
         - status
         - domain

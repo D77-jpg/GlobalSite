@@ -94,6 +94,7 @@ export async function buildStatic(
     const images = new Set<string>(
       [
         snapshot.site.logoId,
+        snapshot.settings?.seoAnalytics?.ogImageAssetId,
         ...(snapshot.products ?? []).flatMap((p) => p.assetIds.slice(0, 2)),
         ...snapshot.pages.flatMap((p) => [
           ...p.blocks
@@ -245,6 +246,24 @@ export async function buildStatic(
       path.join(root, "public/catalogue.html"),
       catalogueHtml(snapshot),
     );
+    const redirects = snapshot.settings?.seoAnalytics?.redirects ?? [];
+    if (Array.isArray(redirects) && redirects.length) {
+      const lines = redirects
+        .filter(
+          (r: any) =>
+            typeof r?.from === "string" &&
+            typeof r?.to === "string" &&
+            (r.status === 301 || r.status === 302) &&
+            !/[\r\n\s]/.test(r.from) &&
+            !/[\r\n\s]/.test(r.to),
+        )
+        .map((r: any) => `${r.from} ${r.to} ${r.status}`);
+      if (lines.length)
+        await fs.writeFile(
+          path.join(root, "public/_redirects"),
+          lines.join("\n") + "\n",
+        );
+    }
     await new Promise<void>((resolve, reject) => {
       const child = spawn(
         process.execPath,

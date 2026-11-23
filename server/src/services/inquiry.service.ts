@@ -26,7 +26,12 @@ import { config } from "../config";
 import { ensure, AppError } from "../errors";
 import { encrypt, decrypt, otpHash } from "./credential-crypto";
 import { sha } from "./catalog.service";
-import { detectMime, storeArtifact, readArtifact } from "./storage.service";
+import {
+  detectMime,
+  storeArtifact,
+  readArtifact,
+  deleteStoredObject,
+} from "./storage.service";
 import {
   settingsRow,
   verifyPreviewGrant,
@@ -545,15 +550,7 @@ async function countInquiry(id: string, session: mongoose.ClientSession) {
 }
 export async function removePrivateFile(key: string, bytes: number) {
   // Internal cleanup only: object path is still validated by the tenant storage layer.
-  const fs = await import("node:fs/promises"),
-    path = await import("node:path");
-  const org = tenantContext()!.organizationId;
-  ensure(org);
-  ensure(/^[a-f0-9-]{36}$/.test(key));
-  const root = path.resolve(config.storage, org),
-    target = path.resolve(root, key);
-  ensure(path.dirname(target) === root);
-  await fs.rm(target, { force: true });
+  await deleteStoredObject(key);
   await mongoose.connection.transaction(async (session) => {
     const rec = await UsageRecord.findOne({
       metric: "storage_bytes",
@@ -655,6 +652,79 @@ function queryFilter(q: z.infer<typeof inquiryQuery>) {
       ...(q.maxSpamScore !== undefined ? { $lte: q.maxSpamScore } : {}),
     };
   return f;
+}
+export const inquirySummaryQuery = z
+  .object({
+    siteId: objectId.optional(),
+    from: z.iso.datetime().optional(),
+    to: z.iso.datetime().optional(),
+  })
+  .strict();
+export async function inquirySummary(query: unknown) {
+  const q = inquirySummaryQuery.parse(query);
+  ensure(!q.from || !q.to || q.from <= q.to, 400, "INVALID_DATE_RANGE");
+  const filter: any = {};
+  if (q.siteId) filter.siteId = q.siteId;
+  if (q.from || q.to) {
+    filter.receivedAt = {
+      ...(q.from ? { $gte: new Date(q.from) } : {}),
+      ...(q.to ? { $lte: new Date(q.to) } : {}),
+    };
+  }
+  const rows = await SiteInquiry.find(filter)
+    .select("+secret")
+    .sort({ receivedAt: -1 })
+    .limit(2000);
+  const byStatus = { new: 0, following: 0, resolved: 0, spam: 0 };
+  const dayCounts = new Map<string, number>();
+  const sourceCounts = new Map<string, number>();
+  let nonDuplicate = 0;
+  for (const row of rows) {
+    if (!row.duplicateOf) {
+      nonDuplicate++;
+      const s = row.status as keyof typeof byStatus;
+      if (s in byStatus) byStatus[s]++;
+      const day = row.receivedAt.toISOString().slice(0, 10);
+      dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+      try {
+        const d = decryptInquiry(row);
+        const utm = d.source?.utm?.source?.trim();
+        let label = "direct";
+        if (utm) label = utm.slice(0, 60);
+        else if (d.source?.referrer) {
+          try {
+            label = new URL(d.source.referrer).hostname.slice(0, 60);
+          } catch {
+            label = "direct";
+          }
+        }
+        sourceCounts.set(label, (sourceCounts.get(label) ?? 0) + 1);
+      } catch {
+        /* skip unreadable source */
+      }
+    }
+  }
+  const qualified = Math.max(0, nonDuplicate - byStatus.spam);
+  const responseRate = qualified
+    ? Math.round(((byStatus.following + byStatus.resolved) / qualified) * 1000) /
+      10
+    : 0;
+  const byDay = [...dayCounts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-30)
+    .map(([date, count]) => ({ date, count }));
+  const topSources = [...sourceCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([source, count]) => ({ source, count }));
+  return {
+    total: rows.length,
+    nonDuplicate,
+    responseRate,
+    byStatus,
+    byDay,
+    topSources,
+  };
 }
 export async function listInquiries(query: unknown) {
   const q = inquiryQuery.parse(query),
