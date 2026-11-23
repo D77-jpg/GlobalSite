@@ -57,7 +57,10 @@ export async function extractEvidence(
             decrypt(provider.secret, "ai:" + tenantContext()!.organizationId),
         },
         body: JSON.stringify({
-          model: provider.modelName,
+          model:
+            imageData && provider.supportsVision && provider.visionModelName
+              ? provider.visionModelName
+              : provider.modelName,
           max_tokens: 2048,
           response_format: { type: "json_object" },
           messages: [

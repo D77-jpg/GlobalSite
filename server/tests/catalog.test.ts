@@ -1141,94 +1141,124 @@ test("expired task heartbeats cannot resurrect an expired lease or renew another
   assert.equal((await tenant(() => renewTask(task))).matchedCount, 0);
 });
 
-test("organization image provider generates once and stores an illustration in its own library", async () => {
+test("organization image provider generates once with configurable endpoint and stores an illustration in its own library", async () => {
   const config = "/assets/image-provider",
     path = "/assets/generate-image";
   const credential = randomBytes(32).toString("hex");
-  const result = await a.client.request("PUT", config, { apiKey: credential });
-  assert.equal(result.status, 200);
-  assert.equal(result.body.data.configured, true);
-  assert.equal(
-    (await b.client.request("GET", config)).body.data.configured,
-    false,
-  );
-  const png = await sharp({
-    create: { width: 24, height: 16, channels: 3, background: "#142d59" },
-  })
-    .png()
-    .toBuffer();
-  let calls = 0;
-  let model = "gemini-3.1-flash-image";
-  mock.method(globalThis, "fetch", async (url: any, init: any) => {
-    const chat = model.startsWith("gemini");
-    assert.equal(
-      url,
-      "https://www.codex789.com/v1/" +
-        (chat ? "chat/completions" : "images/generations"),
-    );
-    const payload = JSON.parse(init.body);
-    assert.equal(payload.model, model);
-    if (!chat) {
-      assert.equal(payload.size, "1536x1024");
-      assert.equal(payload.n, 1);
-      assert.ok(payload.prompt.includes("Cerulean studio"));
-    }
-    assert.equal(init.headers.Authorization, "Bearer " + credential);
-    calls++;
-    if (!chat)
-      return Response.json({ data: [{ b64_json: png.toString("base64") }] });
-    return Response.json({
-      choices: [
-        {
-          message: {
-            content: "data:image/png;base64," + png.toString("base64"),
-          },
-        },
-      ],
+  const originalLookup = dns.lookup;
+  try {
+    dns.lookup = (async () => [
+      { address: "93.184.216.34", family: 4 },
+    ]) as typeof dns.lookup;
+    const unsafe = await a.client.make("PUT", config).send({
+      apiKey: credential,
+      baseUrl: "http://127.0.0.1:9999/v1",
+      model: "gpt-image-1",
     });
-  });
-  const key = randomUUID(),
-    brief = { subject: "Cerulean studio still life", composition: "campaign" };
-  const send = () =>
-    a.client.make("POST", path).set("Idempotency-Key", key).send(brief);
-  await role("viewer");
-  assert.equal((await send()).status, 403);
-  await role("editor");
-  assert.equal(
-    (await a.client.make("PUT", config).send({ apiKey: "" })).status,
-    403,
-  );
-  const created = await send();
-  assert.equal(created.status, 201);
-  a.client.check(created, "POST", path);
-  assert.equal((await send()).status, 409);
-  assert.equal(calls, 1);
-  const id = created.body.data.id;
-  assert.equal((await b.client.make("GET", "/assets/" + id)).status, 404);
-  const extraction = await a.client
-    .make("POST", "/facts/extractions")
-    .send({ kind: "asset", id, consent: true });
-  assert.equal(extraction.body.error.code, "CONCEPT_NOT_EVIDENCE");
-  await role("admin");
-  model = "gpt-image-2.5-sunburst";
-  const switched = await a.client.request("PUT", config, {
-    apiKey: credential,
-    model,
-  });
-  assert.equal(switched.body.data.model, model);
-  assert.equal(
-    (
-      await a.client
-        .make("POST", path)
-        .set("Idempotency-Key", randomUUID())
-        .send(brief)
-    ).status,
-    201,
-  );
-  assert.equal(calls, 2);
-  assert.equal(
-    (await a.client.request("PUT", config, { apiKey: "" })).body.data
-      .configured,
-    false,
-  );
+    assert.equal(unsafe.status, 400);
+    const result = await a.client.request("PUT", config, {
+      apiKey: credential,
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      model: "gemini-2.5-flash-image",
+      mode: "chat",
+    });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.data.configured, true);
+    assert.equal(
+      result.body.data.baseUrl,
+      "https://generativelanguage.googleapis.com/v1beta/openai",
+    );
+    assert.equal(result.body.data.mode, "chat");
+    assert.equal(
+      (await b.client.request("GET", config)).body.data.configured,
+      false,
+    );
+    const png = await sharp({
+      create: { width: 24, height: 16, channels: 3, background: "#142d59" },
+    })
+      .png()
+      .toBuffer();
+    let calls = 0;
+    let model = "gemini-2.5-flash-image";
+    let base = "https://generativelanguage.googleapis.com/v1beta/openai";
+    let chat = true;
+    mock.method(globalThis, "fetch", async (url: any, init: any) => {
+      assert.equal(
+        url,
+        base + (chat ? "/chat/completions" : "/images/generations"),
+      );
+      const payload = JSON.parse(init.body);
+      assert.equal(payload.model, model);
+      if (!chat) {
+        assert.equal(payload.size, "1536x1024");
+        assert.equal(payload.n, 1);
+        assert.ok(payload.prompt.includes("Cerulean studio"));
+      }
+      assert.equal(init.headers.Authorization, "Bearer " + credential);
+      calls++;
+      if (!chat)
+        return Response.json({ data: [{ b64_json: png.toString("base64") }] });
+      return Response.json({
+        choices: [
+          {
+            message: {
+              content: "data:image/png;base64," + png.toString("base64"),
+            },
+          },
+        ],
+      });
+    });
+    const key = randomUUID(),
+      brief = { subject: "Cerulean studio still life", composition: "campaign" };
+    const send = () =>
+      a.client.make("POST", path).set("Idempotency-Key", key).send(brief);
+    await role("viewer");
+    assert.equal((await send()).status, 403);
+    await role("editor");
+    assert.equal(
+      (await a.client.make("PUT", config).send({ apiKey: "" })).status,
+      403,
+    );
+    const created = await send();
+    assert.equal(created.status, 201);
+    a.client.check(created, "POST", path);
+    assert.equal((await send()).status, 409);
+    assert.equal(calls, 1);
+    const id = created.body.data.id;
+    assert.equal((await b.client.make("GET", "/assets/" + id)).status, 404);
+    const extraction = await a.client
+      .make("POST", "/facts/extractions")
+      .send({ kind: "asset", id, consent: true });
+    assert.equal(extraction.body.error.code, "CONCEPT_NOT_EVIDENCE");
+    await role("admin");
+    model = "gpt-image-1";
+    base = "https://api.openai.com/v1";
+    chat = false;
+    // Updating endpoint/model/mode without resending apiKey preserves encrypted credential.
+    const switched = await a.client.request("PUT", config, {
+      baseUrl: base,
+      model,
+      mode: "images",
+    });
+    assert.equal(switched.body.data.model, model);
+    assert.equal(switched.body.data.baseUrl, base);
+    assert.equal(switched.body.data.mode, "images");
+    assert.equal(
+      (
+        await a.client
+          .make("POST", path)
+          .set("Idempotency-Key", randomUUID())
+          .send(brief)
+      ).status,
+      201,
+    );
+    assert.equal(calls, 2);
+    assert.equal(
+      (await a.client.request("PUT", config, { apiKey: "" })).body.data
+        .configured,
+      false,
+    );
+  } finally {
+    dns.lookup = originalLookup;
+  }
 });

@@ -122,3 +122,7 @@ Docker 镜像包含锁定版本的 Chromium。直接用 Node 启动 Worker 时�
 业务策略、成对首页／详情提案与截图修订闭环见 [S23 设计](docs/design/S23-业务策略与设计闭环.md)。新策略先确认业务与页面结构，再比较两套提案；批准试点和截图审查后扩展整站。模型不支持图像时保留人工截图检查，历史版本保持不变。
 
 本轮真实四页试点、测试结果与完整文件清单见 [S23 验收记录](docs/verification/S23-验收.md)。
+
+### AI 底座、生图配置与并发引擎（S24）
+
+支持配置任意经 SSRF 校验的公开 HTTPS OpenAI 兼容文本/视觉/生图服务商（支持常用服务商预设及可选专用视觉模型，以及 `AI_ALLOWED_HOSTS` 白名单），移除生图硬编码中转；Worker 拆分为快/重双车道并发（`WORKER_FAST_CONCURRENCY` / `WORKER_HEAVY_CONCURRENCY`），避免长耗时建站任务阻塞邮件、询盘与 CRM 同步；Agent 任务页接入鉴权 SSE 实时进度流并支持自动降级轮询。详见 [S24 设计](docs/design/S24-AI底座与并发引擎.md)。

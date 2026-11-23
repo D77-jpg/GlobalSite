@@ -20,29 +20,52 @@ import { runScheduler, runWithTenant } from "../models/tenant-context";
 import { decrypt } from "../services/credential-crypto";
 import { config } from "../config";
 const owner = randomUUID();
-export async function claimTask(now = new Date()) {
+export type TaskLane = "fast" | "heavy";
+const FAST_LANE_FILTER = {
+  $or: [
+    { kind: "mail" },
+    { kind: /^inquiry\./ },
+    { kind: /^crm\./ },
+  ],
+};
+const HEAVY_LANE_FILTER = {
+  $or: [
+    { kind: "site.agent" },
+    { kind: "site.build" },
+    { kind: "site.deploy" },
+    { kind: /^catalog\./ },
+  ],
+};
+export async function claimTask(now = new Date(), lane?: TaskLane) {
+  const readyCondition = {
+    $or: [
+      { status: "pending", nextAttemptAt: { $lte: now } },
+      // Older known format failures may carry a task-wide long backoff.
+      // Preserve attempts and fences; only their paid, known outcome can
+      // use the bounded short correction delay. Network/unknown outcomes
+      // never enter this branch.
+      {
+        kind: "site.agent",
+        status: "pending",
+        lastErrorCode: "AI_OUTPUT_INVALID",
+        updatedAt: { $lte: new Date(now.getTime() - 3000) },
+      },
+      {
+        status: "running",
+        nextAttemptAt: { $lte: now },
+        leaseUntil: { $lt: now },
+      },
+    ],
+  };
+  const filter =
+    lane === "fast"
+      ? { $and: [FAST_LANE_FILTER, readyCondition] }
+      : lane === "heavy"
+        ? { $and: [HEAVY_LANE_FILTER, readyCondition] }
+        : readyCondition;
   return runScheduler(() =>
     Task.findOneAndUpdate(
-      {
-        $or: [
-          { status: "pending", nextAttemptAt: { $lte: now } },
-          // Older known format failures may carry a task-wide long backoff.
-          // Preserve attempts and fences; only their paid, known outcome can
-          // use the bounded short correction delay. Network/unknown outcomes
-          // never enter this branch.
-          {
-            kind: "site.agent",
-            status: "pending",
-            lastErrorCode: "AI_OUTPUT_INVALID",
-            updatedAt: { $lte: new Date(now.getTime() - 3000) },
-          },
-          {
-            status: "running",
-            nextAttemptAt: { $lte: now },
-            leaseUntil: { $lt: now },
-          },
-        ],
-      },
+      filter,
       {
         $set: {
           status: "running",
@@ -94,9 +117,9 @@ export async function renewTask(task: any) {
     { $set: { leaseUntil: new Date(Date.now() + 60000) } },
   );
 }
-export async function tick() {
-  const task = await claimTask();
-  if (!task) return;
+export async function tick(lane?: TaskLane): Promise<boolean> {
+  const task = await claimTask(new Date(), lane);
+  if (!task) return false;
   await runWithTenant(String(task.organizationId), async () => {
     const heartbeat = setInterval(() => {
       void renewTask(task).catch(() => {});
@@ -234,24 +257,52 @@ export async function tick() {
       clearInterval(heartbeat);
     }
   });
+  return true;
 }
-export function startBackgroundJobs() {
-  let stopping = false;
-  let running: Promise<void> | undefined;
-  const timer = setInterval(() => {
-    if (!running && !stopping) {
-      running = tick()
-        .catch(() =>
-          console.error(JSON.stringify({ event: "worker_tick_failed" })),
-        )
-        .finally(() => {
-          running = undefined;
-        });
+function sleepMs(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
     }
-  }, 1000);
+    const t = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      resolve();
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+export function startBackgroundJobs(options?: {
+  fastConcurrency?: number;
+  heavyConcurrency?: number;
+}) {
+  const controller = new AbortController();
+  const fastCount = options?.fastConcurrency ?? config.workerFastConcurrency;
+  const heavyCount = options?.heavyConcurrency ?? config.workerHeavyConcurrency;
+  const runLane = async (lane: TaskLane, idleMs: number) => {
+    while (!controller.signal.aborted) {
+      let claimed = false;
+      try {
+        claimed = await tick(lane);
+      } catch {
+        console.error(
+          JSON.stringify({ event: "worker_tick_failed", lane }),
+        );
+      }
+      if (!claimed && !controller.signal.aborted) {
+        await sleepMs(idleMs, controller.signal);
+      }
+    }
+  };
+  const loops: Promise<void>[] = [];
+  for (let i = 0; i < fastCount; i++) loops.push(runLane("fast", 500));
+  for (let i = 0; i < heavyCount; i++) loops.push(runLane("heavy", 1000));
   return async () => {
-    stopping = true;
-    clearInterval(timer);
-    await running;
+    controller.abort();
+    await Promise.allSettled(loops);
   };
 }

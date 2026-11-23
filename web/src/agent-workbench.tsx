@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { RunList, useLoad } from "./sites";
+import { RunList, useAgentRuns, useLoad } from "./sites";
 import type { Locale } from "./i18n";
 const labels = {
   zh: {
@@ -70,14 +70,7 @@ export function AgentWorkbench({
     base = site ? "/sites/" + site.id : "";
   const trail = history.siteId === site?.id ? history.cursors : [""],
     cursorKey = trail[trail.length - 1];
-  const runs = useLoad(
-    site
-      ? base +
-          "/agent-runs" +
-          (cursorKey ? "?cursor=" + encodeURIComponent(cursorKey) : "")
-      : null,
-    true,
-  );
+  const runs = useAgentRuns(site ? site.id : null, cursorKey);
   const context = useLoad(site ? base : null);
   const taskState = runs.data?.items
     .map((r: { id: string; status: string }) => r.id + ":" + r.status)

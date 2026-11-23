@@ -2285,14 +2285,22 @@ paths:
           application/json:
             schema:
               type: object
-              required: [ apiKey ]
+              additionalProperties: false
               properties:
-                apiKey: { type: string, maxLength: 512, writeOnly: true, description: Empty disconnects. }
+                apiKey: { type: string, maxLength: 512, writeOnly: true, description: Empty disconnects; omit to keep existing key when updating model, baseUrl or mode. }
+                baseUrl: { type: string, format: uri, maxLength: 500, description: Public HTTPS OpenAI-compatible base URL or exact non-production AI_LOCAL_BASE_URL. }
                 model:
                   {
                     type: string,
-                    default: gemini-3.1-flash-image,
-                    enum: [ gemini-3.1-flash-image, gpt-image-2, gpt-image-2.5-sunburst, gpt-image-2.6-sunburst ]
+                    minLength: 1,
+                    maxLength: 120,
+                    default: gpt-image-1
+                  }
+                mode:
+                  {
+                    type: string,
+                    enum: [ auto, images, chat ],
+                    default: auto
                   }
       responses:
         "200":
@@ -5670,6 +5678,61 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Validation / authorization / revision / fact / quota error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
+  /sites/{id}/agent-runs/stream:
+    get:
+      operationId: s24getsitesidagentrunsstream
+      summary: Authenticated SSE stream pushing live agent run status updates for a site
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: Server-Sent Events stream with event=runs JSON snapshots
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Site not found within current organization
           content:
             application/json:
               schema:
@@ -11858,7 +11921,12 @@ components:
           type: string
           format: uri
           maxLength: 500
-          description: Official OpenAI or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+          description: Public HTTPS OpenAI-compatible base URL (SSRF-verified) or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+        visionModelName:
+          type: string
+          minLength: 0
+          maxLength: 120
+          description: Optional dedicated vision model used when supportsVision is enabled and image inputs are attached.
         enabled:
           type: boolean
         configured:
@@ -12165,7 +12233,12 @@ components:
           type: string
           format: uri
           maxLength: 500
-          description: Official OpenAI or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+          description: Public HTTPS OpenAI-compatible base URL (SSRF-verified) or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+        visionModelName:
+          type: string
+          minLength: 0
+          maxLength: 120
+          description: Optional dedicated vision model used when supportsVision is enabled and image inputs are attached.
         enabled:
           type: boolean
         apiKey:
@@ -12469,11 +12542,13 @@ components:
         success: { type: boolean, enum: [ true ] }
         data:
           type: object
-          required: [ configured, model ]
+          required: [ configured, model, baseUrl, mode ]
           additionalProperties: false
           properties:
             configured: { type: boolean }
-            model: { type: string }
+            model: { type: string, maxLength: 120 }
+            baseUrl: { type: string, format: uri, maxLength: 500 }
+            mode: { type: string, enum: [ auto, images, chat ] }
     GeneratedImageResult:
       type: object
       required: [ success, data ]

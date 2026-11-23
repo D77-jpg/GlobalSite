@@ -8,7 +8,8 @@ import {
   type Response,
   type NextFunction,
 } from "express";
-import { Site, SitePage, AgentRun } from "../models";
+import { Site, SitePage, AgentRun, Session, Membership } from "../models";
+import { runIdentity, runWithTenant } from "../models/tenant-context";
 import { requireRole } from "../middleware/auth.middleware";
 import { objectId, listQuery } from "../validators/catalog.validator";
 import * as v from "../validators/sites.validator";
@@ -112,6 +113,111 @@ r.get(
       siteId: id(req),
       kind: "site.agent",
     });
+  }),
+);
+r.get(
+  "/sites/:id/agent-runs/stream",
+  wrap(async (req, res) => {
+    const siteId = id(req);
+    await sites.ownSite(siteId);
+    const limit = z.coerce.number().int().min(1).max(100).default(30).parse(req.query.limit);
+    const orgId = req.auth!.organizationId;
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "private, no-store, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
+    let closed = false;
+    let lastSignature: string | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const maxLife = setTimeout(() => {
+      if (!closed) {
+        closed = true;
+        clearTimeout(timer);
+        clearInterval(keepalive);
+        res.end();
+      }
+    }, 600000);
+    const keepalive = setInterval(() => {
+      if (!closed) res.write(": keepalive\n\n");
+    }, 15000);
+    req.on("close", () => {
+      closed = true;
+      clearTimeout(timer);
+      clearTimeout(maxLife);
+      clearInterval(keepalive);
+    });
+    const push = async () => {
+      if (closed) return;
+      try {
+        const alive = await runIdentity(async () => {
+          const [session, member] = await Promise.all([
+            Session.exists({
+              _id: req.auth!.sessionId,
+              revokedAt: { $exists: false },
+              accessExpiresAt: { $gt: new Date() },
+              expiresAt: { $gt: new Date() },
+            }),
+            Membership.exists({
+              userId: req.auth!.userId,
+              organizationId: orgId,
+              status: "active",
+            }),
+          ]);
+          return Boolean(session && member);
+        });
+        if (!alive || closed) {
+          if (!closed) {
+            closed = true;
+            clearTimeout(maxLife);
+            clearInterval(keepalive);
+            res.end();
+          }
+          return;
+        }
+        const snapshot = await runWithTenant(orgId, async () => {
+          const rows = await AgentRun.find({ siteId, kind: "site.agent" })
+            .sort({ _id: -1 })
+            .limit(limit + 1);
+          const slice = rows.slice(0, limit);
+          const hasMore = rows.length > limit;
+          const items = slice.map(agents.agentDto);
+          const hasActive = slice.some((r: any) =>
+            ["queued", "running", "cancelling"].includes(r.status),
+          );
+          const sig = slice
+            .map(
+              (r: any) =>
+                `${r._id}:${r.status}:${r.updatedAt?.getTime?.() ?? ""}:${(r.steps ?? []).map((s: any) => `${s.key}=${s.status}`).join(",")}`,
+            )
+            .join("|");
+          return {
+            sig,
+            hasActive,
+            payload: {
+              items,
+              hasMore,
+              nextCursor: hasMore ? String(slice[slice.length - 1]._id) : null,
+            },
+          };
+        });
+        if (closed) return;
+        if (snapshot.sig !== lastSignature) {
+          lastSignature = snapshot.sig;
+          res.write(`event: runs\ndata: ${JSON.stringify(snapshot.payload)}\n\n`);
+        }
+        timer = setTimeout(() => void push(), snapshot.hasActive ? 800 : 2500);
+      } catch {
+        if (!closed) {
+          closed = true;
+          clearTimeout(maxLife);
+          clearInterval(keepalive);
+          res.end();
+        }
+      }
+    };
+    await push();
   }),
 );
 r.post(

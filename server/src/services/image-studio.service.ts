@@ -6,15 +6,22 @@ import { audit } from "./audit.service";
 import { AppError, ensure } from "../errors";
 import { reserve, settle } from "./usage.service";
 import { detectMime, store } from "./storage.service";
+import { aiBase, aiFetch, localAiBase } from "./ai-target";
 
-const base = "https://www.codex789.com/v1";
-const defaultModel = "gemini-3.1-flash-image";
-export const imageModel = z.enum([
-  defaultModel,
-  "gpt-image-2",
-  "gpt-image-2.5-sunburst",
-  "gpt-image-2.6-sunburst",
-]);
+const defaultBase = () => localAiBase() ?? "https://api.openai.com/v1";
+const defaultModel = "gpt-image-1";
+
+export const imageMode = z.enum(["auto", "images", "chat"]);
+export const imageModel = z.string().trim().min(1).max(120);
+export const imageProviderInput = z
+  .object({
+    apiKey: z.string().trim().max(512).optional(),
+    baseUrl: z.string().trim().url().max(500).optional(),
+    model: imageModel.optional(),
+    mode: imageMode.optional(),
+  })
+  .strict();
+
 const shots = {
   campaign:
     "Wide landscape editorial campaign photograph. Stage the subject in the right half. Leave quiet negative space on the left for a headline.",
@@ -30,34 +37,55 @@ export const imageBrief = z
   })
   .strict();
 const purpose = () => "image-provider:" + tenantContext()!.organizationId;
+
 export async function imageStatus() {
   const p = await AgentAiProvider.findOne({ name: "images" })
-    .select("enabled modelName")
+    .select("enabled modelName baseUrl mode")
     .lean();
-  return { configured: !!p?.enabled, model: p?.modelName ?? defaultModel };
+  const mode = imageMode.safeParse(p?.mode).success
+    ? (p!.mode as z.infer<typeof imageMode>)
+    : "auto";
+  return {
+    configured: !!p?.enabled,
+    model: p?.modelName || defaultModel,
+    baseUrl: p?.baseUrl || defaultBase(),
+    mode,
+  };
 }
+
 export async function configureImages(
-  key: string,
+  input: z.infer<typeof imageProviderInput>,
   userId: string,
-  model: z.infer<typeof imageModel> = defaultModel,
 ) {
-  if (key)
-    await AgentAiProvider.updateOne(
-      { name: "images" },
-      {
-        $set: {
-          enabled: true,
-          modelName: model,
-          baseUrl: base,
-          secret: encrypt(key, purpose()),
-        },
+  if (input.apiKey === "") {
+    await AgentAiProvider.deleteOne({ name: "images" });
+    await audit("ai.images.configured", userId);
+    return imageStatus();
+  }
+  const existing = await AgentAiProvider.findOne({ name: "images" });
+  const targetBase = (
+    await aiBase(input.baseUrl ?? existing?.baseUrl ?? defaultBase())
+  ).href.replace(/\/+$/, "");
+  const model = input.model ?? existing?.modelName ?? defaultModel;
+  const mode = input.mode ?? (imageMode.safeParse(existing?.mode).success ? existing!.mode : "auto");
+  ensure(input.apiKey || existing?.secret, 400, "AI_KEY_REQUIRED");
+  await AgentAiProvider.updateOne(
+    { name: "images" },
+    {
+      $set: {
+        enabled: true,
+        modelName: model,
+        baseUrl: targetBase,
+        mode,
+        ...(input.apiKey ? { secret: encrypt(input.apiKey, purpose()) } : {}),
       },
-      { upsert: true },
-    );
-  else await AgentAiProvider.deleteOne({ name: "images" });
+    },
+    { upsert: true },
+  );
   await audit("ai.images.configured", userId);
   return imageStatus();
 }
+
 export async function decodeGeneratedImage(response: Response) {
   const reader = response.body?.getReader();
   ensure(reader, 502, "IMAGE_RESPONSE_INVALID");
@@ -109,12 +137,17 @@ export async function decodeGeneratedImage(response: Response) {
   );
   return { bytes, mime: mime! };
 }
+
 export async function generateImage(
   input: z.infer<typeof imageBrief>,
   key: string,
 ) {
   const p = await AgentAiProvider.findOne({ name: "images", enabled: true });
   ensure(p?.secret, 409, "IMAGE_PROVIDER_MISSING");
+  const baseUrl = (await aiBase(p.baseUrl || defaultBase())).href.replace(
+    /\/+$/,
+    "",
+  );
   const operation = "image:" + key;
   ensure(await reserve("images", 1, operation), 409, "IMAGE_ALREADY_SUBMITTED");
   const prompt = [
@@ -122,8 +155,11 @@ export async function generateImage(
     input.subject,
     "Original illustrative brand imagery. No text, logo, watermark, badges or certification marks.",
   ].join(" ");
-  const model = imageModel.parse(p.modelName),
-    chat = model === defaultModel;
+  const model = imageModel.parse(p.modelName || defaultModel);
+  const mode = imageMode.safeParse(p.mode).success
+    ? (p.mode as z.infer<typeof imageMode>)
+    : "auto";
+  const chat = mode === "chat" || (mode === "auto" && /gemini/i.test(model));
   const payload = chat
     ? {
         model,
@@ -137,8 +173,8 @@ export async function generateImage(
       };
   let response;
   try {
-    response = await fetch(
-      base + (chat ? "/chat/completions" : "/images/generations"),
+    response = await aiFetch(
+      baseUrl + (chat ? "/chat/completions" : "/images/generations"),
       {
         method: "POST",
         redirect: "error",

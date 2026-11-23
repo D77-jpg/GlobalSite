@@ -12,6 +12,7 @@ export async function getProvider() {
   return p
     ? {
         modelName: p.modelName,
+        visionModelName: p.visionModelName ?? "",
         supportsVision: !!p.supportsVision,
         baseUrl: p.baseUrl,
         enabled: p.enabled,
@@ -21,12 +22,14 @@ export async function getProvider() {
         enabled: false,
         configured: false,
         modelName: "",
+        visionModelName: "",
         baseUrl: localAiBase() ?? "https://api.openai.com/v1",
       };
 }
 export async function saveProvider(
   input: {
     modelName: string;
+    visionModelName?: string;
     baseUrl: string;
     enabled: boolean;
     supportsVision?: boolean;
@@ -34,7 +37,7 @@ export async function saveProvider(
   },
   userId: string,
 ) {
-  await aiBase(input.baseUrl);
+  const normalizedBase = (await aiBase(input.baseUrl)).href.replace(/\/+$/, "");
   const org = tenantContext()?.organizationId;
   ensure(org);
   const existing = await AgentAiProvider.findOne({ name: "default" });
@@ -43,10 +46,12 @@ export async function saveProvider(
     400,
     "AI_KEY_REQUIRED",
   );
+  const visionModel = (input.visionModelName ?? "").trim();
   const value = {
-    modelName: input.modelName,
+    modelName: input.modelName.trim(),
+    visionModelName: visionModel,
     supportsVision: !!input.supportsVision,
-    baseUrl: input.baseUrl,
+    baseUrl: normalizedBase,
     enabled: input.enabled,
     ...(input.apiKey ? { secret: encrypt(input.apiKey, "ai:" + org) } : {}),
   };

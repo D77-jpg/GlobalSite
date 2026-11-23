@@ -1032,12 +1032,21 @@ function UsagePage() {
     </div>
   );
 }
+const AI_PRESETS = [
+  { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1", vision: "gpt-4.1" },
+  { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", vision: "" },
+  { id: "openrouter", label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", vision: "anthropic/claude-sonnet-4" },
+  { id: "gemini", label: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-pro", vision: "gemini-2.5-flash" },
+  { id: "dashscope", label: "DashScope", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-max", vision: "qwen-vl-max" },
+  { id: "siliconflow", label: "SiliconFlow", baseUrl: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", vision: "Qwen/Qwen2.5-VL-72B-Instruct" },
+] as const;
 function AiPage() {
   const { t } = useI18n();
   const { me } = useContext(Auth);
   const { data, error, reload } = useData("/ai/provider");
   const [enabled, setEnabled] = useState(false);
   const [supportsVision, setSupportsVision] = useState(false);
+  const [draft, setDraft] = useState<{ modelName: string; visionModelName: string; baseUrl: string; rev: number }>();
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>();
@@ -1045,6 +1054,12 @@ function AiPage() {
     if (data) {
       setEnabled(data.enabled);
       setSupportsVision(!!data.supportsVision);
+      setDraft({
+        modelName: data.modelName ?? "",
+        visionModelName: data.visionModelName ?? "",
+        baseUrl: data.baseUrl ?? "https://api.openai.com/v1",
+        rev: Date.now(),
+      });
     }
   }, [data]);
   return (
@@ -1056,7 +1071,7 @@ function AiPage() {
       />
       {me.role !== "admin" ? (
         <Notice error={new ApiError("FORBIDDEN", 403)} />
-      ) : !data ? (
+      ) : !data || !draft ? (
         <Loading error={error} retry={reload} />
       ) : (
         <SettingsSection>
@@ -1068,12 +1083,41 @@ function AiPage() {
             </span>
           </div>
           <p>{t("aiNotice")}</p>
+          <div className="field">
+            <label>{t("providerPreset")}</label>
+            <div className="provider-presets">
+              {AI_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setDraft({
+                      modelName: preset.model,
+                      visionModelName: preset.vision,
+                      baseUrl: preset.baseUrl,
+                      rev: Date.now(),
+                    });
+                    setSupportsVision(Boolean(preset.vision));
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <Notice error={actionError} success={success} />
           <Form
-            key={data.modelName + data.configured}
+            key={draft.rev}
             fields={[
+              { key: "baseUrl", label: "baseUrl" },
               { key: "modelName", label: "modelName" },
-              { key: "baseUrl", label: "baseUrl", readOnly: true },
+              {
+                key: "visionModelName",
+                label: "visionModelName",
+                optional: true,
+                placeholder: t("visionModelHint"),
+              },
               {
                 key: "apiKey",
                 label: "apiKey",
@@ -1082,10 +1126,15 @@ function AiPage() {
                 placeholder: data.configured ? t("keepKey") : undefined,
               },
             ]}
-            initial={{ modelName: data.modelName, baseUrl: data.baseUrl }}
+            initial={{
+              modelName: draft.modelName,
+              visionModelName: draft.visionModelName,
+              baseUrl: draft.baseUrl,
+            }}
             onSubmit={async (value) => {
               await api("/ai/provider", "PUT", {
                 modelName: value.modelName,
+                visionModelName: value.visionModelName ?? "",
                 baseUrl: value.baseUrl,
                 enabled,
                 supportsVision,

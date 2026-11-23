@@ -238,7 +238,9 @@ export const AgentAiProvider = entity<ProviderRow>(
   {
     name: String,
     modelName: String,
+    visionModelName: String,
     supportsVision: { type: Boolean, default: false },
+    mode: String,
     baseUrl: String,
     enabled: { type: Boolean, default: false },
     secret: Schema.Types.Mixed,

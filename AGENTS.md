@@ -144,3 +144,10 @@
 
 - S23 失败候选按组织/任务/单元独立用途加密，仅显式 reuseRunId 且来源/页面修订一致时重用；所有事实/栏目/深度门禁重新执行。未知计费操作不可免费复用；原任务历史/计量不可改写。
 - S23 图片裁切与目录索引必须验证实际计算样式和标签宽度，不能以无横向溢出代替布局合格；可信 CSS 的通用规则不能覆盖区块 contain 意图。
+
+## S24 AI 底座、生图配置与并发引擎
+- 见 docs/design/S24-AI底座与并发引擎.md。AI 与生图服务端点统一经 ai-target 的 publicUrl() SSRF 校验（禁止私网 IP、IP 字面量、保留 TLD、路径穿越与重定向），支持任意公开 HTTPS OpenAI 兼容接口及可选 AI_ALLOWED_HOSTS 域名白名单，保留非生产精确 AI_LOCAL_BASE_URL 例外。
+- 禁止在源码或文案中硬编码第三方中转域名；生图服务支持自定义 baseUrl、model 与 mode（auto/images/chat），保留加密存储、空 apiKey 断开与不重填密钥更新参数。
+- AgentAiProvider 可选 visionModelName 仅在 supportsVision=true 且附带图片输入时生效，留空回退 modelName。
+- Worker 分为 fast（mail/inquiry.*/crm.*）与 heavy（site.agent/site.build/site.deploy/catalog.*）双车道并发，默认各 2，保留租约、owner、fencingToken 与站点活动锁。
+- GET /api/v1/sites/:id/agent-runs/stream 为鉴权 SSE，必须保持组织隔离并在循环内复查会话与当前成员状态，撤销后立即断开。

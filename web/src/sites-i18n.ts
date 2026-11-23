@@ -63,8 +63,8 @@ export const siteMessages = {
   coverStudio: ["生成页面主视觉", "Create a cover image"],
   coverBrief: ["画面描述（可编辑）", "Art direction (editable)"],
   coverConsent: [
-    "仅将上方描述发给 codex789.com 生成一张概念图，服务商按次计费。",
-    "Send the description above to codex789.com for one concept image. Provider charges apply.",
+    "仅将上方描述发给组织配置的生图服务商生成一张概念图，按服务商费率计费。",
+    "Send the description above to your organization's configured image provider for one concept image. Provider charges apply.",
   ],
   coverGenerate: ["生成候选配图", "Generate candidate"],
   coverGenerating: ["正在生成…", "Generating…"],

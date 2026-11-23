@@ -62,6 +62,48 @@ export function useLoad(path: string | null, poll = false) {
     set: (value: any) => path && setState({ path, value }),
   };
 }
+export function useAgentRuns(siteId: string | null, cursor = "") {
+  const path = siteId
+    ? "/sites/" +
+      siteId +
+      "/agent-runs" +
+      (cursor ? "?cursor=" + encodeURIComponent(cursor) : "")
+    : null;
+  const [fallbackPoll, setFallbackPoll] = useState(
+    () => typeof EventSource === "undefined",
+  );
+  const canStream = Boolean(siteId && !cursor && !fallbackPoll);
+  const loaded = useLoad(path, !canStream && Boolean(siteId));
+  useEffect(() => {
+    if (!siteId || cursor || typeof EventSource === "undefined") return;
+    setFallbackPoll(false);
+    let live = true;
+    const source = new EventSource(
+      "/api/v1/sites/" + encodeURIComponent(siteId) + "/agent-runs/stream",
+      { withCredentials: true },
+    );
+    const onRuns = (event: MessageEvent) => {
+      if (!live) return;
+      try {
+        loaded.set(JSON.parse(event.data));
+      } catch {
+        /* ignore malformed frame */
+      }
+    };
+    source.addEventListener("runs", onRuns as EventListener);
+    source.onerror = () => {
+      if (!live) return;
+      source.close();
+      setFallbackPoll(true);
+    };
+    return () => {
+      live = false;
+      source.removeEventListener("runs", onRuns as EventListener);
+      source.close();
+    };
+  }, [siteId, cursor]);
+  return loaded;
+}
 function useAction() {
   const [error, setError] = useState<unknown>(),
     [busy, setBusy] = useState(false),
@@ -433,13 +475,7 @@ export function SiteWorkspace({ locale, role }: Props) {
     taskCursor = taskTrail[taskTrail.length - 1],
     load = useLoad("/sites/" + id),
     sources = useLoad("/sites/" + id + "/sources"),
-    runs = useLoad(
-      "/sites/" +
-        id +
-        "/agent-runs" +
-        (taskCursor ? "?cursor=" + encodeURIComponent(taskCursor) : ""),
-      true,
-    ),
+    runs = useAgentRuns(id ?? null, taskCursor),
     pages = useLoad("/sites/" + id + "/pages"),
     ready = useLoad("/sites/" + id + "/readiness"),
     requestedTab = query.get("tab") ?? "guide",

@@ -1060,6 +1060,11 @@ export function ImportPage({ locale, role }: Props) {
     </Frame>
   );
 }
+const IMAGE_PRESETS = [
+  { id: "openai", label: "OpenAI Images", baseUrl: "https://api.openai.com/v1", model: "gpt-image-1", mode: "images" },
+  { id: "gemini", label: "Gemini Image", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash-image", mode: "chat" },
+  { id: "openrouter", label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", model: "google/gemini-2.5-flash-image", mode: "chat" },
+] as const;
 function ImageStudio({
   locale,
   role,
@@ -1068,8 +1073,12 @@ function ImageStudio({
   const t = catalogText(locale),
     status = useLoad("/assets/image-provider"),
     action = useAction();
-  const [selectedModel, setSelectedModel] = useState(""),
-    model = selectedModel || status.data?.model || "gemini-3.1-flash-image",
+  const [selectedBaseUrl, setSelectedBaseUrl] = useState(""),
+    [selectedModel, setSelectedModel] = useState(""),
+    [selectedMode, setSelectedMode] = useState(""),
+    baseUrl = selectedBaseUrl || status.data?.baseUrl || "https://api.openai.com/v1",
+    model = selectedModel || status.data?.model || "gpt-image-1",
+    mode = selectedMode || status.data?.mode || "auto",
     [key, setKey] = useState(""),
     [subject, setSubject] = useState(""),
     [composition, setComposition] = useState("campaign"),
@@ -1079,21 +1088,54 @@ function ImageStudio({
       {role === "admin" && (
         <details open={status.data && !status.data.configured}>
           <summary>{t("imageConnection")}</summary>
-          <p>codex789.com · {status.data?.model}</p>
+          {status.data?.configured && (
+            <p className="muted">
+              {status.data.baseUrl} · {status.data.model}
+            </p>
+          )}
+          <div className="catalog-actions">
+            {IMAGE_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setSelectedBaseUrl(preset.baseUrl);
+                  setSelectedModel(preset.model);
+                  setSelectedMode(preset.mode);
+                }}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <label>
+            {t("imageBaseUrl")}
+            <input
+              type="url"
+              value={baseUrl}
+              onChange={(e) => setSelectedBaseUrl(e.target.value)}
+              placeholder="https://api.openai.com/v1"
+            />
+          </label>
           <label>
             {t("imageModel")}
-            <select
+            <input
+              type="text"
               value={model}
               onChange={(e) => setSelectedModel(e.target.value)}
+              placeholder="gpt-image-1"
+            />
+          </label>
+          <label>
+            {t("imageMode")}
+            <select
+              value={mode}
+              onChange={(e) => setSelectedMode(e.target.value)}
             >
-              {[
-                "gemini-3.1-flash-image",
-                "gpt-image-2",
-                "gpt-image-2.5-sunburst",
-                "gpt-image-2.6-sunburst",
-              ].map((v) => (
-                <option key={v}>{v}</option>
-              ))}
+              <option value="auto">{t("imageModeAuto")}</option>
+              <option value="images">{t("imageModeImages")}</option>
+              <option value="chat">{t("imageModeChat")}</option>
             </select>
           </label>
           <label>
@@ -1103,19 +1145,25 @@ function ImageStudio({
               autoComplete="off"
               value={key}
               onChange={(e) => setKey(e.target.value)}
+              placeholder={status.data?.configured ? t("imageKeepKey") : undefined}
             />
           </label>
           <button
-            disabled={!key.trim() || action.busy}
+            disabled={(!key.trim() && !status.data?.configured) || !model.trim() || !baseUrl.trim() || action.busy}
             onClick={() =>
               void action.run(async () => {
                 status.replace(
                   await api("/assets/image-provider", "PUT", {
-                    apiKey: key,
-                    model,
+                    ...(key.trim() ? { apiKey: key.trim() } : {}),
+                    baseUrl: baseUrl.trim(),
+                    model: model.trim(),
+                    mode,
                   }),
                 );
                 setKey("");
+                setSelectedBaseUrl("");
+                setSelectedModel("");
+                setSelectedMode("");
               })
             }
           >

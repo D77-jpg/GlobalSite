@@ -106,7 +106,12 @@ export async function callSiteAgent(
             decrypt(provider.secret, "ai:" + tenantContext()!.organizationId),
         },
         body: JSON.stringify({
-          model: provider.modelName,
+          model:
+            provider.supportsVision &&
+            images.length > 0 &&
+            provider.visionModelName
+              ? provider.visionModelName
+              : provider.modelName,
           max_tokens: maxTokens,
           response_format: { type: "json_object" },
           messages,

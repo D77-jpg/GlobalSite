@@ -671,8 +671,9 @@ export function createApp() {
             z
               .object({
                 supportsVision: z.boolean().optional(),
-                modelName: z.string().min(1).max(120),
-                baseUrl: z.string().url().max(500),
+                modelName: z.string().trim().min(1).max(120),
+                visionModelName: z.string().trim().max(120).optional(),
+                baseUrl: z.string().trim().url().max(500),
                 enabled: z.boolean(),
                 apiKey: z.string().min(1).max(512).optional(),
               })
