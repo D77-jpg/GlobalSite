@@ -355,6 +355,17 @@ r.post(
     ok(res, await sites.createPage(id(req), key, actor(req)), 201);
   }),
 );
+r.post(
+  "/sites/:id/pages/batch-approve",
+  admin,
+  wrap(async (req, res) => {
+    const d = v.batchReviewInput.parse(req.body);
+    ok(
+      res,
+      await sites.batchApprovePages(id(req), d.items, actor(req), d.reason),
+    );
+  }),
+);
 r.get(
   "/pages/:id",
   wrap(async (req, res) =>
@@ -391,6 +402,11 @@ r.post(
       await sites.reviewPage(id(req), d.revision, false, actor(req), d.reason),
     );
   }),
+);
+r.post(
+  "/pages/:id/preview-draft",
+  edit,
+  wrap(async (req, res) => ok(res, await sites.previewDraft(id(req), req.body))),
 );
 r.get(
   "/pages/:id/preview",

@@ -156,3 +156,8 @@
 - 见 docs/design/S25-旗舰官网引擎与多语种.md。站点支持 en/es/fr/de/ja/ar/ru/zh 8 种语言（ar 自动 dir="rtl"），静态模板与 inquiry.js 动态文案统一由 storefront-i18n.service.ts 本地化；非英语站点保留全部数值/认证/邮箱/链接事实门禁。
 - 新增 gallery/metrics/certifications/showcase 四类白名单区块；metrics 与 certifications 为强证据区块，必须引用匹配的当前 confirmed 事实，渲染器同步过滤无依据条目。
 - composition 可选扩展 obsidian/ivory/ocean/brand 配色、luxury/geometric 字体及 surface/headerStyle/radius，继续禁用模型 HTML/CSS/JS；brandChannels 仅由管理员配置并严格校验协议与域名，不接受 AI 编造联系方式。
+
+## S26 分屏可视化编辑与精简审批流
+- 见 docs/design/S26-可视化编辑与审批流.md。POST /api/v1/pages/:id/preview-draft 在内存中校验并渲染未保存草稿，不修改数据库状态或页面审批，iframe 仍仅加载 trustedPreview 打包样式。
+- saveSite 仅在结构性字段（name/templateId/targetMarkets/language/productIds/businessBrief/buyerProfile）变化时清空 confirmedPlanHash 与 designDirection；仅修改 brandChannels/brandColor/logoId 时保留。
+- POST /api/v1/facts/batch-confirm 与 POST /api/v1/sites/:id/pages/batch-approve 仅限管理员，逐条执行原修订锁、审计与完整 validatePage 事实/组合门禁，禁止绕过门禁。

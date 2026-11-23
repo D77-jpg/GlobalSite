@@ -445,6 +445,16 @@ export const pagePatch = z.object({ revision, data: pageInput }).strict();
 export const review = z
   .object({ revision, reason: z.string().trim().max(500).optional() })
   .strict();
+export const batchReviewInput = z
+  .object({
+    items: z
+      .array(z.object({ id: objectId, revision }).strict())
+      .min(1)
+      .max(50),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .strict()
+  .refine((x) => new Set(x.items.map((i) => i.id)).size === x.items.length);
 export const agentInput = z
   .object({
     step: z.enum([

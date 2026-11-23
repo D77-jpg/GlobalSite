@@ -3985,6 +3985,81 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CatalogFactPatch"
+  /facts/batch-confirm:
+    post:
+      operationId: s26postfactsbatchconfirm
+      summary: Batch confirm candidate facts; admin only, revision guarded and audited per item.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, revision]
+                    properties:
+                      id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      revision: { type: integer, minimum: 1 }
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        "200":
+          description: Batch confirmation summary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [confirmed, skipped]
+                    properties:
+                      confirmed:
+                        type: array
+                        items: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      skipped:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          required: [id, code]
+                          properties:
+                            id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                            code: { type: string, minLength: 1, maxLength: 80 }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Insufficient role or CSRF rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /facts/{id}/confirm:
     post:
       operationId: catalogpostfactsidconfirm
@@ -6552,6 +6627,157 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SiteReviewInput"
+  /sites/{id}/pages/batch-approve:
+    post:
+      operationId: s26postsitesidpagesbatchapprove
+      summary: Batch approve valid pages belonging to a site; admin only, runs full fact and composition gate per page.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, revision]
+                    properties:
+                      id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      revision: { type: integer, minimum: 1 }
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        "200":
+          description: Batch approval summary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [approved, skipped]
+                    properties:
+                      approved:
+                        type: array
+                        items: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      skipped:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          required: [id, code]
+                          properties:
+                            id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                            code: { type: string, minLength: 1, maxLength: 80 }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Insufficient role or CSRF rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Site not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /pages/{id}/preview-draft:
+    post:
+      operationId: s26postpagesidpreviewdraft
+      summary: Render an unsaved page draft in memory with live fact and composition validation without mutating state.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SitePageInput"
+      responses:
+        "200":
+          description: Live preview HTML and current validation issues
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [html, hash, issues]
+                    properties:
+                      html: { type: string }
+                      hash: { type: string }
+                      issues:
+                        type: array
+                        items: { $ref: "#/components/schemas/SiteIssue" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Insufficient role or CSRF rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /pages/{id}/preview:
     get:
       operationId: s4getpagesidpreview

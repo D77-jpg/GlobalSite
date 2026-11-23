@@ -32,6 +32,7 @@ import {
   saveFact,
   factDto,
   transitionFact,
+  batchConfirmFacts,
 } from "../services/catalog.service";
 import {
   prepareImport,
@@ -313,6 +314,28 @@ router.patch(
     await owned(FactSheet, id(req));
     const d = v.factPatch.parse(req.body);
     ok(res, await saveFact(d.data, req.auth!.userId, id(req), d.revision));
+  }),
+);
+router.post(
+  "/facts/batch-confirm",
+  admin,
+  wrap(async (req, res) => {
+    const d = z
+      .object({
+        items: z
+          .array(
+            z
+              .object({ id: v.objectId, revision: v.revision })
+              .strict(),
+          )
+          .min(1)
+          .max(50),
+        reason: z.string().trim().max(500).optional(),
+      })
+      .strict()
+      .refine((x) => new Set(x.items.map((i) => i.id)).size === x.items.length)
+      .parse(req.body);
+    ok(res, await batchConfirmFacts(d.items, req.auth!.userId, d.reason));
   }),
 );
 for (const [action, status] of [

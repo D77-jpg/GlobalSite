@@ -16,7 +16,7 @@ import {
 import { runIdentity, tenantContext } from "../models/tenant-context";
 import { Organization } from "../models";
 import { plans } from "../constants/plans";
-import { ensure } from "../errors";
+import { ensure, AppError } from "../errors";
 import * as v from "../validators/sites.validator";
 import { pinAssets, productDto, factDto, sha } from "./catalog.service";
 import {
@@ -99,12 +99,29 @@ export async function saveSite(
         409,
         "STEP_BUSY",
       );
+      const structuralChanged =
+        before.name !== data.name ||
+        before.templateId !== data.templateId ||
+        before.language !== data.language ||
+        (before.businessBrief ?? "") !== (data.businessBrief ?? "") ||
+        JSON.stringify(before.targetMarkets ?? []) !==
+          JSON.stringify(data.targetMarkets ?? []) ||
+        JSON.stringify((before.productIds ?? []).map(String)) !==
+          JSON.stringify(data.productIds) ||
+        JSON.stringify(before.buyerProfile ?? null) !==
+          JSON.stringify(data.buyerProfile ?? null);
+      const unsetFields: Record<string, 1> = {};
+      if (structuralChanged) {
+        unsetFields.confirmedPlanHash = 1;
+        unsetFields.designDirection = 1;
+      }
+      if (!data.brandChannels) unsetFields.brandChannels = 1;
       result = await Site.findOneAndUpdate(
         { _id: id, revision },
         {
           $set: data,
           $inc: { revision: 1 },
-          $unset: { confirmedPlanHash: 1, designDirection: 1 },
+          ...(Object.keys(unsetFields).length ? { $unset: unsetFields } : {}),
         },
         { session, new: true },
       );
@@ -722,6 +739,43 @@ export async function reviewPage(
     );
   });
   return pageView(result);
+}
+export async function previewDraft(id: string, input: unknown) {
+  const data = v.pageInput.parse(input);
+  const page = await ownedPage(id);
+  const site = await ownSite(String(page.siteId));
+  const planned = site.plan?.nodes.find((n: any) => n.key === page.nodeKey);
+  const node = planned ?? {
+    key: page.nodeKey,
+    path: page.path,
+    type: page.type,
+    productId: page.productId ? String(page.productId) : null,
+  };
+  return preview(id, { site, node, data });
+}
+export async function batchApprovePages(
+  siteId: string,
+  items: Array<{ id: string; revision: number }>,
+  actor: string,
+  reason?: string,
+) {
+  await ownSite(siteId);
+  const approved: string[] = [];
+  const skipped: Array<{ id: string; code: string }> = [];
+  for (const item of items) {
+    try {
+      const page = await SitePage.findOne({ _id: item.id, siteId });
+      ensure(page, 404, "NOT_FOUND");
+      await reviewPage(item.id, item.revision, true, actor, reason);
+      approved.push(item.id);
+    } catch (err) {
+      skipped.push({
+        id: item.id,
+        code: err instanceof AppError ? err.code : "APPROVAL_FAILED",
+      });
+    }
+  }
+  return { approved, skipped };
 }
 export async function preview(
   id: string,

@@ -893,6 +893,44 @@ export function SiteWorkspace({ locale, role }: Props) {
                   {t("readiness")}
                 </button>
               </section>
+              {role === "admin" &&
+                (() => {
+                  const approvable = (pages.data?.items ?? []).filter(
+                    (p: Row) =>
+                      p.status !== "approved" && (p.issues?.length ?? 0) === 0,
+                  );
+                  return approvable.length > 0 ? (
+                    <div className="studio-batch-bar">
+                      <span>
+                        <strong>{approvable.length}</strong>{" "}
+                        {t("readyToApproveCount")}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={a.busy}
+                        onClick={() =>
+                          void a.run(async () => {
+                            await api(
+                              "/sites/" + id + "/pages/batch-approve",
+                              "POST",
+                              {
+                                items: approvable.map((p: Row) => ({
+                                  id: p.id,
+                                  revision: p.revision,
+                                })),
+                              },
+                            );
+                            pages.reload();
+                            ready.reload();
+                          })
+                        }
+                      >
+                        <CheckCheck size={15} />
+                        {t("batchApprove")} ({approvable.length})
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
               <div className="sites-cards">
                 {site.plan?.nodes.map((n: Row) => {
                   const p = pages.data?.items.find(
@@ -1738,8 +1776,19 @@ function PageEditor({
       refs: page.refs,
       blocks: page.blocks,
     }),
+    [history, setHistory] = useState<{ past: Row[]; future: Row[] }>({
+      past: [],
+      future: [],
+    }),
     [dirty, setDirty] = useState(false),
     [preview, setPreview] = useState(""),
+    [splitOpen, setSplitOpen] = useState(true),
+    [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop"),
+    [liveHtml, setLiveHtml] = useState(""),
+    [liveIssues, setLiveIssues] = useState<Row[] | null>(null),
+    [previewSyncing, setPreviewSyncing] = useState(false),
+    [previewNonce, setPreviewNonce] = useState(0),
+    [dragKey, setDragKey] = useState<string | null>(null),
     [editingBlock, setEditingBlock] = useState<string>(
       page.blocks[0]?.key ?? "",
     ),
@@ -1774,9 +1823,70 @@ function PageEditor({
       if (run.data.status === "succeeded") reload();
     }
   }, [run.data?.status]);
+  useEffect(() => {
+    if (!splitOpen) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      setPreviewSyncing(true);
+      const req = canEdit
+        ? api("/pages/" + page.id + "/preview-draft", "POST", data)
+        : api("/pages/" + page.id + "/preview");
+      void req
+        .then((res) => {
+          if (!active) return;
+          setLiveHtml(res.html);
+          setLiveIssues(res.issues ?? []);
+        })
+        .catch(() => {
+          /* keep last valid preview while draft has incomplete required fields */
+        })
+        .finally(() => {
+          if (active) setPreviewSyncing(false);
+        });
+    }, 450);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [splitOpen, data, page.id, canEdit, previewNonce]);
   const update = (patch: Row) => {
     setDirty(true);
-    setData((old: Row) => ({ ...old, ...patch }));
+    setData((old: Row) => {
+      setHistory((h) => ({ past: [...h.past.slice(-29), old], future: [] }));
+      return { ...old, ...patch };
+    });
+  };
+  const undo = () => {
+    if (!history.past.length) return;
+    const previous = history.past[history.past.length - 1];
+    setHistory((h) => ({
+      past: h.past.slice(0, -1),
+      future: [data, ...h.future.slice(0, 29)],
+    }));
+    setData(previous);
+    setDirty(true);
+  };
+  const redo = () => {
+    if (!history.future.length) return;
+    const next = history.future[0];
+    setHistory((h) => ({
+      past: [...h.past.slice(-29), data],
+      future: h.future.slice(1),
+    }));
+    setData(next);
+    setDirty(true);
+  };
+  const moveBlock = (fromIndex: number, toIndex: number) => {
+    if (
+      fromIndex === toIndex ||
+      toIndex < 0 ||
+      toIndex >= data.blocks.length
+    )
+      return;
+    const next = [...data.blocks];
+    const [item] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, item);
+    update({ blocks: next });
   };
   const blockUpdate = (key: string, patch: Row) =>
     update({
@@ -1784,6 +1894,7 @@ function PageEditor({
         b.key === key ? { ...b, ...patch } : b,
       ),
     });
+  const displayedIssues = liveIssues ?? page.issues;
   const selectedBlock = data.blocks.some((b: Row) => b.key === editingBlock)
     ? editingBlock
     : data.blocks[0]?.key;
@@ -1797,6 +1908,33 @@ function PageEditor({
       actions={
         <>
           <Badge status={page.status} t={t} />
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!history.past.length || locked}
+                onClick={undo}
+              >
+                {t("undo")}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!history.future.length || locked}
+                onClick={redo}
+              >
+                {t("redo")}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setSplitOpen((v) => !v)}
+          >
+            {t(splitOpen ? "hidePreview" : "splitView")}
+          </button>
           <Link className="button secondary" to={"/sites/" + page.siteId}>
             {t("sites")}
           </Link>
@@ -1804,7 +1942,7 @@ function PageEditor({
       }
     >
       <Notice t={t} error={a.error} saved={a.saved} />
-      <IssueList issues={page.issues} t={t} />
+      <IssueList issues={displayedIssues} t={t} />
       <nav className="studio-jumps" aria-label={t("editorJump")}>
         <Layers3 size={15} />
         <a href="#editor-meta">{t("metaFields")}</a>
@@ -1815,6 +1953,8 @@ function PageEditor({
         )}
         <a href="#editor-review">{t("pageReview")}</a>
       </nav>
+      <div className={"studio-split" + (splitOpen ? " has-preview" : "")}>
+      <div className="studio-editor-col">
       {canEdit && (
         <details className="catalog-panel">
           <summary>{t("coverStudio")}</summary>
@@ -2076,6 +2216,137 @@ function PageEditor({
               />
             </label>
           </div>
+          {data.presentation.composition && (
+            <div className="catalog-grid">
+              <label>
+                {t("palette")}
+                <select
+                  value={data.presentation.composition.palette}
+                  onChange={(e) =>
+                    update({
+                      presentation: {
+                        ...data.presentation,
+                        composition: {
+                          ...data.presentation.composition,
+                          palette: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                >
+                  {[
+                    "graphite",
+                    "cobalt",
+                    "clay",
+                    "forest",
+                    "violet",
+                    "obsidian",
+                    "ivory",
+                    "ocean",
+                    "brand",
+                  ].map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t("typography")}
+                <select
+                  value={data.presentation.composition.typography}
+                  onChange={(e) =>
+                    update({
+                      presentation: {
+                        ...data.presentation,
+                        composition: {
+                          ...data.presentation.composition,
+                          typography: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                >
+                  {["sans", "editorial", "technical", "luxury", "geometric"].map(
+                    (v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label>
+                {t("surface")}
+                <select
+                  value={data.presentation.composition.surface ?? "light"}
+                  onChange={(e) =>
+                    update({
+                      presentation: {
+                        ...data.presentation,
+                        composition: {
+                          ...data.presentation.composition,
+                          surface: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                >
+                  {["light", "warm", "contrast"].map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t("headerStyle")}
+                <select
+                  value={data.presentation.composition.headerStyle ?? "classic"}
+                  onChange={(e) =>
+                    update({
+                      presentation: {
+                        ...data.presentation,
+                        composition: {
+                          ...data.presentation.composition,
+                          headerStyle: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                >
+                  {["classic", "editorial", "minimal"].map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {t("radius")}
+                <select
+                  value={data.presentation.composition.radius ?? "subtle"}
+                  onChange={(e) =>
+                    update({
+                      presentation: {
+                        ...data.presentation,
+                        composition: {
+                          ...data.presentation.composition,
+                          radius: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                >
+                  {["sharp", "subtle", "rounded"].map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
         </fieldset>
       ) : (
         canEdit && (
@@ -2110,17 +2381,56 @@ function PageEditor({
           aria-label={t("blockEditor")}
         >
           {data.blocks.map((b: Row, i: number) => (
-            <button
+            <div
               key={b.key}
-              aria-pressed={b.key === selectedBlock}
-              onClick={() => setEditingBlock(b.key)}
+              className="studio-block-item"
+              draggable={canEdit && !locked}
+              onDragStart={() => setDragKey(b.key)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                if (!dragKey || dragKey === b.key) return;
+                const from = data.blocks.findIndex(
+                  (x: Row) => x.key === dragKey,
+                );
+                if (from >= 0) moveBlock(from, i);
+                setDragKey(null);
+              }}
+              onDragEnd={() => setDragKey(null)}
             >
-              <span>{i + 1}</span>
-              {b.heading || b.key}
-              {page.issues.some((v: Row) => v.blockKey === b.key) && (
-                <small>{t("needsEvidence")}</small>
+              <button
+                type="button"
+                aria-pressed={b.key === selectedBlock}
+                onClick={() => setEditingBlock(b.key)}
+              >
+                <span>{i + 1}</span>
+                {b.heading || b.key}
+                {displayedIssues.some((v: Row) => v.blockKey === b.key) && (
+                  <small>{t("needsEvidence")}</small>
+                )}
+              </button>
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    className="secondary studio-block-move"
+                    aria-label={t("moveUp")}
+                    disabled={locked || i === 0}
+                    onClick={() => moveBlock(i, i - 1)}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary studio-block-move"
+                    aria-label={t("moveDown")}
+                    disabled={locked || i === data.blocks.length - 1}
+                    onClick={() => moveBlock(i, i + 1)}
+                  >
+                    ↓
+                  </button>
+                </>
               )}
-            </button>
+            </div>
           ))}
         </nav>
       )}
@@ -2141,17 +2451,40 @@ function PageEditor({
                   {t("jobStep")} {index + 1} · {b.key}
                 </h2>
                 {canEdit && (
-                  <button
-                    className="secondary"
-                    disabled={locked}
-                    onClick={() =>
-                      update({
-                        blocks: data.blocks.filter((x: Row) => x.key !== b.key),
-                      })
-                    }
-                  >
-                    {t("remove")}
-                  </button>
+                  <div className="catalog-actions">
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={locked || data.blocks.length >= 20}
+                      onClick={() => {
+                        const copyKey =
+                          b.key.slice(0, 48) +
+                          "-" +
+                          crypto.randomUUID().slice(0, 6);
+                        const clone = { ...structuredClone(b), key: copyKey };
+                        const next = [...data.blocks];
+                        next.splice(index + 1, 0, clone);
+                        setEditingBlock(copyKey);
+                        update({ blocks: next });
+                      }}
+                    >
+                      {t("duplicateBlock")}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={locked}
+                      onClick={() =>
+                        update({
+                          blocks: data.blocks.filter(
+                            (x: Row) => x.key !== b.key,
+                          ),
+                        })
+                      }
+                    >
+                      {t("remove")}
+                    </button>
+                  </div>
                 )}
               </div>
               <IssueList
@@ -2608,29 +2941,57 @@ function PageEditor({
                 />
               </fieldset>
               {canEdit && (
-                <button
-                  className="secondary"
-                  disabled={locked || dirty || !consent}
-                  onClick={() =>
-                    void a.run(async () => {
-                      const r = await api(
-                        "/sites/" + page.siteId + "/agent-runs",
-                        "POST",
-                        {
-                          step: "rewrite",
-                          consent: true,
-                          pageId: page.id,
-                          blockKey: b.key,
-                          instructions,
-                        },
-                        { "Idempotency-Key": crypto.randomUUID() },
-                      );
-                      setJob(r.id);
-                    })
-                  }
-                >
-                  {t("rewrite")}
-                </button>
+                <div className="studio-rewrite-box">
+                  <strong>{t("aiBlockRewrite")}</strong>
+                  <div className="studio-chips">
+                    {[
+                      t("rewriteChipConcise"),
+                      t("rewriteChipValue"),
+                      t("rewriteChipGuidance"),
+                    ].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        className="secondary"
+                        disabled={locked}
+                        onClick={() => setInstructions(chip)}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={locked || !consent}
+                    onClick={() =>
+                      void a.run(async () => {
+                        if (dirty) {
+                          await api("/pages/" + page.id, "PATCH", {
+                            revision: page.revision,
+                            data,
+                          });
+                          setDirty(false);
+                        }
+                        const r = await api(
+                          "/sites/" + page.siteId + "/agent-runs",
+                          "POST",
+                          {
+                            step: "rewrite",
+                            consent: true,
+                            pageId: page.id,
+                            blockKey: b.key,
+                            instructions,
+                          },
+                          { "Idempotency-Key": crypto.randomUUID() },
+                        );
+                        setJob(r.id);
+                      })
+                    }
+                  >
+                    {dirty ? t("saveAndRewrite") : t("rewrite")}
+                  </button>
+                </div>
               )}
             </section>
           ),
@@ -2798,6 +3159,67 @@ function PageEditor({
           </>
         )}
       </section>
+      </div>
+      {splitOpen && (
+        <aside
+          className="catalog-panel studio-preview-pane"
+          aria-label={t("livePreview")}
+        >
+          <div className="studio-preview-bar">
+            <strong>
+              {t("livePreview")}
+              {previewSyncing ? " · " + t("previewSyncing") : ""}
+            </strong>
+            <div className="catalog-actions">
+              {(["desktop", "tablet", "mobile"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className="secondary"
+                  aria-pressed={viewport === mode}
+                  onClick={() => setViewport(mode)}
+                >
+                  {t(
+                    mode === "desktop"
+                      ? "viewportDesktop"
+                      : mode === "tablet"
+                        ? "viewportTablet"
+                        : "viewportMobile",
+                  )}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="secondary"
+                disabled={previewSyncing}
+                onClick={() => setPreviewNonce((n) => n + 1)}
+              >
+                {t("refreshPreview")}
+              </button>
+            </div>
+          </div>
+          {liveHtml ? (
+            <iframe
+              title={t("livePreview")}
+              sandbox="allow-same-origin"
+              srcDoc={trustedPreview(liveHtml)}
+              className={
+                "sites-preview studio-preview-frame" +
+                (viewport === "mobile"
+                  ? " mobile"
+                  : viewport === "tablet"
+                    ? " tablet"
+                    : "")
+              }
+            />
+          ) : (
+            <p className="muted" role="status">
+              {t("previewSyncing")}
+            </p>
+          )}
+        </aside>
+      )}
+      </div>
     </Frame>
   );
 }

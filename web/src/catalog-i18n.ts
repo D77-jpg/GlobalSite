@@ -242,6 +242,10 @@ export const catalogMessages = {
   manual: ["人工", "Manual"],
   asset: ["上传资料", "Uploaded file"],
   confirm: ["确认", "Confirm"],
+  batchConfirm: ["批量确认所选", "Batch confirm selected"],
+  selectAllCandidates: ["全选本页待确认", "Select all pending on page"],
+  clearSelection: ["清空选择", "Clear selection"],
+  selectedCount: ["项已选", "selected"],
   reject: ["驳回", "Reject"],
   edit: ["编辑", "Edit"],
   reviewHint: [

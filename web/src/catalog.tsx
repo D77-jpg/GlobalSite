@@ -1559,6 +1559,7 @@ export function FactsPage({ locale, role }: Props) {
     { cursor } = pages,
     [editing, setEditing] = useState<Item | null | undefined>(),
     [historyId, setHistoryId] = useState<string>(),
+    [selectedIds, setSelectedIds] = useState<string[]>([]),
     a = useAction();
   const load = useLoad(
     "/facts?" +
@@ -1567,6 +1568,10 @@ export function FactsPage({ locale, role }: Props) {
         ...(cursor ? { cursor } : {}),
       }),
   );
+  const candidates: Item[] = (load.data?.items ?? []).filter(
+    (f: Item) => f.status === "candidate",
+  );
+  const activeSelected = candidates.filter((f) => selectedIds.includes(f.id));
   return (
     <Frame
       title={t("facts")}
@@ -1588,6 +1593,7 @@ export function FactsPage({ locale, role }: Props) {
             value={status}
             onChange={(e) => {
               pages.reset();
+              setSelectedIds([]);
               setStatus(e.target.value);
             }}
           >
@@ -1604,6 +1610,48 @@ export function FactsPage({ locale, role }: Props) {
           {t("reviewHint")}
         </p>
       </div>
+      {role === "admin" && candidates.length > 0 && (
+        <div className="studio-batch-bar">
+          <div className="catalog-actions">
+            <button
+              type="button"
+              className="secondary"
+              disabled={a.busy}
+              onClick={() => setSelectedIds(candidates.map((f) => f.id))}
+            >
+              {t("selectAllCandidates")} ({candidates.length})
+            </button>
+            {activeSelected.length > 0 && (
+              <button
+                type="button"
+                className="secondary"
+                disabled={a.busy}
+                onClick={() => setSelectedIds([])}
+              >
+                {t("clearSelection")}
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={a.busy || !activeSelected.length}
+            onClick={() =>
+              void a.run(async () => {
+                await api("/facts/batch-confirm", "POST", {
+                  items: activeSelected.map((f) => ({
+                    id: f.id,
+                    revision: f.revision,
+                  })),
+                });
+                setSelectedIds([]);
+                load.reload();
+              })
+            }
+          >
+            {t("batchConfirm")} ({activeSelected.length})
+          </button>
+        </div>
+      )}
       {editing !== undefined && (
         <FactForm
           key={editing?.id ?? "new"}
@@ -1622,6 +1670,22 @@ export function FactsPage({ locale, role }: Props) {
             <article key={f.id} className="catalog-fact">
               <div className="catalog-heading">
                 <div>
+                  {role === "admin" && f.status === "candidate" && (
+                    <label className="catalog-check">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(f.id)}
+                        onChange={(e) =>
+                          setSelectedIds((old) =>
+                            e.target.checked
+                              ? [...new Set([...old, f.id])]
+                              : old.filter((x) => x !== f.id),
+                          )
+                        }
+                      />
+                      {t("select")}
+                    </label>
+                  )}
                   <small>
                     {f.type} · {t(f.subjectType)} · {t("revision")} {f.revision}
                   </small>

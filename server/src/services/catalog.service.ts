@@ -10,7 +10,7 @@ import {
   AuditLog,
   WebsiteRead,
 } from "../models";
-import { ensure } from "../errors";
+import { ensure, AppError } from "../errors";
 import { productInput, factInput } from "../validators/catalog.validator";
 const auditTx = (
   action: string,
@@ -354,6 +354,28 @@ export async function transitionFact(
     await auditTx("fact." + status, actor, id, session);
   });
   return factDto(result);
+}
+export async function batchConfirmFacts(
+  items: Array<{ id: string; revision: number }>,
+  actor: string,
+  reason?: string,
+) {
+  const confirmed: string[] = [];
+  const skipped: Array<{ id: string; code: string }> = [];
+  for (const item of items) {
+    try {
+      const exists = await FactSheet.exists({ _id: item.id });
+      ensure(exists, 404, "NOT_FOUND");
+      await transitionFact(item.id, item.revision, "confirmed", actor, reason);
+      confirmed.push(item.id);
+    } catch (err) {
+      skipped.push({
+        id: item.id,
+        code: err instanceof AppError ? err.code : "CONFIRM_FAILED",
+      });
+    }
+  }
+  return { confirmed, skipped };
 }
 export const sha = (text: string) =>
   createHash("sha256").update(text).digest("hex");
