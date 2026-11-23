@@ -1,66 +1,64 @@
 /* ==========================================================================
-   GlobalSite Obsidian AI Studio Design System (S29)
-   Dark-First Flagship Workspace + Porcelain Light Mode Toggle
-   Strict CSP compliant (zero inline styles). Loaded last as canonical theme.
+   GlobalSite Obsidian AI Studio — Complete Structural & Visual UI System (S29)
+   Loaded deterministically LAST in main.tsx after all feature CSS files so
+   no lazy chunk can ever break dark/light surfaces or layout geometry.
+   Strict CSP compliant (zero inline styles).
    ========================================================================== */
 
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Core Canvas & Surfaces */
-  --ui-bg: #080a0f;
-  --ui-bg-aura: radial-gradient(960px 440px at 18% -10%, rgba(99, 102, 241, 0.14), transparent 65%),
-    radial-gradient(760px 380px at 84% -8%, rgba(16, 185, 129, 0.085), transparent 62%);
-  --ui-sidebar: #0c0f17;
-  --ui-topbar: rgba(10, 13, 20, 0.78);
-  --ui-surface: #111521;
-  --ui-surface-2: #161b2a;
-  --ui-surface-hover: #1a2033;
-  --ui-well: #0b0e16;
-  --ui-glass: rgba(17, 21, 33, 0.74);
+  --ui-bg: #07090e;
+  --ui-bg-aura:
+    radial-gradient(980px 420px at 14% -8%, rgba(99, 102, 241, 0.13), transparent 65%),
+    radial-gradient(760px 360px at 86% -6%, rgba(16, 185, 129, 0.08), transparent 62%);
+  --ui-sidebar: #0b0e16;
+  --ui-topbar: rgba(9, 12, 19, 0.82);
+  --ui-rail: #0d111b;
+  --ui-surface: #111623;
+  --ui-surface-2: #171d2e;
+  --ui-surface-hover: #1d253a;
+  --ui-well: #090c14;
+  --ui-glass: rgba(17, 22, 35, 0.78);
 
-  /* Borders & Hairlines */
-  --ui-border: rgba(255, 255, 255, 0.08);
-  --ui-border-strong: rgba(255, 255, 255, 0.15);
-  --ui-border-glow: rgba(129, 140, 248, 0.34);
-  --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --ui-border: rgba(255, 255, 255, 0.075);
+  --ui-border-strong: rgba(255, 255, 255, 0.14);
+  --ui-border-glow: rgba(129, 140, 248, 0.38);
+  --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.055);
 
-  /* Typography */
   --ui-text: #f3f6fc;
-  --ui-text-2: #b8c2d8;
-  --ui-muted: #7f8ba4;
+  --ui-text-2: #b9c3d9;
+  --ui-muted: #7d89a3;
 
-  /* Brand & Luminous Accents */
   --ui-accent: #6366f1;
   --ui-accent-bright: #818cf8;
-  --ui-accent-soft: rgba(99, 102, 241, 0.16);
-  --ui-accent-border: rgba(129, 140, 248, 0.32);
-  --ui-accent-grad: linear-gradient(180deg, #6b6ff7 0%, #4f46e5 100%);
-  --ui-accent-grad-hover: linear-gradient(180deg, #7c80ff 0%, #5b52f0 100%);
-  --ui-accent-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.24),
-    0 6px 20px -6px rgba(99, 102, 241, 0.52);
+  --ui-accent-soft: rgba(99, 102, 241, 0.15);
+  --ui-accent-border: rgba(129, 140, 248, 0.34);
+  --ui-accent-grad: linear-gradient(180deg, #6d71fa 0%, #4f46e5 100%);
+  --ui-accent-grad-hover: linear-gradient(180deg, #7e82ff 0%, #5c53f2 100%);
+  --ui-accent-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 6px 20px -6px rgba(99, 102, 241, 0.55);
 
-  /* Status Signals */
   --ui-ok: #34d399;
-  --ui-ok-bg: rgba(16, 185, 129, 0.14);
+  --ui-ok-bg: rgba(16, 185, 129, 0.13);
   --ui-ok-border: rgba(52, 211, 153, 0.28);
   --ui-warn: #fbbf24;
-  --ui-warn-bg: rgba(245, 158, 11, 0.14);
+  --ui-warn-bg: rgba(245, 158, 11, 0.13);
   --ui-warn-border: rgba(251, 191, 36, 0.28);
   --ui-info: #38bdf8;
-  --ui-info-bg: rgba(56, 189, 248, 0.14);
+  --ui-info-bg: rgba(56, 189, 248, 0.13);
   --ui-info-border: rgba(56, 189, 248, 0.28);
   --ui-danger: #fb7185;
-  --ui-danger-bg: rgba(244, 63, 94, 0.14);
+  --ui-danger-bg: rgba(244, 63, 94, 0.13);
   --ui-danger-border: rgba(251, 113, 133, 0.3);
 
-  /* Shadows */
-  --ui-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.32);
-  --ui-shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.56);
-  --ui-shadow-lg: 0 24px 64px -12px rgba(0, 0, 0, 0.72);
-  --ui-backdrop: rgba(4, 6, 12, 0.72);
+  --ui-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.34);
+  --ui-shadow-md: 0 14px 36px -10px rgba(0, 0, 0, 0.58);
+  --ui-shadow-lg: 0 28px 70px -14px rgba(0, 0, 0, 0.74);
+  --ui-backdrop: rgba(3, 5, 11, 0.76);
 
-  /* Map legacy tokens seamlessly */
+  /* Remap legacy variables globally */
   --ink: var(--ui-text);
   --primary: var(--ui-accent);
   --brand: var(--ui-accent-bright);
@@ -71,6 +69,7 @@
   --ws-tint: var(--ui-accent-soft);
   --ws-border: var(--ui-border-strong);
   --ws-focus: var(--ui-accent-bright);
+  --surface-active: var(--ui-accent-soft);
   --gs-surface-tint: var(--ui-well);
   --gs-surface-elevated: var(--ui-surface);
   --gs-shadow-sm: var(--ui-shadow-sm);
@@ -79,20 +78,22 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --ui-bg: #f5f7fb;
-  --ui-bg-aura: radial-gradient(920px 380px at 20% -10%, rgba(99, 102, 241, 0.08), transparent 65%),
-    radial-gradient(720px 320px at 85% -8%, rgba(16, 185, 129, 0.06), transparent 60%);
+  --ui-bg: #f4f6fb;
+  --ui-bg-aura:
+    radial-gradient(920px 380px at 16% -10%, rgba(79, 70, 229, 0.075), transparent 65%),
+    radial-gradient(700px 320px at 86% -8%, rgba(16, 185, 129, 0.055), transparent 62%);
   --ui-sidebar: #ffffff;
-  --ui-topbar: rgba(255, 255, 255, 0.82);
+  --ui-topbar: rgba(255, 255, 255, 0.85);
+  --ui-rail: #f8fafd;
   --ui-surface: #ffffff;
-  --ui-surface-2: #f8faff;
-  --ui-surface-hover: #f1f5fb;
-  --ui-well: #f2f4f9;
-  --ui-glass: rgba(255, 255, 255, 0.86);
+  --ui-surface-2: #f4f6fb;
+  --ui-surface-hover: #ebf0fa;
+  --ui-well: #f1f4f9;
+  --ui-glass: rgba(255, 255, 255, 0.88);
 
   --ui-border: rgba(15, 23, 42, 0.085);
   --ui-border-strong: rgba(15, 23, 42, 0.16);
-  --ui-border-glow: rgba(79, 70, 229, 0.35);
+  --ui-border-glow: rgba(79, 70, 229, 0.36);
   --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   --ui-text: #0f172a;
@@ -105,8 +106,9 @@
   --ui-accent-border: rgba(79, 70, 229, 0.24);
   --ui-accent-grad: linear-gradient(180deg, #5b53f2 0%, #4338ca 100%);
   --ui-accent-grad-hover: linear-gradient(180deg, #6860f8 0%, #4f46e5 100%);
-  --ui-accent-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.25),
-    0 6px 18px -6px rgba(79, 70, 229, 0.45);
+  --ui-accent-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 6px 18px -6px rgba(79, 70, 229, 0.42);
 
   --ui-ok: #047857;
   --ui-ok-bg: #ecfdf5;
@@ -122,7 +124,7 @@
   --ui-danger-border: #fecdd3;
 
   --ui-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
-  --ui-shadow-md: 0 10px 28px -10px rgba(15, 23, 42, 0.1);
+  --ui-shadow-md: 0 12px 28px -10px rgba(15, 23, 42, 0.11);
   --ui-shadow-lg: 0 24px 60px -14px rgba(15, 23, 42, 0.16);
   --ui-backdrop: rgba(15, 23, 42, 0.42);
 
@@ -136,13 +138,16 @@
   --ws-tint: var(--ui-accent-soft);
   --ws-border: var(--ui-border-strong);
   --ws-focus: var(--ui-accent);
+  --surface-active: var(--ui-accent-soft);
   --gs-surface-tint: var(--ui-well);
   --gs-surface-elevated: var(--ui-surface);
   --gs-shadow-sm: var(--ui-shadow-sm);
   --gs-shadow-md: var(--ui-shadow-md);
 }
 
-/* ---------- Global Typography & Base ---------- */
+/* ==========================================================================
+   1. Base Typography, Links, Code & Scrollbars
+   ========================================================================== */
 html,
 body {
   font-family:
@@ -168,7 +173,7 @@ body {
 
 a {
   color: var(--ui-accent-bright);
-  transition: color 150ms ease;
+  transition: color 140ms ease;
 }
 
 a:hover {
@@ -187,7 +192,7 @@ code {
   color: var(--ui-text);
   padding: 2px 6px;
   border-radius: 6px;
-  font-size: 0.88em;
+  font-size: 0.86em;
 }
 
 pre {
@@ -208,47 +213,30 @@ pre {
   background: var(--ui-bg);
 }
 
-/* ---------- Theme Toggle & Language Controls ---------- */
-.theme-toggle,
-.language {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  height: 34px;
-  min-height: 34px;
-  padding: 0 11px;
-  border-radius: 9px;
-  border: 1px solid var(--ui-border);
-  background: var(--ui-surface);
-  color: var(--ui-text-2);
-  font-size: 12.5px;
-  font-weight: 550;
-  box-shadow: var(--ui-specular);
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.theme-toggle {
-  width: 34px;
-  padding: 0;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.theme-toggle:hover,
-.language:hover {
-  background: var(--ui-surface-hover);
-  border-color: var(--ui-border-strong);
-  color: var(--ui-text);
-  text-decoration: none;
+::-webkit-scrollbar-thumb {
+  background: var(--ui-border-strong);
+  border-radius: 999px;
 }
 
-/* ---------- Flagship Split Auth Studio ---------- */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-muted);
+}
+
+/* ==========================================================================
+   2. Flagship Split-Screen Auth Studio
+   ========================================================================== */
 .auth-page {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
   min-height: 100dvh;
   background: var(--ui-bg);
   background-image: var(--ui-bg-aura);
@@ -259,11 +247,11 @@ pre {
   flex-direction: column;
   justify-content: space-between;
   position: relative;
-  padding: 44px 52px;
+  padding: 46px 56px;
   background:
-    radial-gradient(620px 460px at 20% 25%, rgba(99, 102, 241, 0.24), transparent 68%),
-    radial-gradient(480px 420px at 85% 80%, rgba(16, 185, 129, 0.16), transparent 66%),
-    linear-gradient(155deg, #0b0e18 0%, #090b12 60%, #0c1220 100%);
+    radial-gradient(640px 460px at 18% 22%, rgba(99, 102, 241, 0.25), transparent 68%),
+    radial-gradient(500px 420px at 85% 82%, rgba(16, 185, 129, 0.16), transparent 66%),
+    linear-gradient(155deg, #0b0e18 0%, #080b12 60%, #0c1322 100%);
   color: #f3f6fc;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
@@ -273,9 +261,9 @@ pre {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.085) 1px, transparent 1px);
   background-size: 26px 26px;
-  mask-image: radial-gradient(ellipse 75% 70% at 45% 45%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 76% 72% at 45% 45%, #000 18%, transparent 80%);
   pointer-events: none;
 }
 
@@ -317,14 +305,14 @@ pre {
 .auth-page .story-content {
   padding: 28px 0;
   margin: auto 0;
-  max-width: 480px;
+  max-width: 490px;
 }
 
 .auth-page .story-content .eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 11px;
+  padding: 5px 12px;
   border-radius: 999px;
   background: rgba(99, 102, 241, 0.16);
   border: 1px solid rgba(129, 140, 248, 0.34);
@@ -335,7 +323,7 @@ pre {
 }
 
 .auth-page .story-content h1 {
-  font-size: clamp(32px, 3vw, 46px);
+  font-size: clamp(32px, 3vw, 48px);
   line-height: 1.15;
   letter-spacing: -0.04em;
   margin: 18px 0 14px;
@@ -350,10 +338,10 @@ pre {
 }
 
 .auth-page .story-content h2 {
-  font-size: 12px;
+  font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #7f8ba4;
+  color: #7d89a3;
   margin-bottom: 14px;
 }
 
@@ -371,11 +359,11 @@ pre {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 13px 15px;
+  padding: 13px 16px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e2e8f5;
+  color: #e4eaf7;
   font-size: 13.5px;
   font-weight: 500;
   backdrop-filter: blur(8px);
@@ -400,7 +388,6 @@ pre {
 .auth-page .story-footer {
   font-size: 12px;
   color: #6b768f;
-  letter-spacing: 0.02em;
 }
 
 .auth-page .auth-main {
@@ -454,8 +441,6 @@ pre {
 
 .auth-page .auth-form label {
   color: var(--ui-text-2);
-  font-size: 13px;
-  font-weight: 550;
 }
 
 .auth-page .auth-form input,
@@ -484,25 +469,13 @@ pre {
   color: #ffffff;
   font-weight: 600;
   box-shadow: var(--ui-accent-shadow);
-  transition:
-    background 160ms ease,
-    transform 140ms ease,
-    box-shadow 160ms ease;
 }
 
 .auth-page .auth-form button.primary:hover {
   background: var(--ui-accent-grad-hover);
-  transform: translateY(-1px);
 }
 
-.auth-page .auth-form .forgot-link,
-.auth-page .auth-form .text-link,
-.auth-page .auth-form .auth-switch a {
-  color: var(--ui-accent-bright);
-  font-weight: 550;
-}
-
-.auth-page .auth-form .auth-switch {
+.auth-page .auth-switch {
   margin-top: 18px;
   font-size: 13px;
   color: var(--ui-muted);
@@ -550,14 +523,55 @@ pre {
   }
 }
 
-/* ---------- Workspace Shell: Obsidian Sidebar & Frosted Topbar ---------- */
+/* ==========================================================================
+   3. Shell Navigation, Sidebar, Glass Topbar & Command Palette
+   ========================================================================== */
+.theme-toggle,
+.language {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 9px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text-2);
+  font-size: 12.5px;
+  font-weight: 550;
+  box-shadow: var(--ui-specular);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.theme-toggle {
+  width: 34px;
+  padding: 0;
+}
+
+.theme-toggle:hover,
+.language:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
 .product-shell {
-  --ws-nav: 236px;
+  --ws-nav: 244px;
   background: transparent;
   color: var(--ui-text);
   font-size: 13.5px;
   accent-color: var(--ui-accent);
   min-height: 100dvh;
+}
+
+.product-shell[data-nav-collapsed="true"] {
+  --ws-nav: 68px;
 }
 
 .product-shell > .sidebar,
@@ -568,10 +582,10 @@ pre {
 }
 
 .product-shell .sidebar > .brand {
-  margin: 2px 8px 18px;
+  margin: 2px 6px 18px;
   gap: 10px;
   color: var(--ui-text);
-  font-size: 16.5px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -580,6 +594,23 @@ pre {
   width: 30px;
   height: 30px;
   border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.product-shell .brand-pill {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--ui-accent-soft);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+}
+
+.product-shell[data-nav-collapsed="true"] .brand-pill {
+  display: none;
 }
 
 .product-shell .workspace-label {
@@ -590,9 +621,6 @@ pre {
   margin-bottom: 18px;
   color: var(--ui-text);
   box-shadow: var(--ui-specular);
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease;
 }
 
 .product-shell .workspace-label:hover {
@@ -618,13 +646,12 @@ pre {
 .product-shell .workspace-label strong {
   color: var(--ui-text);
   font-size: 13px;
-  font-weight: 600;
 }
 
 .product-shell .nav-heading {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 650;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--ui-muted);
   margin: 0 0 6px;
@@ -640,15 +667,10 @@ pre {
   font-weight: 500;
   color: var(--ui-text-2);
   border: 1px solid transparent;
-  transition:
-    background-color 140ms ease,
-    color 140ms ease,
-    border-color 140ms ease;
 }
 
 .product-shell .sidebar nav a > svg {
   color: var(--ui-muted);
-  transition: color 140ms ease;
 }
 
 .product-shell .sidebar nav a:hover {
@@ -710,14 +732,13 @@ pre {
   color: var(--ui-danger);
 }
 
-/* Topbar */
 .product-shell .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  height: 58px;
-  min-height: 58px;
-  padding: 0 26px;
+  height: 56px;
+  min-height: 56px;
+  padding: 0 24px;
   background: var(--ui-topbar);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -757,10 +778,6 @@ pre {
   color: var(--ui-muted);
   padding: 0 11px;
   box-shadow: var(--ui-specular);
-  transition:
-    border-color 150ms ease,
-    background-color 150ms ease,
-    color 150ms ease;
 }
 
 .product-shell .topbar .ws-search:hover {
@@ -782,7 +799,6 @@ pre {
   gap: 8px;
 }
 
-/* Command Palette & Modals */
 dialog.ws-palette,
 dialog.ws-drawer,
 dialog.asset-preview-dialog,
@@ -823,9 +839,123 @@ dialog::backdrop {
   color: var(--ui-text);
 }
 
-/* ---------- Surfaces, Cards & Containers ---------- */
+/* ==========================================================================
+   4. Clean Button Hierarchy (NO Blanket Purple Buttons!)
+   ========================================================================== */
+.product-shell :is(button, .button) {
+  border-radius: 9px;
+  font-weight: 550;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+/* Neutral default action button inside .catalog */
+.product-shell :is(.catalog button, .catalog .button, .button.secondary) {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  box-shadow: var(--ui-specular);
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.product-shell :is(.catalog button, .catalog .button, .button.secondary):hover:not(:disabled) {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+/* Explicit Primary CTA buttons ONLY */
+.product-shell
+  :is(
+    button.primary,
+    .button.primary,
+    .catalog button.primary,
+    .catalog .button.primary,
+    .catalog form > button:not(.secondary):not([type="button"]),
+    .catalog fieldset > button:not(.secondary):not([type="button"])
+  ) {
+  background: var(--ui-accent-grad);
+  border: 1px solid transparent;
+  color: #ffffff;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell
+  :is(
+    button.primary,
+    .button.primary,
+    .catalog button.primary,
+    .catalog .button.primary,
+    .catalog form > button:not(.secondary):not([type="button"]),
+    .catalog fieldset > button:not(.secondary):not([type="button"])
+  ):hover:not(:disabled) {
+  background: var(--ui-accent-grad-hover);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.product-shell :is(button, .button):disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* Form Controls */
+.product-shell
+  :is(
+    .catalog input:not([type="checkbox"]):not([type="radio"]),
+    .catalog textarea,
+    .catalog select,
+    .field input,
+    .field select,
+    select,
+    textarea
+  ) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 9px;
+  color: var(--ui-text);
+  font-size: 13px;
+}
+
+.product-shell
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]),
+    textarea,
+    select
+  ):focus {
+  border-color: var(--ui-accent-bright);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
+  outline: none;
+}
+
+.product-shell label,
+.product-shell .field label,
+.product-shell legend {
+  color: var(--ui-text-2);
+  font-weight: 550;
+}
+
+.product-shell input::placeholder,
+.product-shell textarea::placeholder {
+  color: var(--ui-muted);
+}
+
+.product-shell option {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+/* ==========================================================================
+   5. Universal Dark/Light Surfaces, Cards, Tables & Badges
+   ========================================================================== */
 .product-shell .content {
-  padding: 28px 34px 56px;
+  padding: 26px 32px 52px;
 }
 
 .product-shell
@@ -837,7 +967,7 @@ dialog::backdrop {
     .mission-hero
   ) {
   border-bottom: 1px solid var(--ui-border);
-  padding-bottom: 20px;
+  padding-bottom: 18px;
 }
 
 .product-shell
@@ -873,26 +1003,23 @@ dialog::backdrop {
     .panel,
     .site-guide,
     .ops-table-panel,
-    .studio-site-list,
     .fact-register,
     .usage-ledger,
     .member-table,
-    .mission-metrics,
     .mission-body .mission-panel,
-    .sites-tabs,
-    .studio-metrics,
     .inquiry-reading-layout > .inquiry-letter,
     .inquiry-reading-layout > .inquiry-followup,
     .account-page .panel,
     .account-page .settings-section,
-    .agent-studio,
-    .agent-task-detail,
     .asset-tile,
     .design-card,
     .journey-card,
     .studio-diff-box,
     .studio-preview-pane,
-    .funnel-card
+    .funnel-card,
+    .site-design-card,
+    .journey-step-card,
+    .ops-card
   ) {
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
@@ -907,31 +1034,15 @@ dialog::backdrop {
     .gap-quick-form,
     .studio-subdetails,
     .diag-panel,
-    .agent-task-list,
-    .agent-step-card,
-    .agent-output-card,
-    .site-design-card,
-    .catalog-subpanel
+    .catalog-subpanel,
+    .result-document,
+    .result-finding,
+    .result-plan-card
   ) {
   background: var(--ui-well);
   border: 1px solid var(--ui-border);
   border-radius: 12px;
   color: var(--ui-text);
-}
-
-.product-shell
-  :is(
-    .catalog-panel h2,
-    .catalog-panel h3,
-    .panel h2,
-    .panel h3,
-    .mission-panel h3,
-    .studio-section-heading h2,
-    .ops-panel-title h2
-  ) {
-  color: var(--ui-text);
-  font-weight: 650;
-  letter-spacing: -0.02em;
 }
 
 .product-shell :is(p, li, small, dd, dt) {
@@ -942,196 +1053,7 @@ dialog::backdrop {
   color: var(--ui-text);
 }
 
-/* ---------- Buttons ---------- */
-.product-shell :is(button, .button) {
-  border-radius: 9px;
-  font-weight: 550;
-  transition:
-    background 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    transform 130ms ease,
-    box-shadow 150ms ease;
-}
-
-.product-shell
-  :is(
-    .catalog button:not(.secondary):not(.asset-name):not(.asset-menu-trigger):not(.asset-thumbnail),
-    .catalog .button:not(.secondary),
-    .button.primary,
-    button.primary
-  ) {
-  background: var(--ui-accent-grad);
-  border: 1px solid transparent;
-  color: #ffffff;
-  box-shadow: var(--ui-accent-shadow);
-}
-
-.product-shell
-  :is(
-    .catalog button:not(.secondary):not(.asset-name):not(.asset-menu-trigger):not(.asset-thumbnail),
-    .catalog .button:not(.secondary),
-    .button.primary,
-    button.primary
-  ):hover:not(:disabled) {
-  background: var(--ui-accent-grad-hover);
-  color: #ffffff;
-  text-decoration: none;
-  transform: translateY(-1px);
-}
-
-.product-shell
-  :is(
-    .catalog .secondary,
-    .button.secondary,
-    .mission-hero-action,
-    .studio-site-links > a.button
-  ) {
-  background: var(--ui-surface-2);
-  color: var(--ui-text);
-  border: 1px solid var(--ui-border-strong);
-  box-shadow: var(--ui-specular);
-}
-
-.product-shell
-  :is(
-    .catalog .secondary,
-    .button.secondary,
-    .mission-hero-action,
-    .studio-site-links > a.button
-  ):hover:not(:disabled) {
-  background: var(--ui-surface-hover);
-  border-color: var(--ui-border-glow);
-  color: var(--ui-text);
-  text-decoration: none;
-}
-
-/* ---------- Form Controls ---------- */
-.product-shell
-  :is(
-    .catalog input:not([type="checkbox"]):not([type="radio"]),
-    .catalog textarea,
-    .catalog select,
-    .field input,
-    .field select,
-    select,
-    textarea
-  ) {
-  background: var(--ui-well);
-  border: 1px solid var(--ui-border-strong);
-  border-radius: 9px;
-  color: var(--ui-text);
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
-}
-
-.product-shell
-  :is(
-    input:not([type="checkbox"]):not([type="radio"]),
-    textarea,
-    select
-  ):focus {
-  border-color: var(--ui-accent-bright);
-  box-shadow: 0 0 0 3px var(--ui-accent-soft);
-  outline: none;
-}
-
-.product-shell label,
-.product-shell .field label,
-.product-shell legend {
-  color: var(--ui-text-2);
-  font-weight: 550;
-}
-
-.product-shell input::placeholder,
-.product-shell textarea::placeholder {
-  color: var(--ui-muted);
-}
-
-.product-shell option {
-  background: var(--ui-surface);
-  color: var(--ui-text);
-}
-
-/* ---------- KPI Strips & Overview ---------- */
-.product-shell .mission-metrics > a,
-.product-shell .studio-metrics > button {
-  background: transparent;
-  color: var(--ui-text-2);
-  border-color: var(--ui-border);
-  box-shadow: none;
-}
-
-.product-shell .mission-metrics > a:hover,
-.product-shell .studio-metrics > button:hover {
-  background: var(--ui-surface-2);
-  color: var(--ui-text);
-  text-decoration: none;
-  transform: none;
-}
-
-.product-shell .mission-metrics strong,
-.product-shell .studio-metrics strong,
-.product-shell .funnel-value,
-.product-shell .b2b-coverage {
-  color: var(--ui-text);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.product-shell .funnel-card {
-  position: relative;
-  overflow: hidden;
-  transition:
-    border-color 150ms ease,
-    transform 150ms ease;
-}
-
-.product-shell .funnel-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--ui-accent), var(--ui-ok));
-  opacity: 0.65;
-}
-
-.product-shell .funnel-card:hover {
-  border-color: var(--ui-border-glow);
-  transform: translateY(-1px);
-}
-
-.product-shell .funnel-label {
-  color: var(--ui-muted);
-}
-
-.product-shell .funnel-source-list {
-  color: var(--ui-text-2);
-}
-
-.product-shell .mission-panel header > a,
-.product-shell .studio-site-links > a:not(.button),
-.product-shell .guide-steps a,
-.product-shell .ops-facts-link {
-  color: var(--ui-accent-bright);
-}
-
-.product-shell .mission-stages li,
-.product-shell .mission-jobs li,
-.product-shell .mission-panel > header {
-  border-color: var(--ui-border);
-}
-
-.product-shell .mission-stages a:hover,
-.product-shell .mission-jobs a:hover {
-  background: var(--ui-surface-2);
-  border-radius: 8px;
-}
-
-/* ---------- Tables & Lists ---------- */
+/* Tables */
 .product-shell :is(table, .publish-table) {
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
@@ -1139,13 +1061,16 @@ dialog::backdrop {
   overflow: hidden;
 }
 
-.product-shell :is(th, .ops-colheads) {
+.product-shell :is(th, .ops-colheads),
+.product-shell :is(.catalog, .ops-workspace, .inquiry-table, .publish-table, .account-page) th,
+.product-shell thead,
+.product-shell thead tr {
   background: var(--ui-well);
   color: var(--ui-muted);
   border-color: var(--ui-border);
-  font-size: 11.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .product-shell td {
@@ -1154,75 +1079,12 @@ dialog::backdrop {
 }
 
 .product-shell tbody tr:hover,
-.product-shell .studio-site-row:hover,
 .product-shell .ops-product-line:hover {
   background: var(--ui-surface-2);
 }
 
-.product-shell .studio-site-list .sites-brand {
-  background: var(--ui-accent-grad);
-  color: #ffffff;
-  box-shadow: var(--ui-accent-shadow);
-}
-
-/* ---------- Tabs, Filter Pills & Sub-Navigation ---------- */
-.product-shell .sites-tabs button,
-.product-shell .ops-status-tabs button,
-.product-shell .asset-filters button,
-.product-shell .asset-view-options button {
-  background: transparent;
-  color: var(--ui-text-2);
-  border: 1px solid transparent;
-  box-shadow: none;
-}
-
-.product-shell .sites-tabs button:hover,
-.product-shell .ops-status-tabs button:hover,
-.product-shell .asset-filters button:hover,
-.product-shell .asset-view-options button:hover {
-  background: var(--ui-surface-2);
-  color: var(--ui-text);
-  transform: none;
-}
-
-.product-shell .sites-tabs button[aria-pressed="true"],
-.product-shell .ops-status-tabs button[aria-pressed="true"],
-.product-shell .asset-filters button[aria-pressed="true"],
-.product-shell .asset-view-options button[aria-pressed="true"] {
-  background: var(--ui-accent-soft);
-  border-color: var(--ui-accent-border);
-  color: var(--ui-text);
-  font-weight: 600;
-  box-shadow: inset 3px 0 0 var(--ui-accent-bright);
-}
-
-.product-shell .ops-status-tabs {
-  background: var(--ui-well);
-  border: 1px solid var(--ui-border);
-  border-radius: 11px;
-}
-
-.product-shell .ops-status-tabs button[aria-pressed="true"] {
-  box-shadow: none;
-}
-
-.product-shell .ops-section-nav,
-.product-shell .release-nav {
-  border-bottom: 1px solid var(--ui-border);
-}
-
-.product-shell .ops-section-nav a,
-.product-shell .release-nav a {
-  color: var(--ui-text-2);
-}
-
-.product-shell .ops-section-nav a:hover,
-.product-shell .release-nav a:hover {
-  color: var(--ui-accent-bright);
-}
-
-/* ---------- Semantic Badges & Notices ---------- */
-.product-shell :is(.badge, .catalog-badge, .mission-state) {
+/* Badges & Notices */
+.product-shell :is(.badge, .catalog-badge, .mission-state, .task-state) {
   background: var(--ui-surface-2);
   border: 1px solid var(--ui-border-strong);
   color: var(--ui-text-2);
@@ -1236,11 +1098,13 @@ dialog::backdrop {
   :is(
     .badge.active,
     .catalog-badge.confirmed,
+    .catalog-badge.confirmedPlan,
     .catalog-badge.approved,
     .catalog-badge.live,
     .catalog-badge.resolved,
     .catalog-badge.ready,
-    .mission-state.state-succeeded
+    .mission-state.state-succeeded,
+    .task-state.state-succeeded
   ) {
   background: var(--ui-ok-bg);
   border-color: var(--ui-ok-border);
@@ -1251,9 +1115,11 @@ dialog::backdrop {
   :is(
     .catalog-badge.candidate,
     .catalog-badge.draft,
+    .catalog-badge.unconfirmedPlan,
     .catalog-badge.pending,
     .catalog-badge.following,
-    .mission-state.state-queued
+    .mission-state.state-queued,
+    .task-state.state-paused
   ) {
   background: var(--ui-warn-bg);
   border-color: var(--ui-warn-border);
@@ -1265,7 +1131,9 @@ dialog::backdrop {
     .catalog-badge.running,
     .catalog-badge.ai,
     .catalog-badge.new,
-    .mission-state.state-running
+    .mission-state.state-running,
+    .task-state.state-running,
+    .task-state.state-queued
   ) {
   background: var(--ui-info-bg);
   border-color: var(--ui-info-border);
@@ -1278,7 +1146,8 @@ dialog::backdrop {
     .catalog-badge.failed,
     .catalog-badge.rejected,
     .catalog-badge.spam,
-    .mission-state.state-failed
+    .mission-state.state-failed,
+    .task-state.state-failed
   ) {
   background: var(--ui-danger-bg);
   border-color: var(--ui-danger-border);
@@ -1309,13 +1178,846 @@ dialog::backdrop {
   color: var(--ui-danger);
 }
 
-/* ---------- Asset Library, Agent Workbench & Split Editor Polish ---------- */
+/* ==========================================================================
+   6. REDESIGNED LAYOUT #1: Agent Studio (/agent) — True 3-Pane AI Workbench
+   ========================================================================== */
+.product-shell[data-page="agent"] .content {
+  padding: 18px 24px 24px;
+}
+
+.product-shell .agent-mast {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  min-height: 54px;
+  padding: 0 0 16px;
+}
+
+.product-shell .agent-mast-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+}
+
+.product-shell .agent-mast h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ui-text);
+  margin: 0;
+}
+
+.product-shell .agent-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ui-ok-bg);
+  border: 1px solid var(--ui-ok-border);
+  color: var(--ui-ok);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.product-shell .agent-live-pill .live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ui-ok);
+  box-shadow: 0 0 8px var(--ui-ok);
+}
+
+.product-shell .agent-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 4px 8px 4px 12px;
+}
+
+.product-shell .agent-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ui-muted);
+  margin: 0;
+}
+
+.product-shell .agent-picker select {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 7px;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-mast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.product-shell .agent-preview-link {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+/* Outer 3-pane Studio Frame */
+.product-shell .agent-studio {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+}
+
+.product-shell .agent-studio .task-split {
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr) 348px;
+  height: calc(100dvh - 156px);
+  min-height: 600px;
+}
+
+/* Left Rail: Task Feed */
+.product-shell .agent-studio .task-navigation {
+  background: var(--ui-rail);
+  border-right: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-center-heading {
+  padding: 16px 16px 12px;
+}
+
+.product-shell .agent-studio .task-center-heading h2 {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio .task-center-heading > span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Filter Pill Segmented Grid (NO purple blocks!) */
+.product-shell .agent-studio .task-toolbar {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-toolbar > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-toolbar button {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--ui-muted);
+  border-radius: 7px;
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  justify-content: space-between;
+}
+
+.product-shell .agent-studio .task-toolbar button:hover {
+  background: var(--ui-surface);
+  color: var(--ui-text-2);
+}
+
+.product-shell .agent-studio .task-toolbar button[aria-pressed="true"] {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+  font-weight: 600;
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell .agent-studio .task-toolbar button span {
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+/* Task Feed Cards */
+.product-shell .agent-studio .task-index {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.product-shell .agent-studio button.task-index-item {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 62px;
+  padding: 11px 11px;
+  text-align: left;
+  background: transparent;
+  color: var(--ui-text);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.product-shell .agent-studio button.task-index-item:hover {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+}
+
+.product-shell .agent-studio button.task-index-item[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  box-shadow: inset 3px 0 0 var(--ui-accent-bright);
+}
+
+.product-shell .agent-studio .task-index-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  margin-top: 1px;
+}
+
+.product-shell .agent-studio .task-index-icon.state-succeeded {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell .agent-studio .task-index-icon.state-failed {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.product-shell .agent-studio .task-index-icon.state-paused {
+  background: var(--ui-warn-bg);
+  border-color: var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell .agent-studio .task-index-icon.state-running,
+.product-shell .agent-studio .task-index-icon.state-queued {
+  background: var(--ui-info-bg);
+  border-color: var(--ui-info-border);
+  color: var(--ui-info);
+}
+
+.product-shell .agent-studio .task-index-copy strong {
+  color: var(--ui-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.product-shell .agent-studio .task-index-copy small {
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.product-shell .agent-studio .task-history-footer {
+  background: var(--ui-well);
+  border-top: 1px solid var(--ui-border);
+  padding: 12px 14px;
+}
+
+.product-shell .agent-studio .task-pagination button {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  min-height: 28px;
+  padding: 4px 10px;
+}
+
+/* Center Stage: Artifact & Inspector */
+.product-shell .agent-studio .task-detail.studio-run {
+  background: var(--ui-surface);
+}
+
+.product-shell .agent-studio .task-detail > header {
+  padding: 22px 26px 14px;
+}
+
+.product-shell .agent-studio .task-detail > header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ui-text);
+}
+
+/* Clean Underline Tabs (NO purple blocks!) */
+.product-shell .agent-studio .task-result-tabs {
+  gap: 20px;
+  padding: 0 26px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-result-tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 550;
+  min-height: 42px;
+  padding: 10px 2px;
+}
+
+.product-shell .agent-studio .task-result-tabs button:hover {
+  background: transparent;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio .task-result-tabs button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--ui-text);
+  border-bottom-color: var(--ui-accent-bright);
+  font-weight: 650;
+}
+
+.product-shell .agent-studio .task-result-tabs button span {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  color: var(--ui-text-2);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.product-shell .agent-studio .task-result-tabs > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: var(--ui-accent-soft);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.product-shell .agent-studio .task-result-tabs > a:hover {
+  background: var(--ui-accent);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.product-shell .agent-studio .task-canvas {
+  padding: 20px 26px 28px;
+}
+
+.product-shell .agent-studio .task-canvas > .task-result-intro {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  margin-bottom: 16px;
+}
+
+.product-shell .agent-studio .result-category button {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  box-shadow: none;
+  border-radius: 999px;
+  padding: 4px 11px;
+  min-height: 28px;
+  font-size: 11.5px;
+}
+
+.product-shell .agent-studio .result-category button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio .task-diagnostics {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-diagnostics dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.product-shell .agent-studio .task-diagnostics dl > div {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-diagnostics dd {
+  color: var(--ui-text);
+  font-weight: 650;
+  font-size: 15px;
+}
+
+/* Right Rail: Dark Mission Composer */
+.product-shell .agent-studio .task-control {
+  background: var(--ui-rail);
+  border-left: 1px solid var(--ui-border);
+  padding: 18px 20px;
+}
+
+.product-shell .agent-studio .task-control > header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-control h2 {
+  color: var(--ui-text);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.product-shell .agent-studio .work-indicator {
+  width: 8px;
+  height: 8px;
+  background: var(--ui-ok);
+  box-shadow: 0 0 10px var(--ui-ok);
+}
+
+.product-shell .agent-studio .task-context {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-context .task-problem {
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--ui-warn-bg);
+  border: 1px solid var(--ui-warn-border);
+  color: var(--ui-warn);
+  font-size: 12px;
+}
+
+.product-shell .agent-studio .task-composer {
+  padding: 18px 0;
+  gap: 14px;
+}
+
+.product-shell .agent-studio .task-composer :is(input, textarea, select) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 12.5px;
+}
+
+.product-shell .agent-studio .task-composer > button.primary {
+  width: 100%;
+  min-height: 40px;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 2x2 Bento Handoff Dock in Right Rail */
+.product-shell .agent-studio .task-control .agent-handoffs {
+  padding: 16px 0 0;
+  margin-top: auto;
+  border-top: 1px solid var(--ui-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.product-shell .agent-studio .task-control .agent-handoffs h3 {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ui-muted);
+  margin: 0 0 2px;
+}
+
+.product-shell .agent-studio .task-control .agent-handoffs a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.product-shell .agent-studio .task-control .agent-handoffs a:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   7. REDESIGNED LAYOUT #2: Sites Portfolio Grid & Full-Width Site Studio
+   ========================================================================== */
+.product-shell .studio-site-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.product-shell .studio-site-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px 16px;
+  align-items: start;
+  padding: 20px;
+  border-radius: 15px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.product-shell .studio-site-row:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+}
+
+.product-shell .studio-site-row .sites-brand {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--ui-accent-grad);
+  color: #ffffff;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell .studio-site-row .catalog-actions {
+  grid-column: 1 / -1;
+}
+
+.product-shell .studio-site-row .studio-site-links {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-border);
+}
+
+.product-shell .studio-site-row .studio-site-links > a.button {
+  margin-left: auto;
+  color: var(--ui-text);
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+}
+
+.product-shell .studio-site-row .studio-site-links > a.button:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+}
+
+/* Full-Width Site Workspace: Horizontal Sticky Pill Tab Bar ABOVE Full Canvas */
+.product-shell .project-workspace-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.product-shell .sites-tabs {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--ui-rail);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell .sites-tabs button {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--ui-text-2);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.product-shell .sites-tabs button:hover {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+.product-shell .sites-tabs button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+  font-weight: 650;
+  box-shadow: none;
+}
+
+/* Site Studio KPI Strip (4 Bento Tiles) */
+.product-shell .studio-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.product-shell .studio-metrics > button {
+  min-height: 82px;
+  padding: 15px 18px;
+  border-radius: 13px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  color: var(--ui-text-2);
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-shell .studio-metrics > button:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+}
+
+.product-shell .studio-metrics strong {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   8. REDESIGNED LAYOUT #3: Bento Executive Mission Overview (/)
+   ========================================================================== */
+.product-shell .mission-hero-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  background: var(--ui-accent-grad);
+  border: 1px solid transparent;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell .mission-hero-action:hover {
+  background: var(--ui-accent-grad-hover);
+  border-color: transparent;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.product-shell .mission-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.product-shell .mission-metrics > a {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  color: var(--ui-text-2);
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.product-shell .mission-metrics > a:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.product-shell .mission-metrics > a > div {
+  font-size: 12.5px;
+  color: var(--ui-muted);
+}
+
+.product-shell .mission-metrics strong {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.product-shell .mission-body {
+  gap: 18px;
+}
+
+.product-shell .mission-stages li,
+.product-shell .mission-jobs li,
+.product-shell .mission-panel > header {
+  border-color: var(--ui-border);
+}
+
+.product-shell .mission-stages a:hover,
+.product-shell .mission-jobs a:hover {
+  background: var(--ui-surface-2);
+  border-radius: 9px;
+}
+
+.product-shell .stage-symbol {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-muted);
+}
+
+.product-shell .stage-symbol.done {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell .mission-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.product-shell .mission-shortcuts a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  font-weight: 550;
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell .mission-shortcuts a:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   9. Operations, Inquiries Funnel, Asset Library, Journey & Editor Polish
+   ========================================================================== */
+.product-shell .ops-status-tabs {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.product-shell .ops-status-tabs button,
+.product-shell .asset-filters button,
+.product-shell .asset-view-options button {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--ui-muted);
+}
+
+.product-shell .ops-status-tabs button:hover,
+.product-shell .asset-filters button:hover,
+.product-shell .asset-view-options button:hover {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+.product-shell .ops-status-tabs button[aria-pressed="true"],
+.product-shell .asset-filters button[aria-pressed="true"],
+.product-shell .asset-view-options button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
 .product-shell .catalog .asset-thumbnail {
   background: var(--ui-well);
 }
 
 .product-shell .catalog .asset-name,
-.product-shell .catalog .asset-menu-trigger {
+.product-shell .catalog .asset-menu-trigger,
+.product-shell .catalog .asset-thumbnail {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
@@ -1344,95 +2046,233 @@ dialog::backdrop {
 .product-shell .catalog .asset-menu-content :is(a, button):hover {
   background: var(--ui-surface-hover);
   color: var(--ui-text);
-  transform: none;
 }
 
 .product-shell .catalog .asset-delete {
   color: var(--ui-danger);
 }
 
-/* Agent Task Master-Detail Dark Surfaces */
-.product-shell .agent-task-row,
-.product-shell .agent-task-item {
-  border-bottom: 1px solid var(--ui-border);
-  background: transparent;
-  color: var(--ui-text-2);
-}
-
-.product-shell .agent-task-row:hover,
-.product-shell .agent-task-item:hover {
-  background: var(--ui-surface-2);
-}
-
-.product-shell .agent-task-row[aria-current="true"],
-.product-shell .agent-task-item[aria-selected="true"],
-.product-shell .agent-task-item.is-selected {
-  background: var(--ui-accent-soft);
+/* Site Journey, Design Proposals, Empty States & Agent Results Dark/Light Polish */
+.product-shell
+  :is(
+    .design-workspace,
+    .proposal,
+    .creation-surface,
+    .site-guide,
+    .journey-step,
+    .journey-option,
+    .journey-shell,
+    .journey-panel,
+    .design-proposal,
+    .design-option,
+    .catalog-empty,
+    .studio-empty,
+    .mission-empty,
+    .creation-empty
+  ) {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
   color: var(--ui-text);
 }
 
-/* Split-Screen Live Page Editor & Device Frame */
-.product-shell .studio-preview-pane {
-  padding: 16px;
+.product-shell .design-selected {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-text);
 }
 
-.product-shell .studio-preview-frame,
-.product-shell .design-thumb iframe,
+.product-shell .proposal-canvas {
+  background: var(--ui-well);
+}
+
+.product-shell .proposal-issues {
+  background: var(--ui-warn-bg);
+  border-top: 1px solid var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell .creation-steps li > span,
+.product-shell .guide-index {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text-2);
+}
+
+.product-shell .is-done .guide-index {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell .creation-steps li[aria-current="step"] > span,
+.product-shell .is-current .guide-index {
+  background: var(--ui-accent-grad);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.product-shell .creation-surface input:not([type="radio"]):not([type="checkbox"]),
+.product-shell .creation-surface textarea,
+.product-shell .creation-surface select {
+  background: var(--ui-well);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+}
+
+.product-shell .site-creation button.secondary,
+.product-shell .project-heading .button.secondary {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+}
+
+.product-shell .site-creation button.primary {
+  background: var(--ui-accent-grad);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell .agent-studio .result-unit-picker select {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 8px;
+  color: var(--ui-text);
+  padding: 7px 12px;
+}
+
+.product-shell .agent-studio button.result-finding {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio button.result-finding:hover {
+  background: var(--ui-surface-2);
+}
+
+.product-shell .agent-studio .finding-level {
+  background: var(--ui-warn-bg);
+  border: 1px solid var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell .agent-studio .finding-level.error {
+  background: var(--ui-danger-bg);
+  border: 1px solid var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.product-shell .agent-studio .result-screenshots img,
+.product-shell .agent-studio .result-image-error {
+  background: var(--ui-well);
+  border-color: var(--ui-border);
+}
+
+.product-shell .proposal-view-tabs button {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  box-shadow: none;
+}
+
+.product-shell .proposal-view-tabs button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+/* Funnel Cards */
+.product-shell .funnel-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-shell .funnel-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ui-accent), var(--ui-ok));
+  opacity: 0.7;
+}
+
+/* Keep Storefront Preview Iframes Neutral White */
 .product-shell iframe {
   background: #ffffff;
   border: 1px solid var(--ui-border-strong);
   border-radius: 10px;
 }
 
-.product-shell .studio-preflight.is-ready {
-  color: var(--ui-ok);
-}
-
-.product-shell .studio-preflight.is-blocked {
-  color: var(--ui-danger);
-}
-
-.product-shell .diag-list .is-ok {
-  color: var(--ui-ok);
-}
-
-.product-shell .diag-list .is-fail {
-  color: var(--ui-danger);
-}
-
-.product-shell progress {
-  accent-color: var(--ui-accent-bright);
-  background: var(--ui-well);
-}
-
-/* Provider presets strip */
 .product-shell .provider-presets {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-/* Subtle Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+.product-shell .studio-preflight.is-ready,
+.product-shell .diag-list .is-ok {
+  color: var(--ui-ok);
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.product-shell .studio-preflight.is-blocked,
+.product-shell .diag-list .is-fail {
+  color: var(--ui-danger);
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--ui-border-strong);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+/* ==========================================================================
+   10. Responsive Breakpoints (1100px & 760px)
+   ========================================================================== */
+@media (max-width: 1180px) {
+  .product-shell .agent-studio .task-split {
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
+  }
+  .product-shell .agent-studio .task-diagnostics dl {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-muted);
-  border: 2px solid transparent;
-  background-clip: content-box;
+@media (max-width: 960px) {
+  .product-shell .mission-metrics,
+  .product-shell .studio-metrics,
+  .product-shell .mission-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .product-shell .agent-studio .task-split {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .product-shell .agent-studio .task-mobile-switch {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-rail);
+  }
+  .product-shell .agent-studio .task-mobile-switch button {
+    flex: 1;
+    background: transparent;
+    border: 1px solid transparent;
+    box-shadow: none;
+    color: var(--ui-muted);
+  }
+  .product-shell .agent-studio .task-mobile-switch button[aria-pressed="true"] {
+    background: var(--ui-accent-soft);
+    border-color: var(--ui-accent-border);
+    color: var(--ui-text);
+  }
+  .product-shell .agent-studio[data-panel="tasks"] .task-detail,
+  .product-shell .agent-studio[data-panel="tasks"] .task-control,
+  .product-shell .agent-studio[data-panel="result"] .task-navigation,
+  .product-shell .agent-studio[data-panel="result"] .task-control,
+  .product-shell .agent-studio[data-panel="controls"] .task-navigation,
+  .product-shell .agent-studio[data-panel="controls"] .task-detail {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1442,7 +2282,10 @@ dialog::backdrop {
     min-height: 52px;
   }
   .product-shell .content {
-    padding: 20px 16px 40px;
+    padding: 18px 14px 36px;
+  }
+  .product-shell .studio-site-list {
+    grid-template-columns: minmax(0, 1fr);
   }
   .auth-page .auth-form {
     padding: 26px 20px;

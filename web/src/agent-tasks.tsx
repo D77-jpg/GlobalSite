@@ -14,7 +14,6 @@ import {
 import { api, ApiError } from "./api";
 import { st, siteMessages } from "./sites-i18n";
 import type { Locale } from "./i18n";
-import "./agent-tasks.css";
 import { AgentControls } from "./agent-controls";
 import { AgentResults } from "./agent-results";
 type Row = Record<string, any>;

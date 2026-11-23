@@ -207,9 +207,10 @@ export function WorkspaceFrame({
     <>
       <Link to="/" className="brand" onClick={() => setPopup(null)}>
         <span className="brand-icon">
-          <Globe2 size={21} />
+          <Globe2 size={18} />
         </span>
         <span className="brand-name">GlobalSite</span>
+        <span className="brand-pill">STUDIO</span>
       </Link>
       <Link
         to="/organization"

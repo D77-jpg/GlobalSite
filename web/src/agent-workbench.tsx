@@ -82,12 +82,16 @@ export function AgentWorkbench({
   return (
     <div className="agent-workbench catalog">
       <header className="agent-mast">
-        <div>
+        <div className="agent-mast-title">
           <h1>{c.title}</h1>
+          <span className="agent-live-pill">
+            <span className="live-dot" aria-hidden="true" />
+            {locale === "zh" ? "实时同步" : "Live"}
+          </span>
         </div>
         <section className="agent-picker">
           <label>
-            {c.site}
+            <span>{c.site}</span>
             <select
               value={site?.id ?? ""}
               onChange={(e) => setSelected(e.target.value)}
@@ -115,13 +119,18 @@ export function AgentWorkbench({
           )}
         </section>
         {site && (
-          <Link
-            className="button secondary agent-preview-link"
-            to={base + "/preview"}
-          >
-            {locale === "zh" ? "预览网站" : "Preview site"}
-            <ArrowUpRight size={14} />
-          </Link>
+          <div className="agent-mast-actions">
+            <Link className="button secondary agent-preview-link" to={base}>
+              {locale === "zh" ? "站点工作台" : "Site studio"}
+            </Link>
+            <Link
+              className="button secondary agent-preview-link"
+              to={base + "/preview"}
+            >
+              {locale === "zh" ? "预览网站" : "Preview site"}
+              <ArrowUpRight size={14} />
+            </Link>
+          </div>
         )}
       </header>
       {sites.error ? (

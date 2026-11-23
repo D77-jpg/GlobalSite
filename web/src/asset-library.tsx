@@ -10,7 +10,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { catalogText } from "./catalog-i18n";
-import "./asset-library.css";
 type Item = Record<string, any>;
 type T = ReturnType<typeof catalogText>;
 export function assetSize(bytes: number) {

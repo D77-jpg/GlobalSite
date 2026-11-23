@@ -3,8 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import type { Locale } from "./i18n";
-import "./sites.css";
-import "./studio.css";
 import {
   ClipboardCheck,
   PackageCheck,

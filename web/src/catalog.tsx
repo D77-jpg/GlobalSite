@@ -19,7 +19,6 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import "./operations.css";
 import { catalogText, catalogMessages } from "./catalog-i18n";
 import type { Locale } from "./i18n";
 type Props = { locale: Locale; role: "admin" | "editor" | "viewer" };

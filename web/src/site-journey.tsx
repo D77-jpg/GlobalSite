@@ -13,7 +13,6 @@ import { api, ApiError } from "./api";
 import { useLoad } from "./sites";
 import { st, siteMessages } from "./sites-i18n";
 import type { Locale } from "./i18n";
-import "./site-journey.css";
 
 const copy = {
   zh: {

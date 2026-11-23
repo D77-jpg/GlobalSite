@@ -6,8 +6,6 @@ import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import { inquiryMessages } from "./inquiry-i18n";
 import type { Locale } from "./i18n";
-import "./inquiries.css";
-import "./operations.css";
 type Row = Record<string, any>;
 type Props = { locale: Locale; role: string };
 const translator = (locale: Locale) => (key: string) =>

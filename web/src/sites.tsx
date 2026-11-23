@@ -22,8 +22,6 @@ import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import { st, siteMessages } from "./sites-i18n";
 import type { Locale } from "./i18n";
-import "./sites.css";
-import "./studio.css";
 type Props = { locale: Locale; role: "admin" | "editor" | "viewer" };
 type Row = Record<string, any>;
 type T = ReturnType<typeof st>;
