@@ -37,6 +37,7 @@ type Props = {
   role: "admin" | "editor" | "viewer";
   organizationName?: string;
   languageButton: ReactNode;
+  themeButton?: ReactNode;
   children: ReactNode;
 };
 const copy = {
@@ -111,6 +112,7 @@ export function WorkspaceFrame({
   role,
   organizationName,
   languageButton,
+  themeButton,
   children,
 }: Props) {
   const t = (key: Key) => messages[locale][key],
@@ -317,6 +319,7 @@ export function WorkspaceFrame({
               <span>{c.search}</span>
               <kbd>Ctrl K</kbd>
             </button>
+            {themeButton}
             {languageButton}
           </div>
         </header>

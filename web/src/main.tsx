@@ -88,6 +88,8 @@ import {
   Mail,
   Monitor,
   KeyRound,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { api, ApiError } from "./api";
 import { messages, errors, type Locale, type Key } from "./i18n";
@@ -97,6 +99,13 @@ import "./account-workspace.css";
 import "./product-ui.css";
 import "./workspace-layouts.css";
 import "./surface.css";
+import "./obsidian-studio.css";
+type Theme = "dark" | "light";
+const ThemeCtx = createContext<{
+  theme: Theme;
+  toggleTheme: () => void;
+}>({ theme: "dark", toggleTheme: () => {} });
+const useTheme = () => useContext(ThemeCtx);
 type Me = {
   user: { id: string; name: string; email: string; twoFactorEnabled: boolean };
   organizationId: string;
@@ -284,6 +293,26 @@ function DevMail({ receipt }: { receipt?: string }) {
     </aside>
   );
 }
+function ThemeButton() {
+  const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
+  const label = theme === "dark" ? t("switchToLight") : t("switchToDark");
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      aria-label={label}
+      title={label}
+      onClick={toggleTheme}
+    >
+      {theme === "dark" ? (
+        <Sun size={16} aria-hidden="true" />
+      ) : (
+        <Moon size={16} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
 function LocaleButton() {
   const { locale, setLocale, t } = useI18n();
   return (
@@ -304,7 +333,7 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
       <section className="auth-story">
         <Link to="/login" className="brand">
           <span className="brand-icon">
-            <Globe2 size={25} aria-hidden="true" />
+            <Globe2 size={22} aria-hidden="true" />
           </span>
           GlobalSite
           <span className="brand-dot" aria-hidden="true">
@@ -312,6 +341,9 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
         <div className="story-content">
+          <p className="eyebrow">{t("builtForGlobal")}</p>
+          <h1>{t("tagline")}</h1>
+          <p className="story-lead">{t("workspaceSub")}</p>
           <h2>{t("accountWorkflow")}</h2>
           <ol className="auth-workflow">
             {(["authCapture", "authPlan", "authReview"] as const).map(
@@ -321,15 +353,19 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
             )}
           </ol>
         </div>
+        <div className="story-footer">GlobalSite · B2B AI Site Studio</div>
       </section>
       <main className="auth-main">
+        <div className="auth-controls">
+          <ThemeButton />
+          <LocaleButton />
+        </div>
         <Link to="/login" className="brand auth-mark">
           <span className="brand-icon">
-            <Globe2 size={21} />
+            <Globe2 size={20} />
           </span>
           GlobalSite
         </Link>
-        <LocaleButton />
         <div className="auth-form">{children}</div>
         <footer>© {new Date().getFullYear()} GlobalSite</footer>
       </main>
@@ -1314,6 +1350,7 @@ function WorkspaceRoutes({ me }: { me: Me }) {
       userName={me.user.name}
       role={me.role}
       organizationName={org.data?.name}
+      themeButton={<ThemeButton />}
       languageButton={<LocaleButton />}
     >
       <Suspense fallback={<p role="status">{t("loading")}</p>}>
@@ -1407,29 +1444,47 @@ function App() {
   const [locale, setLocaleState] = useState<Locale>(
     localStorage.getItem("globalsite_locale") === "en" ? "en" : "zh",
   );
+  const [theme, setThemeState] = useState<Theme>(
+    localStorage.getItem("globalsite_theme") === "light" ? "light" : "dark",
+  );
   const setLocale = (next: Locale) => {
     setLocaleState(next);
     localStorage.setItem("globalsite_locale", next);
   };
+  const toggleTheme = () => {
+    setThemeState((prev) => {
+      const next: Theme = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("globalsite_theme", next);
+      return next;
+    });
+  };
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta)
+      meta.setAttribute("content", theme === "dark" ? "#090b10" : "#f6f7fb");
+  }, [theme]);
   return (
-    <I18n.Provider
-      value={{ locale, setLocale, t: (key) => messages[locale][key] ?? key }}
-    >
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-email" element={<Verify />} />
-          <Route path="/resend-verification" element={<ResendVerification />} />
-          <Route path="/forgot-password" element={<PasswordPage />} />
-          <Route path="/reset-password" element={<PasswordPage reset />} />
-          <Route path="/*" element={<Workspace />} />
-        </Routes>
-      </BrowserRouter>
-    </I18n.Provider>
+    <ThemeCtx.Provider value={{ theme, toggleTheme }}>
+      <I18n.Provider
+        value={{ locale, setLocale, t: (key) => messages[locale][key] ?? key }}
+      >
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<Verify />} />
+            <Route path="/resend-verification" element={<ResendVerification />} />
+            <Route path="/forgot-password" element={<PasswordPage />} />
+            <Route path="/reset-password" element={<PasswordPage reset />} />
+            <Route path="/*" element={<Workspace />} />
+          </Routes>
+        </BrowserRouter>
+      </I18n.Provider>
+    </ThemeCtx.Provider>
   );
 }
 createRoot(document.getElementById("root")!).render(<App />);

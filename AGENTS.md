@@ -171,3 +171,6 @@
 - 访客询盘自动确认邮件运行于 inquiry.autoreply（fast 车道），仅发送管理员模板与 receiptId，禁止回显访客原始留言，保留 attemptedAt 防重与未知 SMTP 停重发机制；GET /api/v1/inquiries/summary 保持组织隔离且仅输出脱敏来源标签。
 - 部署 Webhook（POST /api/v1/site-versions/:id/webhook）仅限管理员触发已通过 validVersion 门禁的版本，目标 URL 须通过 publicUrl() SSRF 校验并禁用重定向，可选加密密钥以 HMAC-SHA256 签名。
 - S3/R2 对象存储通过零外部依赖的 object-storage.service.ts（AWS SigV4）适配，STORAGE_DRIVER 默认 local 保持向后兼容，s3 模式严格按 ${prefix}/${organizationId}/${key} 隔离并保留 storage_bytes 计量。
+
+## S29 暗黑旗舰 UI 设计系统
+- 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 为最终加载的权威主题层，默认启用 Dark-First（data-theme="dark"）并支持顶栏/登录页一键切换浅色模式（偏好存 localStorage 的 globalsite_theme，不存任何凭证）；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持白底中性画布以还原独立站真实视觉。

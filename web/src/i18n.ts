@@ -65,6 +65,8 @@ export const messages = {
     signUp: "创建账号",
     signOut: "退出登录",
     language: "切换语言",
+    switchToLight: "切换浅色模式",
+    switchToDark: "切换深色模式",
     welcome: "欢迎回来",
     loginSub: "登录你的工作空间，继续打造全球业务。",
     registerTitle: "开启你的全球业务",
@@ -268,6 +270,8 @@ export const messages = {
     signUp: "Create account",
     signOut: "Sign out",
     language: "Change language",
+    switchToLight: "Switch to light mode",
+    switchToDark: "Switch to dark mode",
     welcome: "Welcome back",
     loginSub:
       "Sign in to your workspace and keep building your global business.",

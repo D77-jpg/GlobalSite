@@ -1,0 +1,1450 @@
+/* ==========================================================================
+   GlobalSite Obsidian AI Studio Design System (S29)
+   Dark-First Flagship Workspace + Porcelain Light Mode Toggle
+   Strict CSP compliant (zero inline styles). Loaded last as canonical theme.
+   ========================================================================== */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  /* Core Canvas & Surfaces */
+  --ui-bg: #080a0f;
+  --ui-bg-aura: radial-gradient(960px 440px at 18% -10%, rgba(99, 102, 241, 0.14), transparent 65%),
+    radial-gradient(760px 380px at 84% -8%, rgba(16, 185, 129, 0.085), transparent 62%);
+  --ui-sidebar: #0c0f17;
+  --ui-topbar: rgba(10, 13, 20, 0.78);
+  --ui-surface: #111521;
+  --ui-surface-2: #161b2a;
+  --ui-surface-hover: #1a2033;
+  --ui-well: #0b0e16;
+  --ui-glass: rgba(17, 21, 33, 0.74);
+
+  /* Borders & Hairlines */
+  --ui-border: rgba(255, 255, 255, 0.08);
+  --ui-border-strong: rgba(255, 255, 255, 0.15);
+  --ui-border-glow: rgba(129, 140, 248, 0.34);
+  --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Typography */
+  --ui-text: #f3f6fc;
+  --ui-text-2: #b8c2d8;
+  --ui-muted: #7f8ba4;
+
+  /* Brand & Luminous Accents */
+  --ui-accent: #6366f1;
+  --ui-accent-bright: #818cf8;
+  --ui-accent-soft: rgba(99, 102, 241, 0.16);
+  --ui-accent-border: rgba(129, 140, 248, 0.32);
+  --ui-accent-grad: linear-gradient(180deg, #6b6ff7 0%, #4f46e5 100%);
+  --ui-accent-grad-hover: linear-gradient(180deg, #7c80ff 0%, #5b52f0 100%);
+  --ui-accent-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.24),
+    0 6px 20px -6px rgba(99, 102, 241, 0.52);
+
+  /* Status Signals */
+  --ui-ok: #34d399;
+  --ui-ok-bg: rgba(16, 185, 129, 0.14);
+  --ui-ok-border: rgba(52, 211, 153, 0.28);
+  --ui-warn: #fbbf24;
+  --ui-warn-bg: rgba(245, 158, 11, 0.14);
+  --ui-warn-border: rgba(251, 191, 36, 0.28);
+  --ui-info: #38bdf8;
+  --ui-info-bg: rgba(56, 189, 248, 0.14);
+  --ui-info-border: rgba(56, 189, 248, 0.28);
+  --ui-danger: #fb7185;
+  --ui-danger-bg: rgba(244, 63, 94, 0.14);
+  --ui-danger-border: rgba(251, 113, 133, 0.3);
+
+  /* Shadows */
+  --ui-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --ui-shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.56);
+  --ui-shadow-lg: 0 24px 64px -12px rgba(0, 0, 0, 0.72);
+  --ui-backdrop: rgba(4, 6, 12, 0.72);
+
+  /* Map legacy tokens seamlessly */
+  --ink: var(--ui-text);
+  --primary: var(--ui-accent);
+  --brand: var(--ui-accent-bright);
+  --muted: var(--ui-muted);
+  --line: var(--ui-border);
+  --card: var(--ui-surface);
+  --ws-bg: var(--ui-bg);
+  --ws-tint: var(--ui-accent-soft);
+  --ws-border: var(--ui-border-strong);
+  --ws-focus: var(--ui-accent-bright);
+  --gs-surface-tint: var(--ui-well);
+  --gs-surface-elevated: var(--ui-surface);
+  --gs-shadow-sm: var(--ui-shadow-sm);
+  --gs-shadow-md: var(--ui-shadow-md);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ui-bg: #f5f7fb;
+  --ui-bg-aura: radial-gradient(920px 380px at 20% -10%, rgba(99, 102, 241, 0.08), transparent 65%),
+    radial-gradient(720px 320px at 85% -8%, rgba(16, 185, 129, 0.06), transparent 60%);
+  --ui-sidebar: #ffffff;
+  --ui-topbar: rgba(255, 255, 255, 0.82);
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f8faff;
+  --ui-surface-hover: #f1f5fb;
+  --ui-well: #f2f4f9;
+  --ui-glass: rgba(255, 255, 255, 0.86);
+
+  --ui-border: rgba(15, 23, 42, 0.085);
+  --ui-border-strong: rgba(15, 23, 42, 0.16);
+  --ui-border-glow: rgba(79, 70, 229, 0.35);
+  --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  --ui-text: #0f172a;
+  --ui-text-2: #334155;
+  --ui-muted: #64748b;
+
+  --ui-accent: #4f46e5;
+  --ui-accent-bright: #4338ca;
+  --ui-accent-soft: rgba(79, 70, 229, 0.09);
+  --ui-accent-border: rgba(79, 70, 229, 0.24);
+  --ui-accent-grad: linear-gradient(180deg, #5b53f2 0%, #4338ca 100%);
+  --ui-accent-grad-hover: linear-gradient(180deg, #6860f8 0%, #4f46e5 100%);
+  --ui-accent-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.25),
+    0 6px 18px -6px rgba(79, 70, 229, 0.45);
+
+  --ui-ok: #047857;
+  --ui-ok-bg: #ecfdf5;
+  --ui-ok-border: #a7f3d0;
+  --ui-warn: #b45309;
+  --ui-warn-bg: #fffbeb;
+  --ui-warn-border: #fde68a;
+  --ui-info: #0369a1;
+  --ui-info-bg: #f0f9ff;
+  --ui-info-border: #bae6fd;
+  --ui-danger: #be123c;
+  --ui-danger-bg: #fff1f2;
+  --ui-danger-border: #fecdd3;
+
+  --ui-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --ui-shadow-md: 0 10px 28px -10px rgba(15, 23, 42, 0.1);
+  --ui-shadow-lg: 0 24px 60px -14px rgba(15, 23, 42, 0.16);
+  --ui-backdrop: rgba(15, 23, 42, 0.42);
+
+  --ink: var(--ui-text);
+  --primary: var(--ui-accent);
+  --brand: var(--ui-accent);
+  --muted: var(--ui-muted);
+  --line: var(--ui-border);
+  --card: var(--ui-surface);
+  --ws-bg: var(--ui-bg);
+  --ws-tint: var(--ui-accent-soft);
+  --ws-border: var(--ui-border-strong);
+  --ws-focus: var(--ui-accent);
+  --gs-surface-tint: var(--ui-well);
+  --gs-surface-elevated: var(--ui-surface);
+  --gs-shadow-sm: var(--ui-shadow-sm);
+  --gs-shadow-md: var(--ui-shadow-md);
+}
+
+/* ---------- Global Typography & Base ---------- */
+html,
+body {
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "PingFang SC",
+    "Segoe UI Variable",
+    "Segoe UI",
+    "Microsoft YaHei",
+    sans-serif;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-image: var(--ui-bg-aura);
+  background-attachment: fixed;
+}
+
+a {
+  color: var(--ui-accent-bright);
+  transition: color 150ms ease;
+}
+
+a:hover {
+  color: var(--ui-text);
+}
+
+code,
+pre,
+kbd {
+  font-family: "JetBrains Mono", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+code {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.88em;
+}
+
+pre {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.initial-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+  color: var(--ui-text-2);
+  background: var(--ui-bg);
+}
+
+/* ---------- Theme Toggle & Language Controls ---------- */
+.theme-toggle,
+.language {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 9px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text-2);
+  font-size: 12.5px;
+  font-weight: 550;
+  box-shadow: var(--ui-specular);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.theme-toggle {
+  width: 34px;
+  padding: 0;
+}
+
+.theme-toggle:hover,
+.language:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+/* ---------- Flagship Split Auth Studio ---------- */
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--ui-bg);
+  background-image: var(--ui-bg-aura);
+}
+
+.auth-page .auth-story {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  padding: 44px 52px;
+  background:
+    radial-gradient(620px 460px at 20% 25%, rgba(99, 102, 241, 0.24), transparent 68%),
+    radial-gradient(480px 420px at 85% 80%, rgba(16, 185, 129, 0.16), transparent 66%),
+    linear-gradient(155deg, #0b0e18 0%, #090b12 60%, #0c1220 100%);
+  color: #f3f6fc;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.auth-page .auth-story::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 75% 70% at 45% 45%, #000 20%, transparent 80%);
+  pointer-events: none;
+}
+
+.auth-page .auth-story > * {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-page .auth-story .brand {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.auth-page .auth-story .brand-icon,
+.auth-page .auth-main .auth-mark .brand-icon,
+.product-shell .brand-icon {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: var(--ui-accent-grad);
+  color: #ffffff;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.auth-page .auth-story .brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.auth-page .auth-story .brand-dot {
+  color: #34d399;
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.auth-page .story-content {
+  padding: 28px 0;
+  margin: auto 0;
+  max-width: 480px;
+}
+
+.auth-page .story-content .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.16);
+  border: 1px solid rgba(129, 140, 248, 0.34);
+  color: #c7d2fe;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.auth-page .story-content h1 {
+  font-size: clamp(32px, 3vw, 46px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  margin: 18px 0 14px;
+  color: #ffffff;
+}
+
+.auth-page .story-lead {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #9ba8c4;
+  margin-bottom: 30px;
+}
+
+.auth-page .story-content h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #7f8ba4;
+  margin-bottom: 14px;
+}
+
+.auth-page .auth-workflow {
+  list-style: none;
+  counter-reset: auth-step;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.auth-page .auth-workflow li {
+  counter-increment: auth-step;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f5;
+  font-size: 13.5px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
+.auth-page .auth-workflow li::before {
+  content: "0" counter(auth-step);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(129, 140, 248, 0.34);
+  color: #a5b4fc;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  flex-shrink: 0;
+}
+
+.auth-page .story-footer {
+  font-size: 12px;
+  color: #6b768f;
+  letter-spacing: 0.02em;
+}
+
+.auth-page .auth-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px 24px;
+  background: transparent;
+}
+
+.auth-page .auth-controls {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-page .auth-main .auth-mark {
+  display: none;
+}
+
+.auth-page .auth-form {
+  width: 100%;
+  max-width: 420px;
+  margin: auto 0;
+  padding: 34px 32px 30px;
+  background: var(--ui-glass);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 18px;
+  box-shadow: var(--ui-specular), var(--ui-shadow-lg);
+  backdrop-filter: blur(20px);
+}
+
+.auth-page .auth-form h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--ui-text);
+  margin: 0 0 8px;
+}
+
+.auth-page .auth-form .sub {
+  color: var(--ui-muted);
+  font-size: 13.5px;
+  margin-bottom: 24px;
+}
+
+.auth-page .auth-form label {
+  color: var(--ui-text-2);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.auth-page .auth-form input,
+.auth-page .auth-form select {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 10px 13px;
+}
+
+.auth-page .auth-form input:focus,
+.auth-page .auth-form select:focus {
+  border-color: var(--ui-accent-bright);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
+  outline: none;
+}
+
+.auth-page .auth-form button.primary {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--ui-accent-grad);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: var(--ui-accent-shadow);
+  transition:
+    background 160ms ease,
+    transform 140ms ease,
+    box-shadow 160ms ease;
+}
+
+.auth-page .auth-form button.primary:hover {
+  background: var(--ui-accent-grad-hover);
+  transform: translateY(-1px);
+}
+
+.auth-page .auth-form .forgot-link,
+.auth-page .auth-form .text-link,
+.auth-page .auth-form .auth-switch a {
+  color: var(--ui-accent-bright);
+  font-weight: 550;
+}
+
+.auth-page .auth-form .auth-switch {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--ui-muted);
+}
+
+.auth-page .auth-main footer {
+  color: var(--ui-muted);
+  font-size: 12px;
+  padding-top: 20px;
+}
+
+.dev-mail {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+.dev-mail .mail-body {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 9px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+}
+
+@media (max-width: 960px) {
+  .auth-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .auth-page .auth-story {
+    display: none;
+  }
+  .auth-page .auth-main .auth-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px auto 16px;
+    color: var(--ui-text);
+    font-size: 19px;
+    font-weight: 700;
+  }
+}
+
+/* ---------- Workspace Shell: Obsidian Sidebar & Frosted Topbar ---------- */
+.product-shell {
+  --ws-nav: 236px;
+  background: transparent;
+  color: var(--ui-text);
+  font-size: 13.5px;
+  accent-color: var(--ui-accent);
+  min-height: 100dvh;
+}
+
+.product-shell > .sidebar,
+.ws-drawer .sidebar {
+  background: var(--ui-sidebar);
+  border-right: 1px solid var(--ui-border);
+  padding: 18px 12px 14px;
+}
+
+.product-shell .sidebar > .brand {
+  margin: 2px 8px 18px;
+  gap: 10px;
+  color: var(--ui-text);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.product-shell .brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.product-shell .workspace-label {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 11px;
+  padding: 9px 10px;
+  margin-bottom: 18px;
+  color: var(--ui-text);
+  box-shadow: var(--ui-specular);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.product-shell .workspace-label:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  text-decoration: none;
+}
+
+.product-shell .workspace-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--ui-accent-soft);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+}
+
+.product-shell .workspace-label small {
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.product-shell .workspace-label strong {
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.product-shell .nav-heading {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+  margin: 0 0 6px;
+  padding: 0 10px;
+}
+
+.product-shell .sidebar nav a {
+  padding: 8px 10px;
+  min-height: 36px;
+  border-radius: 9px;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ui-text-2);
+  border: 1px solid transparent;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.product-shell .sidebar nav a > svg {
+  color: var(--ui-muted);
+  transition: color 140ms ease;
+}
+
+.product-shell .sidebar nav a:hover {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+.product-shell .sidebar nav a:hover > svg {
+  color: var(--ui-text-2);
+}
+
+.product-shell .sidebar nav a.active {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--ui-accent-bright);
+}
+
+.product-shell .sidebar nav a.active > svg {
+  color: var(--ui-accent-bright);
+}
+
+.product-shell .account-box {
+  border-top: 1px solid var(--ui-border);
+  padding: 14px 4px 2px;
+  color: var(--ui-text);
+}
+
+.product-shell .account-box .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-accent-bright);
+  font-weight: 700;
+}
+
+.product-shell .account-box strong {
+  color: var(--ui-text);
+}
+
+.product-shell .account-box small {
+  color: var(--ui-muted);
+}
+
+.product-shell .account-box button {
+  color: var(--ui-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.product-shell .account-box button:hover {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+/* Topbar */
+.product-shell .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 58px;
+  min-height: 58px;
+  padding: 0 26px;
+  background: var(--ui-topbar);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .topbar .breadcrumb {
+  color: var(--ui-muted);
+  font-size: 13px;
+}
+
+.product-shell .topbar .breadcrumb strong {
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
+.product-shell .nav-collapse,
+.product-shell .mobile-menu {
+  color: var(--ui-text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.product-shell .nav-collapse:hover,
+.product-shell .mobile-menu:hover {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+.product-shell .topbar .ws-search {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 9px;
+  height: 34px;
+  color: var(--ui-muted);
+  padding: 0 11px;
+  box-shadow: var(--ui-specular);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.product-shell .topbar .ws-search:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+}
+
+.product-shell .ws-search kbd {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text-2);
+  border-radius: 5px;
+  padding: 2px 5px;
+  font-size: 10.5px;
+}
+
+.product-shell .topbar-right {
+  gap: 8px;
+}
+
+/* Command Palette & Modals */
+dialog.ws-palette,
+dialog.ws-drawer,
+dialog.asset-preview-dialog,
+.product-shell dialog {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 16px;
+  box-shadow: var(--ui-specular), var(--ui-shadow-lg);
+}
+
+dialog::backdrop {
+  background: var(--ui-backdrop);
+  backdrop-filter: blur(6px);
+}
+
+.ws-palette .ws-search-field {
+  background: var(--ui-well);
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-text);
+}
+
+.ws-palette .ws-search-field input {
+  background: transparent;
+  color: var(--ui-text);
+  border: 0;
+}
+
+.ws-palette a,
+.ws-palette button {
+  color: var(--ui-text-2);
+  border-radius: 8px;
+}
+
+.ws-palette a:hover,
+.ws-palette button:hover {
+  background: var(--ui-accent-soft);
+  color: var(--ui-text);
+}
+
+/* ---------- Surfaces, Cards & Containers ---------- */
+.product-shell .content {
+  padding: 28px 34px 56px;
+}
+
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  ) {
+  border-bottom: 1px solid var(--ui-border);
+  padding-bottom: 20px;
+}
+
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  )
+  :is(h1, h2) {
+  color: var(--ui-text);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  )
+  p {
+  color: var(--ui-muted);
+}
+
+.product-shell
+  :is(
+    .catalog-panel,
+    .panel,
+    .site-guide,
+    .ops-table-panel,
+    .studio-site-list,
+    .fact-register,
+    .usage-ledger,
+    .member-table,
+    .mission-metrics,
+    .mission-body .mission-panel,
+    .sites-tabs,
+    .studio-metrics,
+    .inquiry-reading-layout > .inquiry-letter,
+    .inquiry-reading-layout > .inquiry-followup,
+    .account-page .panel,
+    .account-page .settings-section,
+    .agent-studio,
+    .agent-task-detail,
+    .asset-tile,
+    .design-card,
+    .journey-card,
+    .studio-diff-box,
+    .studio-preview-pane,
+    .funnel-card
+  ) {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  color: var(--ui-text);
+}
+
+.product-shell
+  :is(
+    .guide-next,
+    .gap-quick-form,
+    .studio-subdetails,
+    .diag-panel,
+    .agent-task-list,
+    .agent-step-card,
+    .agent-output-card,
+    .site-design-card,
+    .catalog-subpanel
+  ) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  color: var(--ui-text);
+}
+
+.product-shell
+  :is(
+    .catalog-panel h2,
+    .catalog-panel h3,
+    .panel h2,
+    .panel h3,
+    .mission-panel h3,
+    .studio-section-heading h2,
+    .ops-panel-title h2
+  ) {
+  color: var(--ui-text);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.product-shell :is(p, li, small, dd, dt) {
+  color: var(--ui-text-2);
+}
+
+.product-shell :is(strong, b, h1, h2, h3, h4) {
+  color: var(--ui-text);
+}
+
+/* ---------- Buttons ---------- */
+.product-shell :is(button, .button) {
+  border-radius: 9px;
+  font-weight: 550;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 130ms ease,
+    box-shadow 150ms ease;
+}
+
+.product-shell
+  :is(
+    .catalog button:not(.secondary):not(.asset-name):not(.asset-menu-trigger):not(.asset-thumbnail),
+    .catalog .button:not(.secondary),
+    .button.primary,
+    button.primary
+  ) {
+  background: var(--ui-accent-grad);
+  border: 1px solid transparent;
+  color: #ffffff;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell
+  :is(
+    .catalog button:not(.secondary):not(.asset-name):not(.asset-menu-trigger):not(.asset-thumbnail),
+    .catalog .button:not(.secondary),
+    .button.primary,
+    button.primary
+  ):hover:not(:disabled) {
+  background: var(--ui-accent-grad-hover);
+  color: #ffffff;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.product-shell
+  :is(
+    .catalog .secondary,
+    .button.secondary,
+    .mission-hero-action,
+    .studio-site-links > a.button
+  ) {
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border-strong);
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell
+  :is(
+    .catalog .secondary,
+    .button.secondary,
+    .mission-hero-action,
+    .studio-site-links > a.button
+  ):hover:not(:disabled) {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+/* ---------- Form Controls ---------- */
+.product-shell
+  :is(
+    .catalog input:not([type="checkbox"]):not([type="radio"]),
+    .catalog textarea,
+    .catalog select,
+    .field input,
+    .field select,
+    select,
+    textarea
+  ) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 9px;
+  color: var(--ui-text);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.product-shell
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]),
+    textarea,
+    select
+  ):focus {
+  border-color: var(--ui-accent-bright);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
+  outline: none;
+}
+
+.product-shell label,
+.product-shell .field label,
+.product-shell legend {
+  color: var(--ui-text-2);
+  font-weight: 550;
+}
+
+.product-shell input::placeholder,
+.product-shell textarea::placeholder {
+  color: var(--ui-muted);
+}
+
+.product-shell option {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+/* ---------- KPI Strips & Overview ---------- */
+.product-shell .mission-metrics > a,
+.product-shell .studio-metrics > button {
+  background: transparent;
+  color: var(--ui-text-2);
+  border-color: var(--ui-border);
+  box-shadow: none;
+}
+
+.product-shell .mission-metrics > a:hover,
+.product-shell .studio-metrics > button:hover {
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+  text-decoration: none;
+  transform: none;
+}
+
+.product-shell .mission-metrics strong,
+.product-shell .studio-metrics strong,
+.product-shell .funnel-value,
+.product-shell .b2b-coverage {
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.product-shell .funnel-card {
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.product-shell .funnel-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ui-accent), var(--ui-ok));
+  opacity: 0.65;
+}
+
+.product-shell .funnel-card:hover {
+  border-color: var(--ui-border-glow);
+  transform: translateY(-1px);
+}
+
+.product-shell .funnel-label {
+  color: var(--ui-muted);
+}
+
+.product-shell .funnel-source-list {
+  color: var(--ui-text-2);
+}
+
+.product-shell .mission-panel header > a,
+.product-shell .studio-site-links > a:not(.button),
+.product-shell .guide-steps a,
+.product-shell .ops-facts-link {
+  color: var(--ui-accent-bright);
+}
+
+.product-shell .mission-stages li,
+.product-shell .mission-jobs li,
+.product-shell .mission-panel > header {
+  border-color: var(--ui-border);
+}
+
+.product-shell .mission-stages a:hover,
+.product-shell .mission-jobs a:hover {
+  background: var(--ui-surface-2);
+  border-radius: 8px;
+}
+
+/* ---------- Tables & Lists ---------- */
+.product-shell :is(table, .publish-table) {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.product-shell :is(th, .ops-colheads) {
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  border-color: var(--ui-border);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.product-shell td {
+  color: var(--ui-text-2);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell tbody tr:hover,
+.product-shell .studio-site-row:hover,
+.product-shell .ops-product-line:hover {
+  background: var(--ui-surface-2);
+}
+
+.product-shell .studio-site-list .sites-brand {
+  background: var(--ui-accent-grad);
+  color: #ffffff;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+/* ---------- Tabs, Filter Pills & Sub-Navigation ---------- */
+.product-shell .sites-tabs button,
+.product-shell .ops-status-tabs button,
+.product-shell .asset-filters button,
+.product-shell .asset-view-options button {
+  background: transparent;
+  color: var(--ui-text-2);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.product-shell .sites-tabs button:hover,
+.product-shell .ops-status-tabs button:hover,
+.product-shell .asset-filters button:hover,
+.product-shell .asset-view-options button:hover {
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+  transform: none;
+}
+
+.product-shell .sites-tabs button[aria-pressed="true"],
+.product-shell .ops-status-tabs button[aria-pressed="true"],
+.product-shell .asset-filters button[aria-pressed="true"],
+.product-shell .asset-view-options button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--ui-accent-bright);
+}
+
+.product-shell .ops-status-tabs {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  border-radius: 11px;
+}
+
+.product-shell .ops-status-tabs button[aria-pressed="true"] {
+  box-shadow: none;
+}
+
+.product-shell .ops-section-nav,
+.product-shell .release-nav {
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .ops-section-nav a,
+.product-shell .release-nav a {
+  color: var(--ui-text-2);
+}
+
+.product-shell .ops-section-nav a:hover,
+.product-shell .release-nav a:hover {
+  color: var(--ui-accent-bright);
+}
+
+/* ---------- Semantic Badges & Notices ---------- */
+.product-shell :is(.badge, .catalog-badge, .mission-state) {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.product-shell
+  :is(
+    .badge.active,
+    .catalog-badge.confirmed,
+    .catalog-badge.approved,
+    .catalog-badge.live,
+    .catalog-badge.resolved,
+    .catalog-badge.ready,
+    .mission-state.state-succeeded
+  ) {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell
+  :is(
+    .catalog-badge.candidate,
+    .catalog-badge.draft,
+    .catalog-badge.pending,
+    .catalog-badge.following,
+    .mission-state.state-queued
+  ) {
+  background: var(--ui-warn-bg);
+  border-color: var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell
+  :is(
+    .catalog-badge.running,
+    .catalog-badge.ai,
+    .catalog-badge.new,
+    .mission-state.state-running
+  ) {
+  background: var(--ui-info-bg);
+  border-color: var(--ui-info-border);
+  color: var(--ui-info);
+}
+
+.product-shell
+  :is(
+    .catalog-badge.blocked,
+    .catalog-badge.failed,
+    .catalog-badge.rejected,
+    .catalog-badge.spam,
+    .mission-state.state-failed
+  ) {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.notice,
+.product-shell :is(.notice, .mission-feedback) {
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 13px;
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-2);
+}
+
+.notice.success,
+.product-shell .notice.success {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.notice.error,
+.product-shell .notice.error {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+/* ---------- Asset Library, Agent Workbench & Split Editor Polish ---------- */
+.product-shell .catalog .asset-thumbnail {
+  background: var(--ui-well);
+}
+
+.product-shell .catalog .asset-name,
+.product-shell .catalog .asset-menu-trigger {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--ui-text);
+}
+
+.product-shell .catalog .asset-menu-trigger:hover,
+.product-shell .catalog .asset-menu-trigger[aria-expanded="true"] {
+  background: var(--ui-surface-2);
+}
+
+.product-shell .catalog .asset-menu-content {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 11px;
+  box-shadow: var(--ui-shadow-md);
+}
+
+.product-shell .catalog .asset-menu-content :is(a, button) {
+  background: transparent;
+  color: var(--ui-text-2);
+  border: 0;
+  box-shadow: none;
+}
+
+.product-shell .catalog .asset-menu-content :is(a, button):hover {
+  background: var(--ui-surface-hover);
+  color: var(--ui-text);
+  transform: none;
+}
+
+.product-shell .catalog .asset-delete {
+  color: var(--ui-danger);
+}
+
+/* Agent Task Master-Detail Dark Surfaces */
+.product-shell .agent-task-row,
+.product-shell .agent-task-item {
+  border-bottom: 1px solid var(--ui-border);
+  background: transparent;
+  color: var(--ui-text-2);
+}
+
+.product-shell .agent-task-row:hover,
+.product-shell .agent-task-item:hover {
+  background: var(--ui-surface-2);
+}
+
+.product-shell .agent-task-row[aria-current="true"],
+.product-shell .agent-task-item[aria-selected="true"],
+.product-shell .agent-task-item.is-selected {
+  background: var(--ui-accent-soft);
+  color: var(--ui-text);
+}
+
+/* Split-Screen Live Page Editor & Device Frame */
+.product-shell .studio-preview-pane {
+  padding: 16px;
+}
+
+.product-shell .studio-preview-frame,
+.product-shell .design-thumb iframe,
+.product-shell iframe {
+  background: #ffffff;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 10px;
+}
+
+.product-shell .studio-preflight.is-ready {
+  color: var(--ui-ok);
+}
+
+.product-shell .studio-preflight.is-blocked {
+  color: var(--ui-danger);
+}
+
+.product-shell .diag-list .is-ok {
+  color: var(--ui-ok);
+}
+
+.product-shell .diag-list .is-fail {
+  color: var(--ui-danger);
+}
+
+.product-shell progress {
+  accent-color: var(--ui-accent-bright);
+  background: var(--ui-well);
+}
+
+/* Provider presets strip */
+.product-shell .provider-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Subtle Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ui-border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-muted);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+@media (max-width: 760px) {
+  .product-shell .topbar {
+    padding: 0 14px;
+    height: 52px;
+    min-height: 52px;
+  }
+  .product-shell .content {
+    padding: 20px 16px 40px;
+  }
+  .auth-page .auth-form {
+    padding: 26px 20px;
+  }
+}

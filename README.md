@@ -142,3 +142,7 @@ Docker 镜像包含锁定版本的 Chromium。直接用 Node 启动 Worker 时�
 ### 外贸增长运营、多渠道发布与对象存储（S28）
 
 发布设置新增遵守 Cookie 同意的 GA4 / GTM / Meta Pixel、GSC/Bing 站点验证、自定义 OG 封面图与 301/302 `_redirects` 生成；域名检测升级为 DNS/Cloudflare/HTTPS 分步诊断与推荐 CNAME；支持签名部署 Webhook 对接 Vercel / S3 / CI；询盘收件箱新增转化漏斗汇总（`GET /api/v1/inquiries/summary`）及可选防反射访客自动确认邮件；支持零外部依赖的可选 S3 / Cloudflare R2 对象存储（`STORAGE_DRIVER=s3`）。详见 [S28 设计](docs/design/S28-外贸增长发布与存储.md)。
+
+### 暗黑旗舰 UI 设计系统（S29）
+
+管理台全面升级为 **Obsidian AI Studio** 沉浸暗黑工作台（深空炭黑画布、柔和靛蓝/翡翠微光、细亮边卡片、磨砂顶栏与全新双栏登录展示页），并在顶栏与登录页右上角提供「深色 / 浅色」一键切换（记忆 UI 偏好）。详见 [S29 设计](docs/design/S29-暗黑旗舰UI设计系统.md)。
