@@ -24,27 +24,10 @@
 .product-shell .catalog-panel + .catalog-panel {
   border-top: 1px solid var(--line);
 }
-.product-shell .mission-metrics {
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
-}
-.product-shell .mission-body {
-  gap: 16px;
-}
-.product-shell .mission-body .mission-panel {
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 18px 20px;
-  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
-}
-.product-shell .mission-body .mission-panel:first-child {
-  border-left: 1px solid var(--line);
-  padding-left: 20px;
-}
+
+
+
+
 .product-shell .mission-panel header > a,
 .product-shell .studio-site-links > a,
 .product-shell .guide-steps a,
@@ -66,45 +49,12 @@
   color: #3a404a;
   font-weight: 550;
 }
-.product-shell .project-workspace-layout {
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 18px;
-}
-.product-shell .sites-tabs {
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 8px;
-  gap: 4px;
-  box-shadow: 0 1px 2px rgba(28, 27, 23, 0.04);
-}
-.product-shell .sites-tabs button {
-  min-height: 40px;
-  padding: 8px 12px;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.35;
-  color: #3e4450;
-  background: transparent;
-  border: 0;
-  text-align: left;
-}
-.product-shell .sites-tabs button:hover {
-  background: #f6f5f2;
-}
-.product-shell .sites-tabs button[aria-pressed="true"] {
-  background: var(--ws-tint);
-  color: #143528;
-  font-weight: 650;
-  box-shadow: inset 3px 0 0 var(--brand);
-}
-.product-shell .project-workspace-layout:has(.project-tab-runs) .sites-tabs {
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 8px;
-}
+
+
+
+
+
+
 .product-shell .studio-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -189,12 +139,8 @@
   font-size: 15px;
   line-height: 1.7;
 }
-.product-shell .fact-register {
-  padding: 8px 18px 12px;
-}
-.product-shell .fact-register .catalog-fact {
-  padding: 16px 0;
-}
+
+
 .product-shell .account-page .panel,
 .product-shell .account-page .settings-section {
   background: #fff;
@@ -342,7 +288,7 @@
   background: #fff;
 }
 @media (max-width: 1100px) {
-  .product-shell .studio-metrics {
+.product-shell .studio-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .product-shell .studio-metrics > button:nth-child(2) {
@@ -353,23 +299,7 @@
   }
 }
 @media (max-width: 760px) {
-  .product-shell .project-workspace-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .product-shell .sites-tabs {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    position: static;
-  }
-  .product-shell .sites-tabs button {
-    width: auto;
-    flex: none;
-    white-space: nowrap;
-    min-height: 44px;
-    font-size: 13px;
-  }
-  .product-shell .inquiry-reading-layout > .inquiry-followup {
+.product-shell .inquiry-reading-layout > .inquiry-followup {
     padding: 20px;
   }
   .product-shell :is(.catalog-panel, .panel, .site-guide) {
@@ -388,7 +318,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .product-shell .asset-tile {
+.product-shell .asset-tile {
     transition: none;
   }
 }
@@ -438,10 +368,7 @@
   border: 1px solid var(--line);
   border-radius: var(--gs-radius-sm);
 }
-.product-shell .studio-preview-pane {
-  background: var(--gs-surface-elevated);
-  box-shadow: var(--gs-shadow-md);
-}
+
 .product-shell .funnel-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

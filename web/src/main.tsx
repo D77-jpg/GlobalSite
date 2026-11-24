@@ -1126,13 +1126,32 @@ const AI_PRESETS = [
   { id: "dashscope", label: "DashScope", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-max", vision: "qwen-vl-max" },
   { id: "siliconflow", label: "SiliconFlow", baseUrl: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", vision: "Qwen/Qwen2.5-VL-72B-Instruct" },
 ] as const;
+const AI_TASK_ROUTES = [
+  { key: "research", label: "taskResearch" },
+  { key: "interview", label: "taskInterview" },
+  { key: "design", label: "taskDesign" },
+  { key: "content", label: "taskContent" },
+  { key: "review", label: "taskReview" },
+  { key: "rewrite", label: "taskRewrite" },
+] as const;
+
 function AiPage() {
   const { t } = useI18n();
   const { me } = useContext(Auth);
   const { data, error, reload } = useData("/ai/provider");
   const [enabled, setEnabled] = useState(false);
   const [supportsVision, setSupportsVision] = useState(false);
-  const [draft, setDraft] = useState<{ modelName: string; visionModelName: string; baseUrl: string; rev: number }>();
+  const [outputMode, setOutputMode] = useState<"json_object" | "json_schema">(
+    "json_object",
+  );
+  const [taskModels, setTaskModels] = useState<Record<string, string>>({});
+  const [taskTemps, setTaskTemps] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<{
+    modelName: string;
+    visionModelName: string;
+    baseUrl: string;
+    rev: number;
+  }>();
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>();
@@ -1140,6 +1159,15 @@ function AiPage() {
     if (data) {
       setEnabled(data.enabled);
       setSupportsVision(!!data.supportsVision);
+      setOutputMode(
+        data.outputMode === "json_schema" ? "json_schema" : "json_object",
+      );
+      setTaskModels(data.taskModels ?? {});
+      const temps: Record<string, string> = {};
+      for (const [k, v] of Object.entries(data.temperatureByTask ?? {})) {
+        if (typeof v === "number") temps[k] = String(v);
+      }
+      setTaskTemps(temps);
       setDraft({
         modelName: data.modelName ?? "",
         visionModelName: data.visionModelName ?? "",
@@ -1218,12 +1246,28 @@ function AiPage() {
               baseUrl: draft.baseUrl,
             }}
             onSubmit={async (value) => {
+              const cleanedModels: Record<string, string> = {};
+              const cleanedTemps: Record<string, number> = {};
+              for (const row of AI_TASK_ROUTES) {
+                const m = (taskModels[row.key] ?? "").trim();
+                if (m) cleanedModels[row.key] = m;
+                const rawT = (taskTemps[row.key] ?? "").trim();
+                if (rawT !== "") {
+                  const n = Number(rawT);
+                  if (Number.isFinite(n) && n >= 0 && n <= 2) {
+                    cleanedTemps[row.key] = n;
+                  }
+                }
+              }
               await api("/ai/provider", "PUT", {
                 modelName: value.modelName,
                 visionModelName: value.visionModelName ?? "",
                 baseUrl: value.baseUrl,
                 enabled,
                 supportsVision,
+                outputMode,
+                taskModels: cleanedModels,
+                temperatureByTask: cleanedTemps,
                 ...(value.apiKey ? { apiKey: value.apiKey } : {}),
               });
               setSuccess(t("saved"));
@@ -1246,6 +1290,66 @@ function AiPage() {
               />
               {t("supportsVision")}
             </label>
+            <details className="provider-routing-panel">
+              <summary>{t("aiAdvancedRouting")}</summary>
+              <div className="field">
+                <label htmlFor="ai-output-mode">{t("outputMode")}</label>
+                <select
+                  id="ai-output-mode"
+                  value={outputMode}
+                  onChange={(e) =>
+                    setOutputMode(
+                      e.target.value === "json_schema"
+                        ? "json_schema"
+                        : "json_object",
+                    )
+                  }
+                >
+                  <option value="json_object">{t("outputModeJsonObject")}</option>
+                  <option value="json_schema">{t("outputModeJsonSchema")}</option>
+                </select>
+                <small>{t("outputModeHint")}</small>
+              </div>
+              <p className="muted">{t("taskModelsHint")}</p>
+              <div className="provider-routing-grid">
+                {AI_TASK_ROUTES.map((row) => (
+                  <div key={row.key} className="provider-route-row">
+                    <label>
+                      {t(row.label)}
+                      <input
+                        type="text"
+                        maxLength={120}
+                        placeholder={t("taskModelPlaceholder")}
+                        value={taskModels[row.key] ?? ""}
+                        onChange={(e) =>
+                          setTaskModels((old) => ({
+                            ...old,
+                            [row.key]: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="provider-temp-field">
+                      {t("temperatureLabel")}
+                      <input
+                        type="number"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        placeholder="—"
+                        value={taskTemps[row.key] ?? ""}
+                        onChange={(e) =>
+                          setTaskTemps((old) => ({
+                            ...old,
+                            [row.key]: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </details>
           </Form>
           <button
             className="button secondary test-button"

@@ -509,7 +509,7 @@ pre {
 }
 
 @media (max-width: 960px) {
-  .auth-page {
+.auth-page {
     grid-template-columns: minmax(0, 1fr);
   }
   .auth-page .auth-story {
@@ -686,16 +686,6 @@ pre {
 .product-shell .workspace-label strong {
   color: var(--ui-text);
   font-size: 13px;
-}
-
-.product-shell .nav-heading {
-  font-size: 10.5px;
-  font-weight: 650;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--ui-muted);
-  margin: 0 0 6px;
-  padding: 0 10px;
 }
 
 .product-shell .sidebar nav a {
@@ -1923,53 +1913,6 @@ dialog::backdrop {
 }
 
 /* Full-Width Site Workspace: Horizontal Sticky Pill Tab Bar ABOVE Full Canvas */
-.product-shell .project-workspace-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
-}
-
-.product-shell .sites-tabs {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  overflow-x: auto;
-  gap: 6px;
-  padding: 6px;
-  border-radius: 12px;
-  background: var(--ui-rail);
-  border: 1px solid var(--ui-border);
-  box-shadow: var(--ui-specular);
-}
-
-.product-shell .sites-tabs button {
-  flex: 0 0 auto;
-  width: auto;
-  min-height: 36px;
-  padding: 7px 14px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid transparent;
-  box-shadow: none;
-  color: var(--ui-text-2);
-  font-size: 13px;
-  font-weight: 550;
-  white-space: nowrap;
-}
-
-.product-shell .sites-tabs button:hover {
-  background: var(--ui-surface);
-  color: var(--ui-text);
-}
-
-.product-shell .sites-tabs button[aria-pressed="true"] {
-  background: var(--ui-accent-soft);
-  border-color: var(--ui-accent-border);
-  color: var(--ui-text);
-  font-weight: 650;
-  box-shadow: none;
-}
 
 /* Site Studio KPI Strip (4 Bento Tiles) */
 .product-shell .studio-metrics {
@@ -2010,89 +1953,6 @@ dialog::backdrop {
 /* ==========================================================================
    8. REDESIGNED LAYOUT #3: Bento Executive Mission Overview (/)
    ========================================================================== */
-.product-shell .mission-hero-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: 7px;
-  background: var(--ui-accent-grad);
-  border: 1px solid transparent;
-  color: var(--ui-accent-fg);
-  font-size: 13px;
-  font-weight: 550;
-  box-shadow: var(--ui-accent-shadow);
-}
-
-.product-shell .mission-hero-action:hover {
-  background: var(--ui-accent-grad-hover);
-  border-color: transparent;
-  color: var(--ui-accent-fg);
-  text-decoration: none;
-}
-
-.product-shell .mission-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  overflow: visible;
-}
-
-.product-shell .mission-metrics > a {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px;
-  border-radius: 14px;
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-border);
-  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
-  color: var(--ui-text-2);
-  transition:
-    border-color 150ms ease,
-    transform 150ms ease;
-}
-
-.product-shell .mission-metrics > a:hover {
-  background: var(--ui-surface-2);
-  border-color: var(--ui-border-glow);
-  transform: translateY(-2px);
-  text-decoration: none;
-}
-
-.product-shell .mission-metrics > a > div {
-  font-size: 12.5px;
-  color: var(--ui-muted);
-}
-
-.product-shell .mission-metrics strong {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  color: var(--ui-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.product-shell .mission-body {
-  gap: 18px;
-}
-
-.product-shell .mission-stages li,
-.product-shell .mission-jobs li,
-.product-shell .mission-panel > header {
-  border-color: var(--ui-border);
-}
-
-.product-shell .mission-stages a:hover,
-.product-shell .mission-jobs a:hover {
-  background: var(--ui-surface-2);
-  border-radius: 9px;
-}
 
 .product-shell .stage-symbol {
   background: var(--ui-well);
@@ -2104,35 +1964,6 @@ dialog::backdrop {
   background: var(--ui-ok-bg);
   border-color: var(--ui-ok-border);
   color: var(--ui-ok);
-}
-
-.product-shell .mission-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-.product-shell .mission-shortcuts a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-border);
-  color: var(--ui-text);
-  font-weight: 550;
-  box-shadow: var(--ui-specular);
-}
-
-.product-shell .mission-shortcuts a:hover {
-  background: var(--ui-surface-2);
-  border-color: var(--ui-border-glow);
-  text-decoration: none;
 }
 
 /* ==========================================================================
@@ -2391,7 +2222,7 @@ dialog::backdrop {
    10. Responsive Breakpoints (1100px & 760px)
    ========================================================================== */
 @media (max-width: 1180px) {
-  .product-shell .agent-studio .task-split {
+.product-shell .agent-studio .task-split {
     grid-template-columns: 240px minmax(0, 1fr) 300px;
   }
   .product-shell .agent-studio .task-diagnostics dl {
@@ -2400,7 +2231,7 @@ dialog::backdrop {
 }
 
 @media (max-width: 960px) {
-  .product-shell .main-shell {
+.product-shell .main-shell {
     margin-left: 0;
     width: 100%;
   }
@@ -2444,7 +2275,7 @@ dialog::backdrop {
 }
 
 @media (max-width: 760px) {
-  .product-shell .topbar {
+.product-shell .topbar {
     padding: 0 14px;
     height: 52px;
     min-height: 52px;

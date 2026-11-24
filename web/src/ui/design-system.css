@@ -4229,3 +4229,41 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* S33 AI Provider Advanced Routing & Structured Output */
+.provider-routing-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.03));
+}
+.provider-routing-panel > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.provider-routing-panel[open] > summary {
+  margin-bottom: 12px;
+}
+.provider-routing-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.provider-route-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+  align-items: end;
+}
+.provider-route-row label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.provider-temp-field input {
+  text-align: center;
+}
