@@ -34,6 +34,14 @@ const copy = {
     next: "下一步，选择产品",
     previous: "上一步",
     create: "创建并进入建站向导",
+    createFastTrack: "创建并一键启动 AI 规划",
+    fastTrackTitle: "一键出站快速通道（可选）",
+    fastTrackSub:
+      "勾选同意后，创建站点时立即自动排队执行站点规划，无需再手动点击进入规划；仍保留人工确认事实、地图和页面审批门禁。",
+    fastTrackConsent:
+      "创建后立即启动 AI 网站规划，同意将本站选用资料发送给组织配置的 AI 服务商并计入 AI 额度。",
+    fastTrackRefUrl: "现有官网或参考站链接（可选，用于参考信息架构）",
+    fastTrackRefHint: "仅公开 https:// 网址，不抓取登录内容，不复制对方业务事实",
     creating: "正在创建…",
     look: "基础版式",
     lookHint: "选择接近业务的起点，后续可调整内容与页面结构。",
@@ -117,6 +125,14 @@ const copy = {
     next: "Continue to products",
     previous: "Back",
     create: "Create and open the site guide",
+    createFastTrack: "Create & start AI planning",
+    fastTrackTitle: "One-click fast-track launch (optional)",
+    fastTrackSub:
+      "When enabled, site creation immediately queues AI sitemap & strategy planning. Human fact confirmation, sitemap review, and page approval gates remain enforced.",
+    fastTrackConsent:
+      "Immediately start AI website planning after creation and send selected sources to the organization's AI provider.",
+    fastTrackRefUrl: "Existing or reference website URL (optional, layout structure only)",
+    fastTrackRefHint: "Public https:// URL only; never imports competitor claims or facts",
     creating: "Creating…",
     look: "Starting layout",
     lookHint:
@@ -211,6 +227,8 @@ export function SiteCreation({
     [filter, setFilter] = useState(""),
     [onlySelected, setOnlySelected] = useState(false),
     [busy, setBusy] = useState(false),
+    [fastTrack, setFastTrack] = useState(false),
+    [refUrl, setRefUrl] = useState(""),
     [error, setError] = useState(""),
     [createdId, setCreatedId] = useState("");
   const saving = useRef(false);
@@ -255,6 +273,9 @@ export function SiteCreation({
     setBusy(true);
     setError("");
     try {
+      const cleanRef = refUrl.trim();
+      const referenceUrls =
+        cleanRef && /^https:\/\/[^\s]+$/i.test(cleanRef) ? [cleanRef] : [];
       const site = await api<{ id: string }>("/sites", "POST", {
         name: value.name.trim(),
         templateId: value.templateId,
@@ -268,18 +289,32 @@ export function SiteCreation({
         productIds: ids,
         businessBrief: value.needs.trim(),
         status: "draft",
-        ...(value.audience.trim()
+        ...(value.audience.trim() || referenceUrls.length
           ? {
               buyerProfile: {
                 businessModel: "wholesale",
-                audiences: [value.audience.trim()],
+                audiences: value.audience.trim()
+                  ? [value.audience.trim()]
+                  : ["Wholesale buyers"],
                 buyerNeeds: [],
                 primaryAction: "quote",
-                referenceUrls: [],
+                referenceUrls,
               },
             }
           : {}),
       });
+      if (fastTrack) {
+        try {
+          await api(
+            "/sites/" + site.id + "/agent-runs",
+            "POST",
+            { step: "research", consent: true },
+            { "Idempotency-Key": "fast-track-" + crypto.randomUUID() },
+          );
+        } catch {
+          // Degrade safely into the site guide if AI provider is not configured or needs facts first.
+        }
+      }
       setCreatedId(site.id);
       navigate("/sites/" + site.id + "?tab=guide", { replace: true });
     } catch (e) {
@@ -513,6 +548,29 @@ export function SiteCreation({
                     )}
                   </div>
                 )}
+                <div className="provider-routing-panel">
+                  <strong>{c.fastTrackTitle}</strong>
+                  <p className="muted">{c.fastTrackSub}</p>
+                  <label>
+                    {c.fastTrackRefUrl}
+                    <input
+                      type="url"
+                      maxLength={300}
+                      placeholder="https://example.com"
+                      value={refUrl}
+                      onChange={(e) => setRefUrl(e.target.value)}
+                    />
+                    <small>{c.fastTrackRefHint}</small>
+                  </label>
+                  <label className="check-field">
+                    <input
+                      type="checkbox"
+                      checked={fastTrack}
+                      onChange={(e) => setFastTrack(e.target.checked)}
+                    />
+                    {c.fastTrackConsent}
+                  </label>
+                </div>
               </section>
             )}
             <footer className="creation-footer">
@@ -526,7 +584,13 @@ export function SiteCreation({
                 </button>
               )}
               <button type="submit" className="primary">
-                {busy ? c.creating : step === 0 ? c.next : c.create}
+                {busy
+                  ? c.creating
+                  : step === 0
+                    ? c.next
+                    : fastTrack
+                      ? c.createFastTrack
+                      : c.create}
                 <ArrowRight size={16} />
               </button>
             </footer>

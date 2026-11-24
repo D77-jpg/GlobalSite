@@ -181,3 +181,8 @@
 
 ## S32 多风格旗舰独立站渲染引擎
 - 见 docs/design/S32-旗舰独立站渲染引擎.md。本地打包 SIL OFL 1.1 字体（Cormorant Garamond / Plus Jakarta Sans / Space Grotesk / JetBrains Mono）至 `server/builder/fonts/` 与 `web/public/assets/fonts/` 并附 `OFL-LICENSES.txt`，零外部 CDN 依赖；`server/builder/composition.css` 提供 9 套 WCAG AA 配色（含真暗黑 `obsidian`）与 5 种字体轴、4 种首屏构图及无遮挡 Cookie/询价栏协同布局。保持严格 CSP、S23 `fit-contain` 裁切语义、所有事实与审批门禁及 Lighthouse 性能/SEO >= 90。
+
+## S33 Agent 质量、模块化重构与一键出站
+- 见 docs/design/S33-优化说明.md。`server/src/services/agents/**` 与 `agent-json.service.ts` 启用 `@typescript-eslint/no-explicit-any: error`，`site-agents.service.ts` 保留对外聚合导出不变。
+- `AgentAiProvider` 可选 `outputMode`（默认 `json_object`；启用 `json_schema` 经 `toStrictOpenAiJsonSchema()` 转为严格子集，上游 400 自动回退 `json_object` 一次且不重复计费）、`taskModels` 与 `temperatureByTask`（留空不传 `temperature`，兼容推理模型）。`parseAgentJsonDetailed` 与 `agentDto.diagnostics` 只记录枚举/计数诊断，不落盘模型原文或密钥。
+- 新 B2B 首页内容区块硬上限 9 个（建议 5–8 个，避免冗长滚动页），`brand-site.md` 与 `image-studio.service.ts` 对齐 S32 配色/构图/`fit-cover`/暗亮光影规则。`/sites/new` 一键快速规划仅串联既有受限接口并需显式 AI 同意，绝不放松事实确认、地图确认或页面审批门禁。`web/src/sites.tsx` 拆分为 `web/src/sites/**` 子模块，保持现有路由导出与 CSS 精简。
