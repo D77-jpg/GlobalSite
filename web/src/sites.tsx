@@ -2,6 +2,7 @@ import { trustedPreview } from "./trusted-preview";
 import { diffPageDraft } from "./page-diff";
 import { RunList } from "./agent-tasks";
 export { RunList } from "./agent-tasks";
+import { SiteCopilot } from "./site-copilot";
 import { SiteDesign } from "./site-design";
 import { SiteGuide } from "./site-journey";
 import { BuyerWorkspace, SiteQuality } from "./b2b";
@@ -598,54 +599,128 @@ export function SiteWorkspace({ locale, role }: Props) {
     if (tab !== "guide")
       setTab(["review", "refine"].includes(step) ? "quality" : "runs");
   }
+  const zh = locale === "zh";
+  const stageGroups = [
+    {
+      key: "prep",
+      num: 1,
+      label: zh ? "资料与定位" : "Brief & Facts",
+      tabs: ["guide", "business", "interview", "settings"].filter((k) =>
+        workspaceTabs.includes(k),
+      ),
+      done: (site.productIds?.length ?? 0) > 0,
+    },
+    {
+      key: "blueprint",
+      num: 2,
+      label: zh ? "结构与视觉" : "Plan & Design",
+      tabs: ["planning", "design"].filter((k) => workspaceTabs.includes(k)),
+      done: Boolean(site.planConfirmed),
+    },
+    {
+      key: "craft",
+      num: 3,
+      label: zh ? "页面精修" : "Pages & Studio",
+      tabs: ["pages"],
+      done:
+        (site.plan?.nodes?.length ?? 0) > 0 &&
+        (pages.data?.items?.filter((p: Row) => p.status === "approved").length ??
+          0) === (site.plan?.nodes?.length ?? 0),
+    },
+    {
+      key: "launch",
+      num: 4,
+      label: zh ? "质检与上线" : "QA & Runs",
+      tabs: ["quality", "runs"].filter((k) => workspaceTabs.includes(k)),
+      done: false,
+    },
+  ];
+  const activeGroup =
+    stageGroups.find((g) => g.tabs.includes(tab)) ?? stageGroups[0];
   return (
-    <Frame
-      title={site.name}
-      banner
-      sub={
-        site.targetMarkets.join(", ") +
-        " · " +
-        (languageLabels[site.language] ?? site.language ?? "English")
-      }
-      t={t}
-      error={load.error}
-      actions={
-        <>
-          <Link className="button secondary" to="/sites">
-            {t("back")}
-          </Link>
-          <Link className="button primary" to={"/sites/" + id + "/preview"}>
-            {t("previewSite")}
-          </Link>
-          <Link
-            className="button secondary"
-            to={"/sites/" + id + "/publishing"}
-          >
+    <div className="catalog sites-workspace gs-studio-shell">
+      <header className="gs-studio-topbar">
+        <div className="gs-studio-identity">
+          <span className="gs-studio-monogram" aria-hidden="true">
+            {site.name.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <h1>{site.name}</h1>
+            <p>
+              {site.targetMarkets.join(", ")} ·{" "}
+              {languageLabels[site.language] ?? site.language ?? "English"}
+            </p>
+          </div>
+        </div>
+        <nav
+          className="gs-studio-stages"
+          aria-label={zh ? "建站阶段" : "Build stages"}
+        >
+          {stageGroups.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              className={"gs-stage-pill" + (g.done ? " is-done" : "")}
+              aria-pressed={activeGroup.key === g.key}
+              onClick={() => setTab(g.tabs[0] ?? "guide")}
+            >
+              <span className="gs-stage-num">{g.num}</span>
+              <span>{g.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="gs-row">
+          <Link className="gs-btn gs-btn-sm" to={"/sites/" + id + "/publishing"}>
             {t("buildPublish")}
           </Link>
           <Link
-            className="button secondary"
+            className="gs-btn gs-btn-sm"
             to={"/sites/" + id + "/inquiry-settings"}
           >
             {t("inquirySettings")}
           </Link>
-        </>
-      }
-    >
-      <div className="project-workspace-layout">
-        <nav className="sites-tabs" aria-label={t("sites")}>
-          {workspaceTabs.map((k) => (
-            <button
-              key={k}
-              className={tab === k ? "" : "secondary"}
-              aria-pressed={tab === k}
-              onClick={() => setTab(k)}
-            >
-              {t(k)}
-            </button>
-          ))}
-        </nav>
-        <div className={"project-workspace-content project-tab-" + tab}>
+          <Link
+            className="gs-btn gs-btn-sm gs-btn-primary"
+            to={"/sites/" + id + "/preview"}
+          >
+            {t("previewSite")}
+          </Link>
+        </div>
+      </header>
+      <div
+        className={
+          tab === "runs" ? "gs-stack" : "gs-studio-body"
+        }
+      >
+        {tab !== "runs" && (
+          <SiteCopilot
+            site={site}
+            pages={pages.data?.items}
+            runs={runs.data?.items}
+            locale={locale}
+            canEdit={canEdit}
+            busy={a.busy}
+            onQueue={(step, instructions) =>
+              a.run(() => queue(step, undefined, instructions))
+            }
+            onNavigateTab={(nextTab) => setTab(nextTab)}
+          />
+        )}
+        <div className={"gs-studio-stage-main project-tab-" + tab}>
+          {activeGroup.tabs.length > 1 && (
+            <nav className="gs-segmented" aria-label={t("sites")}>
+              {activeGroup.tabs.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={tab === k}
+                  onClick={() => setTab(k)}
+                >
+                  {t(k)}
+                </button>
+              ))}
+            </nav>
+          )}
           {!["guide", "runs"].includes(tab) && (
             <div
               className="studio-metrics"
@@ -1024,7 +1099,7 @@ export function SiteWorkspace({ locale, role }: Props) {
             ))}
         </div>
       </div>
-    </Frame>
+    </div>
   );
 }
 function PlanEditor({

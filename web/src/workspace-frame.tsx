@@ -7,19 +7,20 @@ import {
   Boxes,
   Building2,
   ChartNoAxesCombined,
-  Check,
   ChevronRight,
   FileStack,
+  FolderKanban,
   Globe2,
+  Inbox,
   LayoutDashboard,
   LogOut,
-  Mail,
   Menu,
-  PanelsTopLeft,
   PanelLeftClose,
   PanelLeftOpen,
   Plug,
+  Plus,
   Search,
+  Settings,
   ShieldCheck,
   Sparkles,
   Users,
@@ -29,8 +30,13 @@ import {
 import { api } from "./api";
 import { messages, type Locale, type Key } from "./i18n";
 
-type Item = { path: string; label: string; icon: LucideIcon };
-type Group = { title: string; items: Item[] };
+type Item = {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  match?: (pathname: string) => boolean;
+};
+
 type Props = {
   locale: Locale;
   userName: string;
@@ -40,15 +46,20 @@ type Props = {
   themeButton?: ReactNode;
   children: ReactNode;
 };
+
 const copy = {
   zh: {
     work: "工作台",
-    content: "建站与内容",
-    settings: "组织与设置",
-    agent: "建站 Agent",
-    search: "查找功能",
-    searchLabel: "搜索页面名称或路径",
-    noResults: "没有匹配的页面",
+    hub: "指挥台",
+    studio: "建站工作台",
+    knowledge: "外贸资料中心",
+    leads: "询盘与获客",
+    settings: "系统设置",
+    newSite: "新建外贸站",
+    agent: "AI 任务中心",
+    search: "快速跳转",
+    searchLabel: "搜索页面、站点功能或设置…",
+    noResults: "没有匹配的功能",
     close: "关闭",
     skip: "跳到主要内容",
     menu: "打开导航",
@@ -58,11 +69,15 @@ const copy = {
   },
   en: {
     work: "Workspace",
-    content: "Sites & content",
-    settings: "Organization & settings",
-    agent: "Site agent",
-    search: "Find a page",
-    searchLabel: "Search by page name or path",
+    hub: "Command Hub",
+    studio: "Site Studio",
+    knowledge: "Knowledge Hub",
+    leads: "Leads & Inbox",
+    settings: "Settings",
+    newSite: "New website",
+    agent: "AI Task Center",
+    search: "Jump to…",
+    searchLabel: "Search workspaces, tools, or settings…",
     noResults: "No matching pages",
     close: "Close",
     skip: "Skip to content",
@@ -72,6 +87,10 @@ const copy = {
     collapseNav: "Collapse navigation",
   },
 };
+
+const KNOWLEDGE_PATHS = ["/knowledge", "/products", "/assets", "/facts", "/website-reads"];
+const SETTINGS_PATHS = ["/settings", "/organization", "/members", "/security", "/usage", "/ai", "/crm"];
+
 function Modal({
   label,
   close,
@@ -106,6 +125,7 @@ function Modal({
     </dialog>
   );
 }
+
 export function WorkspaceFrame({
   locale,
   userName,
@@ -115,59 +135,82 @@ export function WorkspaceFrame({
   themeButton,
   children,
 }: Props) {
-  const t = (key: Key) => messages[locale][key],
-    c = copy[locale];
-  const location = useLocation(),
-    navigate = useNavigate(),
-    [popup, setPopup] = useState<"menu" | "search" | null>(null),
-    [query, setQuery] = useState(""),
-    [logoutError, setLogoutError] = useState(false),
-    [navPreference, setNavPreference] = useState<boolean | null>(null);
-  const collapsed = navPreference ?? location.pathname === "/agent";
-  const groups = useMemo<Group[]>(() => {
+  const t = (key: Key) => messages[locale][key];
+  const c = copy[locale];
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [popup, setPopup] = useState<"menu" | "search" | null>(null);
+  const [query, setQuery] = useState("");
+  const [logoutError, setLogoutError] = useState(false);
+  const [navPreference, setNavPreference] = useState<boolean | null>(null);
+  const collapsed =
+    navPreference ??
+    (location.pathname === "/agent" || location.pathname.startsWith("/pages/"));
+
+  // Clean 5-pillar sidebar tailored to foreign-trade workflows.
+  const navItems = useMemo<Item[]>(
+    () => [
+      {
+        path: "/",
+        label: c.hub,
+        icon: LayoutDashboard,
+        match: (p) => p === "/",
+      },
+      {
+        path: "/sites",
+        label: c.studio,
+        icon: Sparkles,
+        match: (p) =>
+          p.startsWith("/sites") || p.startsWith("/pages") || p === "/agent",
+      },
+      {
+        path: "/products",
+        label: c.knowledge,
+        icon: FolderKanban,
+        match: (p) => KNOWLEDGE_PATHS.some((prefix) => p.startsWith(prefix)),
+      },
+      {
+        path: "/inquiries",
+        label: c.leads,
+        icon: Inbox,
+        match: (p) => p.startsWith("/inquiries"),
+      },
+      {
+        path: role === "admin" ? "/ai" : "/organization",
+        label: c.settings,
+        icon: Settings,
+        match: (p) => SETTINGS_PATHS.some((prefix) => p.startsWith(prefix)),
+      },
+    ],
+    [c, role],
+  );
+
+  // Full command-palette index (all 15+ deep destinations in one Ctrl+K).
+  const paletteItems = useMemo<Item[]>(() => {
     const item = (path: string, key: Key, icon: LucideIcon): Item => ({
       path,
       label: messages[locale][key],
       icon,
     });
     return [
-      {
-        title: c.work,
-        items: [
-          item("/", "overview", LayoutDashboard),
-          { path: "/agent", label: c.agent, icon: Activity },
-        ],
-      },
-      {
-        title: c.content,
-        items: [
-          item("/sites", "sites", PanelsTopLeft),
-          item("/inquiries", "inquiries", Mail),
-          item("/products", "products", Boxes),
-          item("/assets", "assets", FileStack),
-          item("/facts", "facts", BookOpenCheck),
-          item("/website-reads", "website", Globe2),
-        ],
-      },
-      {
-        title: c.settings,
-        items: [
-          item("/organization", "organization", Building2),
-          item("/members", "members", Users),
-          item("/security", "security", ShieldCheck),
-          item("/usage", "usage", ChartNoAxesCombined),
-          ...(role === "admin"
-            ? [item("/ai", "ai", Sparkles), item("/crm", "crm", Plug)]
-            : []),
-        ],
-      },
-    ];
-  }, [locale, role, c]);
-  const all = groups.flatMap((g) => g.items),
-    actions: Item[] =
-      role === "viewer"
-        ? []
-        : [
+      { path: "/", label: c.hub, icon: LayoutDashboard },
+      { path: "/sites", label: c.studio, icon: Sparkles },
+      { path: "/agent", label: c.agent, icon: Activity },
+      item("/inquiries", "inquiries", Inbox),
+      item("/products", "products", Boxes),
+      item("/assets", "assets", FileStack),
+      item("/facts", "facts", BookOpenCheck),
+      item("/website-reads", "website", Globe2),
+      item("/organization", "organization", Building2),
+      item("/members", "members", Users),
+      item("/security", "security", ShieldCheck),
+      item("/usage", "usage", ChartNoAxesCombined),
+      ...(role === "admin"
+        ? [item("/ai", "ai", Sparkles), item("/crm", "crm", Plug)]
+        : []),
+      ...(role !== "viewer"
+        ? [
+            { path: "/sites/new", label: c.newSite, icon: Plus },
             {
               path: "/products/new",
               label: locale === "zh" ? "新建产品" : "Create product",
@@ -175,23 +218,29 @@ export function WorkspaceFrame({
             },
             {
               path: "/products/imports",
-              label: locale === "zh" ? "批量导入产品" : "Import products",
+              label: locale === "zh" ? "批量导入产品 (Excel)" : "Import products (Excel)",
               icon: FileStack,
             },
-          ],
-    matches = [...all, ...actions].filter((i) =>
-      (i.label + " " + i.path)
-        .toLowerCase()
-        .includes(query.toLowerCase().trim()),
-    );
-  const parentPath = location.pathname.startsWith("/pages/")
-    ? "/sites"
-    : "/" + location.pathname.split("/")[1];
-  const current = all.find((i) => i.path === parentPath);
+          ]
+        : []),
+    ];
+  }, [locale, role, c]);
+
+  const matches = paletteItems.filter((i) =>
+    (i.label + " " + i.path).toLowerCase().includes(query.toLowerCase().trim()),
+  );
+
+  const activeNav = navItems.find((i) => i.match?.(location.pathname));
+  const deepLabel =
+    paletteItems.find((i) =>
+      i.path === "/" ? location.pathname === "/" : location.pathname === i.path,
+    )?.label ?? activeNav?.label;
+
   useEffect(() => {
     setPopup(null);
     setLogoutError(false);
   }, [location.pathname, location.search]);
+
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -203,6 +252,7 @@ export function WorkspaceFrame({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, []);
+
   const sidebar = (
     <>
       <Link to="/" className="brand" onClick={() => setPopup(null)}>
@@ -228,27 +278,34 @@ export function WorkspaceFrame({
         </div>
         <ChevronRight size={14} />
       </Link>
+      {role !== "viewer" && (
+        <Link
+          to="/sites/new"
+          className="gs-sidebar-cta"
+          title={c.newSite}
+          onClick={() => setPopup(null)}
+        >
+          <Plus size={16} aria-hidden="true" />
+          <span>{c.newSite}</span>
+        </Link>
+      )}
       <nav aria-label={t("workspace")}>
-        {groups.map((g) => (
-          <div className="ws-group" key={g.title}>
-            <div className="nav-heading">{g.title}</div>
-            {g.items.map(({ path, icon: Icon, label }) => (
-              <NavLink
-                key={path}
-                to={path}
-                title={label}
-                end={path === "/"}
-                className={({ isActive }) =>
-                  isActive || current?.path === path ? "active" : ""
-                }
-                onClick={() => setPopup(null)}
-              >
-                <Icon size={17} aria-hidden="true" />
-                <span className="nav-item-label">{label}</span>
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        <div className="ws-group">
+          <div className="nav-heading">{c.work}</div>
+          {navItems.map(({ path, icon: Icon, label, match }) => (
+            <NavLink
+              key={path}
+              to={path}
+              title={label}
+              end={path === "/"}
+              className={() => (match?.(location.pathname) ? "active" : "")}
+              onClick={() => setPopup(null)}
+            >
+              <Icon size={17} aria-hidden="true" />
+              <span className="nav-item-label">{label}</span>
+            </NavLink>
+          ))}
+        </div>
       </nav>
       <div className="account-box">
         <span className="avatar">{userName.slice(0, 1).toUpperCase()}</span>
@@ -270,6 +327,7 @@ export function WorkspaceFrame({
       {logoutError && <p role="alert">{c.logoutError}</p>}
     </>
   );
+
   return (
     <div
       className="workspace ws-shell product-shell"
@@ -305,7 +363,7 @@ export function WorkspaceFrame({
           <div className="breadcrumb">
             <Link to="/">{c.work}</Link>
             <ChevronRight size={13} />
-            <strong>{current?.label ?? t("acceptInvite")}</strong>
+            <strong>{deepLabel ?? t("acceptInvite")}</strong>
           </div>
           <div className="topbar-right">
             <button
@@ -352,30 +410,33 @@ export function WorkspaceFrame({
               aria-label={c.searchLabel}
               placeholder={c.searchLabel}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && matches[0]) {
-                  navigate(matches[0].path);
-                  setPopup(null);
-                }
-              }}
             />
-            <button aria-label={c.close} onClick={() => setPopup(null)}>
-              <X size={17} />
+            <button
+              className="ws-x"
+              aria-label={c.close}
+              onClick={() => setPopup(null)}
+            >
+              <X size={16} />
             </button>
           </div>
-          <div className="ws-results">
-            {matches.map(({ path, label, icon: Icon }) => (
-              <Link key={path} to={path} onClick={() => setPopup(null)}>
-                <Icon size={17} />
-                {label}
-                {current?.path === path ? (
-                  <Check size={15} />
-                ) : (
-                  <ArrowUpRight size={15} />
-                )}
-              </Link>
-            ))}
-            {!matches.length && <p role="status">{c.noResults}</p>}
+          <div className="ws-search-list">
+            {matches.length ? (
+              matches.map(({ path, label, icon: Icon }) => (
+                <button
+                  key={path}
+                  onClick={() => {
+                    navigate(path);
+                    setPopup(null);
+                  }}
+                >
+                  <Icon size={16} />
+                  <span>{label}</span>
+                  <ArrowUpRight size={14} />
+                </button>
+              ))
+            ) : (
+              <p>{c.noResults}</p>
+            )}
           </div>
         </Modal>
       )}

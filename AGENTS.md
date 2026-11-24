@@ -174,3 +174,7 @@
 
 ## S29 暗黑旗舰 UI 设计系统
 - 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 为最终加载的权威主题层，默认启用 Dark-First（data-theme="dark"）并支持顶栏/登录页一键切换浅色模式（偏好存 localStorage 的 globalsite_theme，不存任何凭证）；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持白底中性画布以还原独立站真实视觉。
+
+## S30 外贸工作台产品级重构
+- 见 docs/design/S30-外贸工作台产品重构.md。web/src/ui/design-system.css 在 web/src/main.tsx 中于 obsidian-studio.css 之后确定性加载，禁止在特性 TSX 中懒加载 CSS 破坏层叠顺序。
+- 侧栏保持 5 大外贸支柱导航（指挥台 / 建站工作台 / 外贸资料中心 / 询盘与获客 / 系统设置）及「+ 新建外贸站」快捷入口，所有历史路由与 Ctrl K 深链保持兼容；SiteWorkspace 采用 4 阶段向导头与常驻左侧 AI 建站副驾驶（SiteCopilot），仍严格执行显式 AI 同意与结构/事实/审批门禁；外贸资料中心（KnowledgeShell）与系统设置中心（SettingsShell）分别整合原有分散路由，询盘收件箱采用分屏阅读与快捷跟进交互。

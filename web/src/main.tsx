@@ -1,4 +1,6 @@
 import { WorkspaceFrame } from "./workspace-frame";
+import { KnowledgeShell } from "./knowledge-hub";
+import { SettingsShell } from "./settings-hub";
 import "./catalog.css";
 import { safeReturnTo } from "./navigation";
 import React, {
@@ -109,6 +111,7 @@ import "./product-ui.css";
 import "./workspace-layouts.css";
 import "./surface.css";
 import "./obsidian-studio.css";
+import "./ui/design-system.css";
 type Theme = "dark" | "light";
 const ThemeCtx = createContext<{
   theme: Theme;
@@ -1371,7 +1374,11 @@ function WorkspaceRoutes({ me }: { me: Me }) {
         />
         <Route
           path="crm"
-          element={<CrmConnectionPage locale={locale} role={me.role} />}
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <CrmConnectionPage locale={locale} role={me.role} />
+            </SettingsShell>
+          }
         />
         <Route
           path="inquiries"
@@ -1410,38 +1417,111 @@ function WorkspaceRoutes({ me }: { me: Me }) {
           element={<PageReview locale={locale} role={me.role} />}
         />
         <Route
+          path="knowledge"
+          element={<Navigate to="/products" replace />}
+        />
+        <Route
           path="products"
-          element={<ProductsPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ProductsPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="products/new"
-          element={<ProductEditor locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ProductEditor locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="products/imports"
-          element={<ImportPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ImportPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="products/:id"
-          element={<ProductEditor locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ProductEditor locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="assets"
-          element={<AssetsPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <AssetsPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="facts"
-          element={<FactsPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <FactsPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="website-reads"
-          element={<WebsitePage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <WebsitePage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
-        <Route path="organization" element={<OrganizationPage org={org} />} />
-        <Route path="members" element={<MembersPage />} />
-        <Route path="security" element={<SecurityPage />} />
-        <Route path="usage" element={<UsagePage />} />
-        <Route path="ai" element={<AiPage />} />
+        <Route
+          path="settings"
+          element={
+            <Navigate to={me.role === "admin" ? "/ai" : "/organization"} replace />
+          }
+        />
+        <Route
+          path="organization"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <OrganizationPage org={org} />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="members"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <MembersPage />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="security"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <SecurityPage />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="usage"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <UsagePage />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="ai"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <AiPage />
+            </SettingsShell>
+          }
+        />
         <Route path="accept-invitation" element={<AcceptInvite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

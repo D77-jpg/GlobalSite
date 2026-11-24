@@ -28,13 +28,14 @@ function Status({ value, t }: { value: string; t: (key: string) => string }) {
 }
 const fmt = (s: string, locale: Locale) =>
   new Date(s).toLocaleString(locale === "zh" ? "zh-CN" : "en");
-export function InquiriesPage({ locale }: Props) {
+export function InquiriesPage({ locale, role }: Props) {
   const [params] = useSearchParams();
   const initialSiteId = params.get("siteId") ?? "";
   return (
     <InquiryInbox
       key={initialSiteId}
       locale={locale}
+      role={role}
       initialSiteId={initialSiteId}
     />
   );
@@ -136,12 +137,17 @@ function InquirySitePicker({
 }
 function InquiryInbox({
   locale,
+  role,
   initialSiteId,
 }: {
   locale: Locale;
+  role: string;
   initialSiteId: string;
 }) {
   const t = translator(locale),
+    edit = role !== "viewer",
+    [selectedId, setSelectedId] = useState(""),
+    [updating, setUpdating] = useState(false),
     [filters, setFilters] = useState<Row>({
       siteId: initialSiteId,
       status: "",
@@ -318,66 +324,125 @@ function InquiryInbox({
           )}
         </div>
       </form>
-      <section className="catalog-panel inquiry-table">
-        <div className="ops-panel-title">
-          <h2>{t("inbox")}</h2>
-          {load.data && (
-            <span>
-              {load.data.items.length} {t("thisPage")}
-            </span>
-          )}
-        </div>
+      <section className="gs-stack">
         {!load.data && !load.error && (
           <p role="status" className="ops-loading">
             {t("loading")}
           </p>
         )}
-        <table>
-          <thead>
-            <tr>
-              <th>{t("received")}</th>
-              <th>{t("contact")}</th>
-              <th>{t("status")}</th>
-              <th>{t("score")}</th>
-              <th>{t("notification")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {load.data?.items.map((r: Row) => (
-              <tr key={r.id}>
-                <td data-label={t("received")}>{fmt(r.receivedAt, locale)}</td>
-                <td data-label={t("contact")}>
-                  <Link to={"/inquiries/" + r.id}>{r.contact.name}</Link>
-                  <div>{r.contact.company}</div>
-                  <div>{r.contact.email}</div>
-                </td>
-                <td data-label={t("status")}>
-                  <Status value={r.status} t={t} />
-                  {r.duplicateOf && (
-                    <p>
-                      <Link to={"/inquiries/" + r.duplicateOf}>
-                        {t("duplicateOf")}
-                      </Link>
-                    </p>
-                  )}
-                </td>
-                <td data-label={t("score")}>
-                  {r.spamScore ?? "—"}
-                  <div>
-                    {t(
-                      r.classification === "ai" ? "aiState" : r.classification,
-                    )}
-                  </div>
-                </td>
-                <td data-label={t("notification")}>
-                  {t(r.notificationStatus)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {load.data && !load.data.items.length && (
+        {load.data && !load.data.items.length ? (
           <p className="catalog-empty">{t("empty")}</p>
+        ) : (
+          load.data && (() => {
+            const activeItem =
+              load.data.items.find((r: Row) => r.id === selectedId) ??
+              load.data.items[0];
+            return (
+              <div className="gs-inbox-split">
+                <div className="gs-inbox-list" aria-label={t("inbox")}>
+                  <div className="gs-row-between">
+                    <strong>{t("inbox")}</strong>
+                    <small className="muted">
+                      {load.data.items.length} {t("thisPage")}
+                    </small>
+                  </div>
+                  {load.data.items.map((r: Row) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="gs-inbox-item"
+                      aria-pressed={activeItem?.id === r.id}
+                      onClick={() => setSelectedId(r.id)}
+                    >
+                      <div className="gs-inbox-item-top">
+                        <strong>{r.contact.name}</strong>
+                        <Status value={r.status} t={t} />
+                      </div>
+                      <small className="muted">
+                        {[r.contact.company, r.contact.country, fmt(r.receivedAt, locale)]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                      <span className="gs-inbox-item-msg">{r.message}</span>
+                    </button>
+                  ))}
+                </div>
+                {activeItem && (
+                  <article className="gs-inbox-detail gs-stack">
+                    <div className="gs-row-between">
+                      <div>
+                        <h2>{activeItem.contact.name}</h2>
+                        <p className="muted">
+                          {[
+                            activeItem.contact.company,
+                            activeItem.contact.email,
+                            activeItem.contact.phone,
+                            activeItem.contact.country,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      <div className="gs-row">
+                        <Status value={activeItem.status} t={t} />
+                        <Link
+                          className="gs-btn gs-btn-sm gs-btn-primary"
+                          to={"/inquiries/" + activeItem.id}
+                        >
+                          {t("open")}
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="gs-card-well">
+                      <p className="inquiry-message">{activeItem.message}</p>
+                    </div>
+                    <div className="gs-row-between">
+                      <small className="muted">
+                        {t("received")}: {fmt(activeItem.receivedAt, locale)} ·{" "}
+                        {t("score")}: {activeItem.spamScore ?? "—"} ·{" "}
+                        {t("notification")}: {t(activeItem.notificationStatus)}
+                      </small>
+                      {edit && (
+                        <div className="gs-row">
+                          {(["new", "following", "resolved", "spam"] as const).map(
+                            (stVal) => (
+                              <button
+                                key={stVal}
+                                type="button"
+                                className={
+                                  "gs-btn gs-btn-sm" +
+                                  (activeItem.status === stVal
+                                    ? " gs-btn-primary"
+                                    : "")
+                                }
+                                disabled={
+                                  updating || activeItem.status === stVal
+                                }
+                                onClick={() => {
+                                  setUpdating(true);
+                                  void api("/inquiries/" + activeItem.id, "PATCH", {
+                                    revision: activeItem.revision,
+                                    status: stVal,
+                                  })
+                                    .then(() => {
+                                      load.reload();
+                                      summary.reload();
+                                    })
+                                    .finally(() => setUpdating(false));
+                                }}
+                              >
+                                {t(stVal)}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                )}
+              </div>
+            );
+          })()
         )}
       </section>
       <div className="catalog-actions">

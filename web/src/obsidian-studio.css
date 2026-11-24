@@ -852,8 +852,13 @@ dialog::backdrop {
     box-shadow 140ms ease;
 }
 
-/* Neutral default action button inside .catalog */
-.product-shell :is(.catalog button, .catalog .button, .button.secondary) {
+/* Neutral default action button inside .catalog and .secondary anywhere */
+.product-shell .catalog button,
+.product-shell .catalog .button,
+.product-shell .catalog .secondary,
+.product-shell button.secondary,
+.product-shell .button.secondary,
+.product-shell .account-page button.secondary {
   background: var(--ui-surface-2);
   border: 1px solid var(--ui-border-strong);
   color: var(--ui-text);
@@ -863,11 +868,22 @@ dialog::backdrop {
   font-size: 13px;
 }
 
-.product-shell :is(.catalog button, .catalog .button, .button.secondary):hover:not(:disabled) {
+.product-shell .catalog button:hover:not(:disabled),
+.product-shell .catalog .button:hover:not(:disabled),
+.product-shell .catalog .secondary:hover:not(:disabled),
+.product-shell button.secondary:hover:not(:disabled),
+.product-shell .button.secondary:hover:not(:disabled),
+.product-shell .account-page button.secondary:hover:not(:disabled) {
   background: var(--ui-surface-hover);
   border-color: var(--ui-border-glow);
   color: var(--ui-text);
   text-decoration: none;
+}
+
+.product-shell .ops-product-thumb {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-muted);
 }
 
 /* Explicit Primary CTA buttons ONLY */
