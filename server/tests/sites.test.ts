@@ -759,16 +759,18 @@ test("provider uses configured model and meters output; no provider is a paused/
   );
   mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
   let model = "",
-    expectedBudget = 16384;
+    expectedBudget = 32768;
   const deadlines: number[] = [];
+  const seenRequests: any[] = [];
   mock.method(AbortSignal, "timeout", (ms: number) => {
     deadlines.push(ms);
     return new AbortController().signal;
   });
   mock.method(globalThis, "fetch", async (_url: any, options: any) => {
     const request = JSON.parse(options.body);
+    seenRequests.push(request);
     model = request.model;
-    // Content needs room for both reasoning and the complete page JSON.
+    // Full-page tasks (design/content/refine) need room for both reasoning and complete page JSON.
     assert.equal(request.max_tokens, expectedBudget);
     return new Response(
       JSON.stringify({
@@ -779,7 +781,7 @@ test("provider uses configured model and meters output; no provider is a paused/
   });
   const result = await tenant(() =>
     callSiteAgent(
-      "Return JSON",
+      "UNIQUE_SYSTEM_PROMPT_MARKER",
       { task: "content" },
       randomUUID(),
       async () => {},
@@ -787,6 +789,8 @@ test("provider uses configured model and meters output; no provider is a paused/
   );
   assert.equal(result.tokens, 45);
   assert.equal(model, "configured-fixture-model");
+  assert.equal(seenRequests[0].messages[0].content, "UNIQUE_SYSTEM_PROMPT_MARKER");
+  assert(!seenRequests[0].messages[1].content.includes("UNIQUE_SYSTEM_PROMPT_MARKER"));
   expectedBudget = 32768;
   const designOperation = randomUUID();
   const design = await tenant(() =>
@@ -798,7 +802,16 @@ test("provider uses configured model and meters output; no provider is a paused/
     ),
   );
   assert.equal(design.tokens, 45);
-  assert.deepEqual(deadlines, [120000, 240000]);
+  expectedBudget = 16384;
+  await tenant(() =>
+    callSiteAgent(
+      "Review page JSON",
+      { task: "review" },
+      randomUUID(),
+      async () => {},
+    ),
+  );
+  assert.deepEqual(deadlines, [240000, 240000, 120000]);
   const reservation = await tenant(() =>
     m.UsageRecord.findOne({
       metric: "ai_tokens",
@@ -1156,7 +1169,7 @@ test("real provider retries metered invalid output with fresh operations and com
   mock.method(globalThis, "fetch", async (_url: any, options: any) => {
     const body = JSON.parse(options.body);
     assert.match(body.messages[1].content, /^Execute the website task now/);
-    assert(body.messages[1].content.includes(body.messages[0].content));
+    assert(!body.messages[1].content.includes(body.messages[0].content));
     assert.match(
       body.messages[0].content,
       /Allowed node.type values: home,category,product/,

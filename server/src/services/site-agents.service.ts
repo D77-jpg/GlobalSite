@@ -1063,43 +1063,49 @@ export function unitPrompt(run: any, unit: any) {
   );
   const input = {
     task: run.step,
-    proposalKey: unit.directionKey ?? null,
-    designPageKind: unit.pageKind ?? null,
-    pairedHomepage:
-      unit.pageKind === "detail"
-        ? ((u: any) =>
-            u
-              ? {
-                  label: u.label,
-                  rationale: u.rationale,
-                  presentation: u.page.presentation,
-                }
-              : null)(
-            run.steps.find(
-              (u: any) =>
-                u.directionKey === unit.directionKey && u.pageKind === "home",
-            )?.output,
-          )
-        : null,
-    otherDirection: unit.directionKey
-      ? (run.steps
-          .filter(
-            (u: any) =>
-              u.directionKey !== unit.directionKey &&
-              (u.output?.proposal || (u.pageKind === "home" && u.output?.page)),
-          )
-          .map((u: any) => {
-            const p = u.output.proposal?.page ?? u.output.page;
-            return {
-              presentation: p.presentation,
-              sections: p.blocks.map((b: any) => ({
-                type: b.type,
-                frame: b.design?.frame,
-                ratio: b.design?.ratio,
-              })),
-            };
-          })[0] ?? null)
-      : null,
+    ...(run.step === "design"
+      ? {
+          proposalKey: unit.directionKey ?? null,
+          designPageKind: unit.pageKind ?? null,
+          pairedHomepage:
+            unit.pageKind === "detail"
+              ? ((u: any) =>
+                  u
+                    ? {
+                        label: u.label,
+                        rationale: u.rationale,
+                        presentation: u.page.presentation,
+                      }
+                    : null)(
+                  run.steps.find(
+                    (u: any) =>
+                      u.directionKey === unit.directionKey &&
+                      u.pageKind === "home",
+                  )?.output,
+                )
+              : null,
+          otherDirection: unit.directionKey
+            ? (run.steps
+                .filter(
+                  (u: any) =>
+                    u.directionKey !== unit.directionKey &&
+                    (u.output?.proposal ||
+                      (u.pageKind === "home" && u.output?.page)),
+                )
+                .map((u: any) => {
+                  const p = u.output.proposal?.page ?? u.output.page;
+                  return {
+                    presentation: p.presentation,
+                    sections: p.blocks.map((b: any) => ({
+                      type: b.type,
+                      frame: b.design?.frame,
+                      ratio: b.design?.ratio,
+                    })),
+                  };
+                })[0] ?? null)
+            : null,
+        }
+      : {}),
     site: {
       name: site.name,
       ...(site.buyerProfile ? { buyerProfile: site.buyerProfile } : {}),
@@ -1152,11 +1158,16 @@ export function unitPrompt(run: any, unit: any) {
           }),
         }
       : {}),
-    pendingTypes: s.pendingTypes,
-    referenceResearch: unit.referenceResearch ?? [],
-    buyerReadiness: site.buyerProfile
-      ? procurementCoverage(site, s.products, s.facts)
-      : null,
+    ...(["research", "interview"].includes(run.step)
+      ? { pendingTypes: s.pendingTypes }
+      : {}),
+    ...(run.step === "research"
+      ? { referenceResearch: unit.referenceResearch ?? [] }
+      : {}),
+    ...(["research", "interview", "review"].includes(run.step) &&
+    site.buyerProfile
+      ? { buyerReadiness: procurementCoverage(site, s.products, s.facts) }
+      : {}),
     pageBrief: unit.node?.brief ?? null,
     availableSections: sectionRecipes[unit.node?.type ?? "home"],
     businessStrategy:
@@ -1165,7 +1176,9 @@ export function unitPrompt(run: any, unit: any) {
       run.step === "research"
         ? null
         : (site.plan?.strategy?.productSections ?? v.productSections),
-    representativeDetail: unit.detailNode ?? null,
+    ...(run.step === "design"
+      ? { representativeDetail: unit.detailNode ?? null }
+      : {}),
     ...(run.step === "design" && unit.previousDirections
       ? {
           previousDirections: unit.previousDirections
@@ -1227,12 +1240,16 @@ export function unitPrompt(run: any, unit: any) {
         : site,
       unit.node,
     ),
-    strategyPolicy: {
-      visualSelection: ["specs", "material"],
-      technicalSelection: ["specs", "material", "application"],
-      configuredSourcing: ["specs", "material", "oem", "moq", "samples"],
-      rule: "Choose the minimum relevant required sections. Unknown optional order terms belong in private questions, not repetitive empty blocks.",
-    },
+    ...(["research", "interview"].includes(run.step)
+      ? {
+          strategyPolicy: {
+            visualSelection: ["specs", "material"],
+            technicalSelection: ["specs", "material", "application"],
+            configuredSourcing: ["specs", "material", "oem", "moq", "samples"],
+            rule: "Choose the minimum relevant required sections. Unknown optional order terms belong in private questions, not repetitive empty blocks.",
+          },
+        }
+      : {}),
     ...(run.step === "review"
       ? {
           page: unit.draft,
