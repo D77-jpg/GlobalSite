@@ -168,12 +168,19 @@ export async function buildStatic(
       path.join(root, "public/assets/fonts"),
       { recursive: true },
     );
-    await fs.writeFile(
-      path.join(root, "public/assets/site.css"),
-      (await fs.readFile(path.join(builder, "site.css"), "utf8")) +
-        "\n" +
-        (await fs.readFile(path.join(builder, "composition.css"), "utf8")),
-    );
+    const compactCss = (raw: string) =>
+      raw
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^[ \t]+/gm, "")
+        .replace(/\r?\n+/g, "\n")
+        .trim();
+    const cssBundle =
+      compactCss(await fs.readFile(path.join(builder, "site.css"), "utf8")) +
+      "\n" +
+      compactCss(
+        await fs.readFile(path.join(builder, "composition.css"), "utf8"),
+      );
+    await fs.writeFile(path.join(root, "public/assets/site.css"), cssBundle);
     const copy404 = getStorefrontCopy(snapshot.site.language);
     await fs.writeFile(
       path.join(root, "public/404.html"),

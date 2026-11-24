@@ -597,6 +597,15 @@ export function renderStaticPage(s: Snapshot, p: any) {
       (composition.headerStyle ? " header-" + composition.headerStyle : "") +
       (composition.radius ? " radius-" + composition.radius : "")
     : "";
+  const fontPreload = composition
+    ? composition.typography === "luxury" ||
+      composition.typography === "editorial"
+      ? '<link rel="preload" href="/assets/fonts/cormorant-garamond-400.woff2" as="font" type="font/woff2" crossorigin>'
+      : composition.typography === "technical" ||
+          composition.typography === "geometric"
+        ? '<link rel="preload" href="/assets/fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>'
+        : '<link rel="preload" href="/assets/fonts/plus-jakarta-sans-700.woff2" as="font" type="font/woff2" crossorigin>'
+    : '<link rel="preload" href="/assets/fonts/varela-round.ttf" as="font" type="font/ttf" crossorigin>';
   return (
     '<!DOCTYPE html><html lang="' +
     e(copy.lang) +
@@ -632,7 +641,8 @@ export function renderStaticPage(s: Snapshot, p: any) {
         e(seo.bingSiteVerification) +
         '">'
       : "") +
-    '<link rel="preload" href="/assets/fonts/varela-round.ttf" as="font" type="font/ttf" crossorigin><link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
+    fontPreload +
+    '<link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
     brandColor +
     '}</style><script type="application/ld+json">' +
     json(schema) +

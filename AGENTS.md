@@ -178,3 +178,6 @@
 ## S30–S31 外贸视觉策略工作室产品级重构
 - 见 docs/design/S30-外贸工作台产品重构.md。web/src/ui/design-system.css 在 web/src/main.tsx 中于 obsidian-studio.css 之后确定性加载，禁止在特性 TSX 中懒加载 CSS 破坏层叠顺序。
 - 侧栏以当前站点为中心：视觉策略、结构蓝图、页面精修分别进入该站点的 guide / planning / 最近页面；站点 id 与页面 id 只放 sessionStorage，不存凭证。蓝图（视觉组织树 + 子页标签 + 区块检视器）和实时预览只使用规划节点、页面区块与 `GET /pages/:id/preview`（页面精修支持 `POST /pages/:id/preview-draft` 并回退 `GET /pages/:id/preview`）。页面精修为 AI 建议+图层树 / 居中实时画布 / 右侧属性检查器三栏加底栏同站切页；产品资产库为三栏 16:10 视觉网格+胶片预览器；品牌知识事实库为维度切换+高密度双列 Bento+来源数据表+环形可信度仪。AI 同意、结构、事实、审批门禁与严格 CSP 保持不变。
+
+## S32 多风格旗舰独立站渲染引擎
+- 见 docs/design/S32-旗舰独立站渲染引擎.md。本地打包 SIL OFL 1.1 字体（Cormorant Garamond / Plus Jakarta Sans / Space Grotesk / JetBrains Mono）至 `server/builder/fonts/` 与 `web/public/assets/fonts/` 并附 `OFL-LICENSES.txt`，零外部 CDN 依赖；`server/builder/composition.css` 提供 9 套 WCAG AA 配色（含真暗黑 `obsidian`）与 5 种字体轴、4 种首屏构图及无遮挡 Cookie/询价栏协同布局。保持严格 CSP、S23 `fit-contain` 裁切语义、所有事实与审批门禁及 Lighthouse 性能/SEO >= 90。

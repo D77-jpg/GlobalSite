@@ -1,0 +1,25 @@
+Bundled Local Storefront Fonts — Open Font Licenses
+=====================================================
+
+All font files in this directory are bundled locally and distributed offline with
+generated static websites (zero external font CDN requests at runtime).
+
+1. Cormorant Garamond (cormorant-garamond-400.woff2, 600.woff2, 400-italic.woff2)
+   Source: @fontsource/cormorant-garamond@5.1.1 (Christian Thalmann / Catharsis Fonts)
+   License: SIL Open Font License 1.1 (OFL-1.1)
+
+2. Plus Jakarta Sans (plus-jakarta-sans-400.woff2, 500.woff2, 600.woff2, 700.woff2)
+   Source: @fontsource/plus-jakarta-sans@5.1.1 (Tokotype)
+   License: SIL Open Font License 1.1 (OFL-1.1)
+
+3. Space Grotesk (space-grotesk-500.woff2, 700.woff2)
+   Source: @fontsource/space-grotesk@5.1.1 (Florian Karsten)
+   License: SIL Open Font License 1.1 (OFL-1.1)
+
+4. JetBrains Mono (jetbrains-mono-400.woff2, 500.woff2)
+   Source: @fontsource/jetbrains-mono@5.1.1 (JetBrains s.r.o.)
+   License: SIL Open Font License 1.1 (OFL-1.1)
+
+5. Varela Round (varela-round.ttf)
+   Source: Legacy S5 bundle (Joe Prince / Admix Designs)
+   License: SIL Open Font License 1.1 (OFL-1.1)
