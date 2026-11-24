@@ -12,6 +12,7 @@ import {
   FolderKanban,
   Globe2,
   Inbox,
+  Layers,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -159,7 +160,7 @@ export function WorkspaceFrame({
       {
         path: "/sites",
         label: c.studio,
-        icon: Sparkles,
+        icon: Layers,
         match: (p) =>
           p.startsWith("/sites") || p.startsWith("/pages") || p === "/agent",
       },
@@ -257,10 +258,9 @@ export function WorkspaceFrame({
     <>
       <Link to="/" className="brand" onClick={() => setPopup(null)}>
         <span className="brand-icon">
-          <Globe2 size={18} />
+          <Globe2 size={16} />
         </span>
         <span className="brand-name">GlobalSite</span>
-        <span className="brand-pill">STUDIO</span>
       </Link>
       <Link
         to="/organization"

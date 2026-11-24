@@ -173,7 +173,7 @@
 - S3/R2 对象存储通过零外部依赖的 object-storage.service.ts（AWS SigV4）适配，STORAGE_DRIVER 默认 local 保持向后兼容，s3 模式严格按 ${prefix}/${organizationId}/${key} 隔离并保留 storage_bytes 计量。
 
 ## S29 暗黑旗舰 UI 设计系统
-- 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 为最终加载的权威主题层，默认启用 Dark-First（data-theme="dark"）并支持顶栏/登录页一键切换浅色模式（偏好存 localStorage 的 globalsite_theme，不存任何凭证）；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持白底中性画布以还原独立站真实视觉。
+- 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 与 web/src/ui/design-system.css 提供克制的建筑级编辑美学（默认暖白石膏 Alabaster `data-theme="light"`，支持顶栏/登录页一键切换中性炭黑 `data-theme="dark"`，偏好存 localStorage 的 globalsite_theme，不存任何凭证）；禁用泛滥霓虹紫渐变与光晕；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持白底中性画布以还原独立站真实视觉。
 
 ## S30 外贸工作台产品级重构
 - 见 docs/design/S30-外贸工作台产品重构.md。web/src/ui/design-system.css 在 web/src/main.tsx 中于 obsidian-studio.css 之后确定性加载，禁止在特性 TSX 中懒加载 CSS 破坏层叠顺序。

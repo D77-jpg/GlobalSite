@@ -5,7 +5,7 @@ import {
   ArrowRight,
   ArrowUp,
   Check,
-  Sparkles,
+  Compass,
 } from "lucide-react";
 import type { Locale } from "./i18n";
 import { st } from "./sites-i18n";
@@ -115,8 +115,8 @@ export function SiteCopilot({
     >
       <div className="gs-copilot-head">
         <h2>
-          <Sparkles size={15} aria-hidden="true" />
-          {zh ? "AI 建站副驾驶" : "AI Site Co-Pilot"}
+          <Compass size={15} aria-hidden="true" />
+          {zh ? "建站助手" : "Site Assistant"}
         </h2>
         <Badge tone={activeRun ? "info" : "ok"}>
           <span className={"gs-dot " + (activeRun ? "gs-dot-info" : "gs-dot-ok")} />

@@ -61,25 +61,23 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 9px;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 6px;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   border: 1px solid var(--ui-border-strong);
-  background: var(--ui-surface-2);
+  background: var(--ui-surface);
   color: var(--ui-text);
-  box-shadow: var(--ui-specular);
+  box-shadow: var(--ui-shadow-sm);
   text-decoration: none;
   transition:
     background 140ms ease,
     border-color 140ms ease,
-    color 140ms ease,
-    transform 120ms ease,
-    box-shadow 140ms ease;
+    color 140ms ease;
 }
 
 .gs-btn:hover:not(:disabled),
@@ -96,8 +94,8 @@
 .product-shell .catalog a.gs-btn-primary {
   background: var(--ui-accent-grad);
   border-color: transparent;
-  color: #ffffff;
-  font-weight: 600;
+  color: var(--ui-accent-fg);
+  font-weight: 550;
   box-shadow: var(--ui-accent-shadow);
 }
 
@@ -105,8 +103,7 @@
 .product-shell .catalog .gs-btn-primary:hover:not(:disabled) {
   background: var(--ui-accent-grad-hover);
   border-color: transparent;
-  color: #ffffff;
-  transform: translateY(-1px);
+  color: var(--ui-accent-fg);
 }
 
 .gs-btn-ghost,
@@ -122,7 +119,7 @@
 .gs-btn-ghost:hover:not(:disabled),
 .product-shell .catalog .gs-btn-ghost:hover:not(:disabled) {
   background: var(--ui-surface-2);
-  border-color: var(--ui-border);
+  border-color: transparent;
   color: var(--ui-text);
 }
 
@@ -143,23 +140,23 @@
 
 .gs-btn-sm,
 .product-shell .catalog .gs-btn-sm {
-  min-height: 30px;
-  padding: 0 11px;
+  min-height: 28px;
+  padding: 0 10px;
   font-size: 12px;
-  border-radius: 7px;
+  border-radius: 5px;
 }
 
 .gs-btn-lg,
 .product-shell .catalog .gs-btn-lg {
-  min-height: 42px;
-  padding: 0 18px;
+  min-height: 40px;
+  padding: 0 16px;
   font-size: 13.5px;
-  border-radius: 10px;
+  border-radius: 7px;
 }
 
 .gs-btn:disabled,
 .product-shell .catalog .gs-btn:disabled {
-  opacity: 0.44;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -167,9 +164,9 @@
 .gs-card {
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
-  border-radius: 15px;
+  border-radius: 10px;
   padding: 20px 22px;
-  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  box-shadow: var(--ui-shadow-sm);
   min-width: 0;
 }
 
@@ -180,7 +177,7 @@
 .gs-card-well {
   background: var(--ui-well);
   border: 1px solid var(--ui-border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 16px 18px;
   min-width: 0;
 }
@@ -198,16 +195,16 @@
 .gs-card-title {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 14.5px;
-  font-weight: 650;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--ui-text);
   margin: 0;
   letter-spacing: -0.015em;
 }
 
 .gs-card-title svg {
-  color: var(--ui-accent-bright);
+  color: var(--ui-muted);
   flex-shrink: 0;
 }
 
@@ -215,10 +212,10 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 550;
   border: 1px solid var(--ui-border-strong);
   background: var(--ui-surface-2);
   color: var(--ui-text-2);
@@ -346,33 +343,33 @@
   margin: 0;
 }
 
-/* ---------- 4. Sidebar Quick Launch CTA ---------- */
+/* ---------- 4. Sidebar Quick Launch CTA (Restrained Architectural) ---------- */
 .gs-sidebar-cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 12px;
-  margin: 4px 0 18px;
-  border-radius: 10px;
-  background: var(--ui-accent-grad);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
+  margin: 2px 0 18px;
+  border-radius: 6px;
+  background: var(--ui-accent);
+  border: 1px solid transparent;
+  color: var(--ui-accent-fg);
+  font-size: 12.5px;
+  font-weight: 550;
   box-shadow: var(--ui-accent-shadow);
   text-decoration: none;
   transition:
     background 140ms ease,
-    transform 120ms ease;
+    border-color 140ms ease;
 }
 
 .gs-sidebar-cta:hover {
   background: var(--ui-accent-grad-hover);
-  color: #ffffff;
+  color: var(--ui-accent-fg);
   text-decoration: none;
-  transform: translateY(-1px);
 }
 
 .product-shell[data-nav-collapsed="true"] .gs-sidebar-cta span {
@@ -381,89 +378,110 @@
 
 .product-shell[data-nav-collapsed="true"] .gs-sidebar-cta {
   padding: 0;
-  width: 40px;
+  width: 36px;
   margin-inline: auto;
 }
 
-/* ---------- 5. Executive Command Hub (/) ---------- */
+/* ---------- 5. Executive Command Hub (/) — Editorial Swiss Masthead ---------- */
 .gs-hub-hero {
   position: relative;
-  overflow: hidden;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
-  padding: 24px 28px;
-  border-radius: 18px;
-  background:
-    radial-gradient(540px 240px at 90% 10%, rgba(99, 102, 241, 0.18), transparent 68%),
-    radial-gradient(420px 220px at 12% 100%, rgba(16, 185, 129, 0.11), transparent 68%),
-    var(--ui-surface);
-  border: 1px solid var(--ui-border-strong);
-  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+  padding: 4px 0 22px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  box-shadow: none;
 }
 
 .gs-hub-hero-copy {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
 .gs-hub-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11.5px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ui-accent-bright);
+  color: var(--ui-muted);
 }
 
 .gs-hub-hero h1 {
   font-size: 26px;
-  font-weight: 750;
-  letter-spacing: -0.04em;
+  font-weight: 650;
+  letter-spacing: -0.03em;
   color: var(--ui-text);
   margin: 0;
+  line-height: 1.2;
 }
 
 .gs-hub-hero p {
   font-size: 13.5px;
-  color: var(--ui-text-2);
-  margin: 0;
+  color: var(--ui-muted);
+  margin: 2px 0 0;
 }
 
 .gs-hub-main {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
-  gap: 18px;
+  gap: 20px;
   align-items: start;
+}
+
+/* Unified Architectural Metric Strip (Stripe / Vercel Analytics style) */
+.gs-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.gs-metric-strip .gs-kpi-card {
+  border: 0;
+  border-radius: 0;
+  border-right: 1px solid var(--ui-border);
+  box-shadow: none;
+  padding: 18px 20px;
+  background: transparent;
+}
+
+.gs-metric-strip .gs-kpi-card:last-child {
+  border-right: 0;
+}
+
+.gs-metric-strip .gs-kpi-card:hover {
+  transform: none;
+  background: var(--ui-well);
 }
 
 .gs-kpi-card {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 16px 18px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
-  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  box-shadow: var(--ui-shadow-sm);
   text-decoration: none;
-  transition:
-    border-color 150ms ease,
-    transform 150ms ease,
-    background-color 150ms ease;
+  transition: background-color 140ms ease;
 }
 
 .gs-kpi-card:hover {
-  border-color: var(--ui-border-glow);
-  background: var(--ui-surface-2);
-  transform: translateY(-2px);
+  background: var(--ui-well);
   text-decoration: none;
 }
 
@@ -473,78 +491,84 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--ui-muted);
 }
 
 .gs-kpi-icon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--ui-accent-soft);
-  color: var(--ui-accent-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ui-muted);
 }
 
 .gs-kpi-value {
   font-size: 28px;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: -0.035em;
   color: var(--ui-text);
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .gs-kpi-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--ui-muted);
 }
 
-/* 4-step Export Launch Pipeline inside Overview */
+/* 4-step Export Launch Pipeline — Architectural Ledger */
 .gs-pipeline {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 0;
+  border-top: 1px solid var(--ui-border);
 }
 
 .gs-pipeline-step {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: var(--ui-well);
-  border: 1px solid var(--ui-border);
+  padding: 15px 12px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
   text-decoration: none;
-  transition:
-    border-color 150ms ease,
-    background-color 150ms ease;
+  transition: background-color 140ms ease;
+}
+
+.gs-pipeline-step:last-child {
+  border-bottom: 0;
 }
 
 .gs-pipeline-step:hover {
-  background: var(--ui-surface-2);
-  border-color: var(--ui-border-glow);
+  background: var(--ui-well);
   text-decoration: none;
 }
 
 .gs-pipeline-step.is-active {
-  background: var(--ui-accent-soft);
-  border-color: var(--ui-accent-border);
+  background: var(--ui-well);
+  box-shadow: inset 2px 0 0 var(--ui-accent);
 }
 
 .gs-pipeline-num {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   background: var(--ui-surface-2);
   border: 1px solid var(--ui-border-strong);
   color: var(--ui-text-2);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   flex-shrink: 0;
 }
 
@@ -555,9 +579,9 @@
 }
 
 .gs-pipeline-step.is-active .gs-pipeline-num {
-  background: var(--ui-accent-grad);
+  background: var(--ui-accent);
   border-color: transparent;
-  color: #ffffff;
+  color: var(--ui-accent-fg);
 }
 
 .gs-pipeline-copy {
@@ -813,11 +837,11 @@
   box-shadow: var(--ui-specular);
 }
 
-/* ---------- 7. Stage B: All-in-One Immersive Site Studio Shell ---------- */
+/* ---------- 7. Stage B: All-in-One Architectural Site Studio Shell ---------- */
 .gs-studio-shell {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   min-width: 0;
 }
 
@@ -825,13 +849,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 14px 18px;
-  border-radius: 15px;
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-border-strong);
-  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  padding: 0 0 18px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  box-shadow: none;
 }
 
 .gs-studio-identity {
@@ -844,20 +869,20 @@
 .gs-studio-monogram {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: var(--ui-accent-grad);
-  color: #ffffff;
-  font-weight: 750;
-  font-size: 16px;
-  box-shadow: var(--ui-accent-shadow);
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  background: var(--ui-accent);
+  color: var(--ui-accent-fg);
+  font-weight: 650;
+  font-size: 14px;
+  box-shadow: none;
   flex-shrink: 0;
 }
 
 .gs-studio-identity h1 {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: -0.025em;
   color: var(--ui-text);
   margin: 0;
@@ -872,10 +897,10 @@
 .gs-studio-stages {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--ui-well);
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--ui-surface-2);
   border: 1px solid var(--ui-border);
   overflow-x: auto;
   max-width: 100%;
@@ -885,15 +910,15 @@
 .product-shell .catalog button.gs-stage-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 13px;
-  border-radius: 8px;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--ui-text-2);
   font-size: 12.5px;
-  font-weight: 550;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
   box-shadow: none;
@@ -901,30 +926,31 @@
 
 .gs-stage-pill:hover,
 .product-shell .catalog button.gs-stage-pill:hover {
-  background: var(--ui-surface);
+  background: var(--ui-surface-hover);
   border-color: transparent;
   color: var(--ui-text);
 }
 
 .gs-stage-pill[aria-pressed="true"],
 .product-shell .catalog button.gs-stage-pill[aria-pressed="true"] {
-  background: var(--ui-accent-soft);
-  border-color: var(--ui-accent-border);
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
   color: var(--ui-text);
-  font-weight: 650;
-  box-shadow: none;
+  font-weight: 600;
+  box-shadow: var(--ui-shadow-sm);
 }
 
 .gs-stage-num {
-  display: grid;
+  display: inline-grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--ui-surface-2);
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: transparent;
   color: var(--ui-muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
 .gs-stage-pill.is-done .gs-stage-num {
@@ -934,13 +960,13 @@
 
 .gs-stage-pill[aria-pressed="true"] .gs-stage-num {
   background: var(--ui-accent);
-  color: #ffffff;
+  color: var(--ui-accent-fg);
 }
 
 .gs-studio-body {
   display: grid;
-  grid-template-columns: 316px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 304px minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
@@ -949,12 +975,12 @@
   top: 72px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   padding: 18px;
-  border-radius: 16px;
-  background: var(--ui-rail);
-  border: 1px solid var(--ui-border-strong);
-  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  border-radius: 10px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-shadow-sm);
   max-height: calc(100dvh - 96px);
   overflow-y: auto;
 }
@@ -964,14 +990,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .gs-copilot-head h2 {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--ui-text);
   margin: 0;
 }
@@ -980,11 +1008,9 @@
   display: grid;
   gap: 10px;
   padding: 14px;
-  border-radius: 12px;
-  background:
-    radial-gradient(280px 120px at 100% 0%, rgba(99, 102, 241, 0.16), transparent 70%),
-    var(--ui-surface);
-  border: 1px solid var(--ui-accent-border);
+  border-radius: 8px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
 }
 
 .gs-copilot-next h3 {
@@ -1184,8 +1210,12 @@
     position: static;
     max-height: none;
   }
-  .gs-grid-4 {
+  .gs-grid-4,
+  .gs-metric-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gs-metric-strip .gs-kpi-card {
+    border-bottom: 1px solid var(--ui-border);
   }
   .gs-launch-grid {
     grid-template-columns: minmax(0, 1fr);

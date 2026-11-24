@@ -13,7 +13,6 @@ import {
   ListChecks,
   Plus,
   Rocket,
-  Sparkles,
   UploadCloud,
   Workflow,
 } from "lucide-react";
@@ -132,18 +131,17 @@ export function MissionOverview({
 
   return (
     <div className="gs-stack">
-      {/* Executive Hero Banner */}
+      {/* Executive Editorial Masthead */}
       <section className="gs-hub-hero">
         <div className="gs-hub-hero-copy">
           <span className="gs-hub-eyebrow">
-            <Sparkles size={14} aria-hidden="true" />
-            {zh ? "外贸独立站 AI 建站指挥台" : "B2B Export AI Site Command Hub"}
+            {zh ? "外贸独立站工作台" : "B2B Export Site Workspace"}
           </span>
           <h1>{organization ?? t.workspace}</h1>
           <p>
             {zh
-              ? "从企业与产品资料出发，由 AI 规划、视觉设计与精修，一键发布并承接全球询盘。"
-              : "Turn verified product & company knowledge into a flagship multilingual export website and capture leads."}
+              ? "整理企业与产品事实，规划并精修多语种独立站，发布上线并持续跟进全球询盘。"
+              : "Turn verified product & company knowledge into a multilingual export website and capture leads."}
           </p>
         </div>
         <div className="gs-row">
@@ -169,8 +167,7 @@ export function MissionOverview({
               className="gs-btn gs-btn-primary"
               to={"/sites/" + site.id}
             >
-              <Sparkles size={15} aria-hidden="true" />
-              {zh ? "进入建站 Studio" : "Open Site Studio"}
+              {zh ? "进入建站工作台" : "Open Site Studio"}
               <ArrowRight size={15} aria-hidden="true" />
             </Link>
           ) : (
@@ -303,7 +300,7 @@ function SiteCommandCockpit({
         ? `已关联 ${site.productIds.length} 款产品，可随时补充认证、MOQ 与交期`
         : `${site.productIds.length} products linked — add MOQ, lead time & certifications`,
       done: site.productIds.length > 0,
-      to: base + "?tab=buyer",
+      to: base + "?tab=business",
       cta: zh ? "完善资料" : "Prepare",
     },
     {
@@ -356,8 +353,8 @@ function SiteCommandCockpit({
 
   return (
     <div className="gs-stack">
-      {/* 4 Bento KPI Cards */}
-      <section className="gs-grid-4" aria-label={t.siteOperations}>
+      {/* Unified Architectural Metric Strip */}
+      <section className="gs-metric-strip" aria-label={t.siteOperations}>
         <KpiCard
           icon={Box}
           label={t.selectedProducts}
