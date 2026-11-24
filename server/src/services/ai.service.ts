@@ -7,6 +7,43 @@ import { ensure, AppError } from "../errors";
 import { reserve, settle } from "./usage.service";
 import { aiBase, aiFetch, localAiBase } from "./ai-target";
 import { audit } from "./audit.service";
+const TASK_KEYS = [
+  "research",
+  "interview",
+  "design",
+  "content",
+  "review",
+  "rewrite",
+] as const;
+
+type TaskRouteKey = (typeof TASK_KEYS)[number];
+type TaskModelConfig = Partial<Record<TaskRouteKey, string>>;
+type TemperatureConfig = Partial<Record<TaskRouteKey, number>>;
+
+function normalizeTaskModels(raw: unknown): TaskModelConfig {
+  const out: TaskModelConfig = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const key of TASK_KEYS) {
+    const val = (raw as Record<string, unknown>)[key];
+    if (typeof val === "string" && val.trim()) {
+      out[key] = val.trim().slice(0, 120);
+    }
+  }
+  return out;
+}
+
+function normalizeTemperatures(raw: unknown): TemperatureConfig {
+  const out: TemperatureConfig = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const key of TASK_KEYS) {
+    const val = (raw as Record<string, unknown>)[key];
+    if (typeof val === "number" && Number.isFinite(val) && val >= 0 && val <= 2) {
+      out[key] = Math.round(val * 100) / 100;
+    }
+  }
+  return out;
+}
+
 export async function getProvider() {
   const p = await AgentAiProvider.findOne({ name: "default" });
   return p
@@ -14,6 +51,10 @@ export async function getProvider() {
         modelName: p.modelName,
         visionModelName: p.visionModelName ?? "",
         supportsVision: !!p.supportsVision,
+        outputMode:
+          p.outputMode === "json_schema" ? ("json_schema" as const) : ("json_object" as const),
+        taskModels: normalizeTaskModels(p.taskModels),
+        temperatureByTask: normalizeTemperatures(p.temperatureByTask),
         baseUrl: p.baseUrl,
         enabled: p.enabled,
         configured: !!p.secret,
@@ -23,6 +64,9 @@ export async function getProvider() {
         configured: false,
         modelName: "",
         visionModelName: "",
+        outputMode: "json_object" as const,
+        taskModels: {},
+        temperatureByTask: {},
         baseUrl: localAiBase() ?? "https://api.openai.com/v1",
       };
 }
@@ -33,6 +77,9 @@ export async function saveProvider(
     baseUrl: string;
     enabled: boolean;
     supportsVision?: boolean;
+    outputMode?: "json_object" | "json_schema";
+    taskModels?: TaskModelConfig;
+    temperatureByTask?: TemperatureConfig;
     apiKey?: string;
   },
   userId: string,
@@ -51,6 +98,15 @@ export async function saveProvider(
     modelName: input.modelName.trim(),
     visionModelName: visionModel,
     supportsVision: !!input.supportsVision,
+    outputMode: input.outputMode ?? existing?.outputMode ?? "json_object",
+    taskModels:
+      input.taskModels !== undefined
+        ? normalizeTaskModels(input.taskModels)
+        : normalizeTaskModels(existing?.taskModels),
+    temperatureByTask:
+      input.temperatureByTask !== undefined
+        ? normalizeTemperatures(input.temperatureByTask)
+        : normalizeTemperatures(existing?.temperatureByTask),
     baseUrl: normalizedBase,
     enabled: input.enabled,
     ...(input.apiKey ? { secret: encrypt(input.apiKey, "ai:" + org) } : {}),

@@ -97,7 +97,7 @@ export function compositionBrief(site: any, node?: any) {
       type === "home"
         ? {
             usefulWords: "400–800 when evidence allows",
-            purposefulSections: "6–10",
+            purposefulSections: "5–8 (<= 8 substantive blocks, avoid scroll fatigue)",
             decisions: [
               "offer and audience",
               "range or capability discovery",
@@ -190,6 +190,7 @@ export function compositionIssues(page: PageInput, type: string) {
   }
   if (type === "home") {
     if (blocks.length < 5) add("CONTENT_SECTIONS_REQUIRED");
+    if (blocks.length > 9) add("CONTENT_HOME_TOO_LONG");
     if (
       !blocks.some(
         (b) =>

@@ -1,14 +1,23 @@
 import { jsonrepair } from "jsonrepair";
+
+export type AgentJsonParseMode = "direct" | "extracted" | "repaired";
+
+export type AgentJsonParseResult = {
+  value: unknown;
+  repaired: boolean;
+  mode: AgentJsonParseMode;
+};
+
 // Parse data only. Bounded extraction tolerates prose/fences, never executes output,
 // repairs bounded syntax only, and refuses truncated/ambiguous/expressive output.
 // Every repaired object still passes the same strict schemas and factual gates.
-export function parseAgentJson(raw: string): unknown {
+export function parseAgentJsonDetailed(raw: string): AgentJsonParseResult {
   if (raw.length > 512 * 1024) throw Error("INVALID_JSON");
   let text = raw.trim().replace(/^<think>[\s\S]*?<\/think>\s*/i, "");
   const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(text);
   if (fenced) text = fenced[1];
   try {
-    return JSON.parse(text);
+    return { value: JSON.parse(text), repaired: false, mode: "direct" };
   } catch {
     /* Try the bounded single-object envelope below. */
   }
@@ -46,7 +55,9 @@ export function parseAgentJson(raw: string): unknown {
       start = -1;
     }
   }
-  if (values.length === 1 && depth === 0) return values[0];
+  if (values.length === 1 && depth === 0) {
+    return { value: values[0], repaired: false, mode: "extracted" };
+  }
   if (
     values.length > 1 ||
     depth !== 0 ||
@@ -66,5 +77,9 @@ export function parseAgentJson(raw: string): unknown {
   const value = JSON.parse(repaired);
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw Error("INVALID_JSON");
-  return value;
+  return { value, repaired: true, mode: "repaired" };
+}
+
+export function parseAgentJson(raw: string): unknown {
+  return parseAgentJsonDetailed(raw).value;
 }

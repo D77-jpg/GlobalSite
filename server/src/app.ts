@@ -668,16 +668,39 @@ export function createApp() {
         await saveProvider(
           body(
             req,
-            z
-              .object({
-                supportsVision: z.boolean().optional(),
-                modelName: z.string().trim().min(1).max(120),
-                visionModelName: z.string().trim().max(120).optional(),
-                baseUrl: z.string().trim().url().max(500),
-                enabled: z.boolean(),
-                apiKey: z.string().min(1).max(512).optional(),
-              })
-              .strict(),
+              z
+                .object({
+                  supportsVision: z.boolean().optional(),
+                  modelName: z.string().trim().min(1).max(120),
+                  visionModelName: z.string().trim().max(120).optional(),
+                  outputMode: z.enum(["json_object", "json_schema"]).optional(),
+                  taskModels: z
+                    .object({
+                      research: z.string().trim().max(120).optional(),
+                      interview: z.string().trim().max(120).optional(),
+                      design: z.string().trim().max(120).optional(),
+                      content: z.string().trim().max(120).optional(),
+                      review: z.string().trim().max(120).optional(),
+                      rewrite: z.string().trim().max(120).optional(),
+                    })
+                    .strict()
+                    .optional(),
+                  temperatureByTask: z
+                    .object({
+                      research: z.number().min(0).max(2).optional(),
+                      interview: z.number().min(0).max(2).optional(),
+                      design: z.number().min(0).max(2).optional(),
+                      content: z.number().min(0).max(2).optional(),
+                      review: z.number().min(0).max(2).optional(),
+                      rewrite: z.number().min(0).max(2).optional(),
+                    })
+                    .strict()
+                    .optional(),
+                  baseUrl: z.string().trim().url().max(500),
+                  enabled: z.boolean(),
+                  apiKey: z.string().min(1).max(512).optional(),
+                })
+                .strict(),
           ),
           req.auth!.userId,
         ),

@@ -30,10 +30,41 @@ const shots = {
   detail:
     "Tight editorial detail photograph. Show texture, a point of interaction and a purposeful crop with soft side lighting.",
 };
+const paletteAtmosphere: Record<string, string> = {
+  obsidian:
+    "Moody dark architectural chiaroscuro lighting, dark walnut, honed black stone or brushed dark steel environment, warm bronze specular highlights, zero pure-white studio background.",
+  ivory:
+    "Warm gallery daylight, honed travertine limestone or alabaster surfaces, soft architectural shadows, refined editorial warmth.",
+  clay: "Warm Mediterranean sunlight, terracotta and textured plaster backdrop, natural tactile warmth.",
+  graphite:
+    "Crisp German precision engineering studio lighting, cool brushed anodized aluminum and matte slate surfaces, high-clarity technical contrast.",
+  cobalt:
+    "Clean industrial automation studio lighting, cool steel and subtle deep cobalt architectural accents.",
+  forest:
+    "Natural diffused daylight with botanical organic textures, raw timber and matte sage stone surfaces.",
+  ocean:
+    "Bright clean-tech studio light, frosted glass, matte white and subtle deep teal architectural highlights.",
+  violet:
+    "Modern avant-garde studio lighting, sculptural matte neutral surfaces with subtle cool rim light.",
+};
+
 export const imageBrief = z
   .object({
     subject: z.string().trim().min(3).max(600),
     composition: z.enum(["campaign", "still-life", "detail"]),
+    palette: z
+      .enum([
+        "obsidian",
+        "ivory",
+        "clay",
+        "graphite",
+        "cobalt",
+        "forest",
+        "ocean",
+        "violet",
+        "brand",
+      ])
+      .optional(),
   })
   .strict();
 const purpose = () => "image-provider:" + tenantContext()!.organizationId;
@@ -152,9 +183,14 @@ export async function generateImage(
   ensure(await reserve("images", 1, operation), 409, "IMAGE_ALREADY_SUBMITTED");
   const prompt = [
     shots[input.composition],
+    input.palette && paletteAtmosphere[input.palette]
+      ? paletteAtmosphere[input.palette]
+      : "",
     input.subject,
     "Original illustrative brand imagery. No text, logo, watermark, badges or certification marks.",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
   const model = imageModel.parse(p.modelName || defaultModel);
   const mode = imageMode.safeParse(p.mode).success
     ? (p.mode as z.infer<typeof imageMode>)

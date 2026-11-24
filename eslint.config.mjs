@@ -22,4 +22,13 @@ export default ts.config(
       ],
     },
   },
+  {
+    files: [
+      "server/src/services/agents/**/*.ts",
+      "server/src/services/agent-json.service.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+    },
+  },
 );

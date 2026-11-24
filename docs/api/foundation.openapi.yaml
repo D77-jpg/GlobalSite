@@ -2339,6 +2339,7 @@ paths:
               properties:
                 subject: { type: string, minLength: 3, maxLength: 600 }
                 composition: { type: string, enum: [ campaign, still-life, detail ] }
+                palette: { type: string, enum: [ obsidian, ivory, clay, graphite, cobalt, forest, ocean, violet, brand ] }
       responses:
         "201":
           description: "data.id identifies the new image Asset."
@@ -12463,6 +12464,68 @@ components:
           minLength: 0
           maxLength: 120
           description: Optional dedicated vision model used when supportsVision is enabled and image inputs are attached.
+        outputMode:
+          type: string
+          enum:
+            - json_object
+            - json_schema
+          description: Structured output mode for site agent JSON calls. Defaults to json_object; json_schema falls back to json_object once on HTTP 400.
+        taskModels:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: string
+              minLength: 0
+              maxLength: 120
+            interview:
+              type: string
+              minLength: 0
+              maxLength: 120
+            design:
+              type: string
+              minLength: 0
+              maxLength: 120
+            content:
+              type: string
+              minLength: 0
+              maxLength: 120
+            review:
+              type: string
+              minLength: 0
+              maxLength: 120
+            rewrite:
+              type: string
+              minLength: 0
+              maxLength: 120
+        temperatureByTask:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: number
+              minimum: 0
+              maximum: 2
+            interview:
+              type: number
+              minimum: 0
+              maximum: 2
+            design:
+              type: number
+              minimum: 0
+              maximum: 2
+            content:
+              type: number
+              minimum: 0
+              maximum: 2
+            review:
+              type: number
+              minimum: 0
+              maximum: 2
+            rewrite:
+              type: number
+              minimum: 0
+              maximum: 2
         enabled:
           type: boolean
         configured:
@@ -12775,6 +12838,67 @@ components:
           minLength: 0
           maxLength: 120
           description: Optional dedicated vision model used when supportsVision is enabled and image inputs are attached.
+        outputMode:
+          type: string
+          enum:
+            - json_object
+            - json_schema
+        taskModels:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: string
+              minLength: 0
+              maxLength: 120
+            interview:
+              type: string
+              minLength: 0
+              maxLength: 120
+            design:
+              type: string
+              minLength: 0
+              maxLength: 120
+            content:
+              type: string
+              minLength: 0
+              maxLength: 120
+            review:
+              type: string
+              minLength: 0
+              maxLength: 120
+            rewrite:
+              type: string
+              minLength: 0
+              maxLength: 120
+        temperatureByTask:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: number
+              minimum: 0
+              maximum: 2
+            interview:
+              type: number
+              minimum: 0
+              maximum: 2
+            design:
+              type: number
+              minimum: 0
+              maximum: 2
+            content:
+              type: number
+              minimum: 0
+              maximum: 2
+            review:
+              type: number
+              minimum: 0
+              maximum: 2
+            rewrite:
+              type: number
+              minimum: 0
+              maximum: 2
         enabled:
           type: boolean
         apiKey:
@@ -14808,6 +14932,21 @@ components:
                 type:
                   - string
                   - "null"
+              invalidReason:
+                type:
+                  - string
+                  - "null"
+                enum:
+                  - truncated
+                  - non_json
+                  - null
+              repaired:
+                type: boolean
+              modelName:
+                type:
+                  - string
+                  - "null"
+                maxLength: 120
             required:
               - attempt
               - status
@@ -14915,6 +15054,33 @@ components:
             - string
             - 'null'
           pattern: ^[a-f0-9]{24}$
+        diagnostics:
+          type: object
+          properties:
+            attempts:
+              type: integer
+              minimum: 0
+            repairedCount:
+              type: integer
+              minimum: 0
+            truncatedCount:
+              type: integer
+              minimum: 0
+            nonJsonCount:
+              type: integer
+              minimum: 0
+            modelsUsed:
+              type: array
+              items:
+                type: string
+                maxLength: 120
+          required:
+            - attempts
+            - repairedCount
+            - truncatedCount
+            - nonJsonCount
+            - modelsUsed
+          additionalProperties: false
       required:
         - id
         - siteId

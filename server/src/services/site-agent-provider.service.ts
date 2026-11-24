@@ -1,4 +1,5 @@
-import { parseAgentJson } from "./agent-json.service";
+import { parseAgentJsonDetailed } from "./agent-json.service";
+import { toStrictOpenAiJsonSchema } from "./agents/validation";
 import { AgentAiProvider } from "../models";
 import { tenantContext } from "../models/tenant-context";
 import { decrypt } from "./credential-crypto";
@@ -10,6 +11,8 @@ export type AgentResult = {
   tokens: number;
   errorCode?: string;
   invalidReason?: "truncated" | "non_json";
+  repaired?: boolean;
+  modelName?: string;
   responseDiagnostics?: {
     characters: number;
     kind: "empty" | "object" | "fence" | "text";
@@ -18,6 +21,38 @@ export type AgentResult = {
   visualInput?: boolean;
   reviewMode?: "structural" | "text" | "visual";
 };
+
+function resolveTaskRouteKey(task?: string): string | undefined {
+  if (!task) return undefined;
+  if (task === "refine") return "content";
+  if (
+    ["research", "interview", "design", "content", "review", "rewrite"].includes(
+      task,
+    )
+  ) {
+    return task;
+  }
+  return undefined;
+}
+
+export function resolveModelForTask(
+  provider: {
+    modelName: string;
+    visionModelName?: string;
+    supportsVision?: boolean;
+    taskModels?: Record<string, string>;
+  },
+  task: string | undefined,
+  hasImages: boolean,
+): string {
+  const routeKey = resolveTaskRouteKey(task);
+  const taskModel = routeKey ? provider.taskModels?.[routeKey]?.trim() : "";
+  if (provider.supportsVision && hasImages) {
+    if (routeKey === "review" && taskModel) return taskModel;
+    if (provider.visionModelName?.trim()) return provider.visionModelName.trim();
+  }
+  return taskModel || provider.modelName;
+}
 export async function callSiteAgent(
   system: string,
   input: unknown,
@@ -87,11 +122,51 @@ export async function callSiteAgent(
     409,
     "AI_USAGE_UNKNOWN",
   );
+  const routeKey = resolveTaskRouteKey(task);
+  const selectedModel = resolveModelForTask(
+    provider,
+    task,
+    images.length > 0,
+  );
+  const rawTemp = routeKey
+    ? provider.temperatureByTask?.[routeKey]
+    : undefined;
+  const temperature =
+    typeof rawTemp === "number" &&
+    Number.isFinite(rawTemp) &&
+    rawTemp >= 0 &&
+    rawTemp <= 2
+      ? rawTemp
+      : undefined;
+  const rawOutputSchema = (input as { outputSchema?: unknown })?.outputSchema;
+  const useStrictSchema =
+    provider.outputMode === "json_schema" &&
+    !!rawOutputSchema &&
+    typeof rawOutputSchema === "object";
+  const makeRequestBody = (schemaMode: boolean) => ({
+    model: selectedModel,
+    max_tokens: maxTokens,
+    ...(temperature !== undefined ? { temperature } : {}),
+    response_format: schemaMode
+      ? {
+          type: "json_schema",
+          json_schema: {
+            name: "globalsite_" + (routeKey ?? "agent"),
+            strict: true,
+            schema: toStrictOpenAiJsonSchema(rawOutputSchema),
+          },
+        }
+      : { type: "json_object" },
+    messages,
+  });
   let known = false;
   try {
-    const response = await aiFetch(
-      url.href.replace(/\/$/, "") + "/chat/completions",
-      {
+    const authHeader =
+      "Bearer " +
+      decrypt(provider.secret, "ai:" + tenantContext()!.organizationId);
+    const endpoint = url.href.replace(/\/$/, "") + "/chat/completions";
+    const send = (schemaMode: boolean) =>
+      aiFetch(endpoint, {
         method: "POST",
         redirect: "error",
         // Full-page JSON generation shares the model's reasoning/output cap.
@@ -99,23 +174,17 @@ export async function callSiteAgent(
         signal: AbortSignal.timeout(fullPageTask ? 240000 : 120000),
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-            "Bearer " +
-            decrypt(provider.secret, "ai:" + tenantContext()!.organizationId),
+          Authorization: authHeader,
         },
-        body: JSON.stringify({
-          model:
-            provider.supportsVision &&
-            images.length > 0 &&
-            provider.visionModelName
-              ? provider.visionModelName
-              : provider.modelName,
-          max_tokens: maxTokens,
-          response_format: { type: "json_object" },
-          messages,
-        }),
-      },
-    );
+        body: JSON.stringify(makeRequestBody(schemaMode)),
+      });
+    let response = await send(useStrictSchema);
+    if (useStrictSchema && response.status === 400) {
+      // Upstream rejected strict json_schema (HTTP 400); fall back once to json_object
+      // within the same reserved operationId so the tenant is never double-billed.
+      await response.body?.cancel().catch(() => undefined);
+      response = await send(false);
+    }
     if (!response.ok) {
       await settle("ai_tokens", operationId, 0);
       known = true;
@@ -169,13 +238,16 @@ export async function callSiteAgent(
         ? body.choices[0].finish_reason
         : "other") as "stop" | "length" | "other",
     };
-    let output: any, errorCode: string | undefined;
+    let output: unknown, errorCode: string | undefined;
     let invalidReason: AgentResult["invalidReason"];
+    let repaired = false;
     try {
       const choice = body.choices?.[0];
       if (choice?.finish_reason === "length") throw new Error("TRUNCATED");
       const content = String(choice?.message?.content ?? "").trim();
-      output = parseAgentJson(content);
+      const parsed = parseAgentJsonDetailed(content);
+      output = parsed.value;
+      repaired = parsed.repaired;
     } catch {
       output = null;
       errorCode = "AI_OUTPUT_INVALID";
@@ -184,9 +256,11 @@ export async function callSiteAgent(
           ? "truncated"
           : "non_json";
     }
-    const result = {
+    const result: AgentResult = {
       output,
       tokens,
+      modelName: selectedModel,
+      ...(repaired ? { repaired: true } : {}),
       visualInput: !!(provider.supportsVision && images.length),
       ...(errorCode ? { errorCode, invalidReason, responseDiagnostics } : {}),
     };

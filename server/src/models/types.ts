@@ -105,6 +105,9 @@ export type ProviderRow = TenantBase & {
   modelName: string;
   visionModelName?: string;
   supportsVision?: boolean;
+  outputMode?: "json_object" | "json_schema";
+  taskModels?: Record<string, string>;
+  temperatureByTask?: Record<string, number>;
   mode?: "auto" | "images" | "chat";
   baseUrl: string;
   enabled: boolean;
