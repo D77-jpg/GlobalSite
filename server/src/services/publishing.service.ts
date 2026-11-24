@@ -697,6 +697,11 @@ export async function validVersion(
         type: p.type,
         brandName: s.site.name,
         language: s.site.language,
+        navigationLabels:
+          p.type === "home"
+            ? s.site.plan?.strategy?.navigation?.map((g: any) => g.label)
+            : [],
+        requiredProductSections: s.site.plan?.strategy?.productSections,
         requireComposition: !!s.site.designDirection?.composition,
         paths: s.pages.map((p) => p.path),
       }).length,
