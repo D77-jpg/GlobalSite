@@ -199,7 +199,7 @@ test("design proposal interface compares, retries previews, expands and selects 
   );
   await expect(proposalBody).toHaveCSS(
     "font-family",
-    "Arial, Helvetica, sans-serif",
+    /"Plus Jakarta Sans"/,
   );
   expect(
     await page.locator(".proposal-canvas").first().getAttribute("style"),
