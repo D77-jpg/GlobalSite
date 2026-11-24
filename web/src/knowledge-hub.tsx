@@ -22,6 +22,10 @@ export function KnowledgeShell({
   const t = (key: Key) => messages[locale][key];
   const zh = locale === "zh";
   const { pathname } = useLocation();
+  // /assets and /facts now render their own full-bleed 3-column StudioMasthead layouts.
+  if (pathname === "/assets" || pathname === "/facts") {
+    return <>{children}</>;
+  }
   const onProductsList = pathname === "/products";
   const tabs = [
     { path: "/products", label: t("products"), Icon: Boxes },

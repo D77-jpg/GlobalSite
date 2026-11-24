@@ -1243,3 +1243,1507 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ==========================================================================
+   10. S31 Cinematic Velvet Obsidian Luxury Visual Studio (5 Reference Screens)
+   ========================================================================== */
+
+/* Top Architectural Masthead Banner */
+.gs-studio-masthead {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 26px 28px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--ui-border-strong);
+  background:
+    linear-gradient(
+      92deg,
+      rgba(12, 10, 20, 0.96) 0%,
+      rgba(14, 12, 24, 0.84) 42%,
+      rgba(14, 12, 24, 0.34) 76%,
+      rgba(12, 10, 20, 0.56) 100%
+    ),
+    url("/assets/studio/hero-arch.jpg") right center / cover no-repeat;
+  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+}
+
+:root[data-theme="light"] .gs-studio-masthead {
+  background:
+    linear-gradient(
+      92deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(255, 255, 255, 0.88) 52%,
+      rgba(246, 245, 249, 0.65) 100%
+    ),
+    url("/assets/studio/hero-arch.jpg") right center / cover no-repeat;
+}
+
+.gs-studio-masthead-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 680px;
+}
+
+.gs-masthead-eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ui-text-2);
+}
+
+.gs-studio-masthead h1 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--ui-text);
+  line-height: 1.2;
+}
+
+.gs-studio-masthead h1 em {
+  font-family: var(--font-editorial, Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.78em;
+  color: var(--ui-text-2);
+  letter-spacing: 0.01em;
+}
+
+.gs-studio-masthead p {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: var(--ui-text-2);
+  line-height: 1.6;
+}
+
+.gs-studio-masthead-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.gs-masthead-meter {
+  min-width: 190px;
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(12, 10, 20, 0.65);
+  border: 1px solid var(--ui-border-strong);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+}
+
+.gs-masthead-meter span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ui-text-2);
+}
+
+.gs-masthead-meter span svg {
+  color: var(--ui-ok);
+}
+
+.gs-masthead-meter progress {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 0;
+  background: var(--ui-surface-2);
+  accent-color: var(--ui-ok);
+}
+
+.gs-inline-en {
+  font-family: var(--font-editorial, Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--ui-muted);
+  margin-left: 4px;
+}
+
+/* Luminous Violet AI Orb Avatar */
+.gs-ai-orb {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at 32% 28%, #ffffff 0%, #c4b5fd 24%, #7c5cfc 58%, #2e1a66 100%);
+  box-shadow:
+    inset -2px -3px 6px rgba(15, 8, 42, 0.55),
+    0 0 18px -2px rgba(124, 92, 252, 0.72);
+}
+
+.gs-copilot-agent-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.gs-copilot-agent-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.gs-copilot-agent-meta h2 {
+  font-size: 14px;
+  font-weight: 650;
+  margin: 0;
+  color: var(--ui-text);
+}
+
+.gs-copilot-agent-meta small {
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+.gs-copilot-intro {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--ui-text-2);
+  margin: 0;
+}
+
+.gs-copilot-bubble {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  font-size: 12px;
+  color: var(--ui-text);
+}
+
+.gs-goal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.gs-goal-tile,
+.product-shell .catalog button.gs-goal-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 0;
+  padding: 9px 8px;
+  border-radius: 9px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.gs-goal-tile strong,
+.product-shell .catalog button.gs-goal-tile strong {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ui-text);
+  line-height: 1.3;
+}
+
+.gs-goal-tile span,
+.product-shell .catalog button.gs-goal-tile span {
+  font-size: 9.5px;
+  color: var(--ui-muted);
+  line-height: 1.25;
+}
+
+.gs-goal-tile[aria-pressed="true"],
+.product-shell .catalog button.gs-goal-tile[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  box-shadow: 0 0 18px -6px rgba(124, 92, 252, 0.5);
+}
+
+.gs-goal-tile[aria-pressed="true"] svg {
+  color: var(--ui-accent-bright);
+}
+
+.gs-positioning-box {
+  display: grid;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+}
+
+.gs-positioning-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+
+.gs-positioning-head svg {
+  color: var(--ui-accent-bright);
+}
+
+.gs-positioning-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.gs-chip {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+}
+
+.gs-positioning-brief {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ui-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gs-copilot-warn {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ui-warn);
+}
+
+/* 3-Column Visual Strategy & Blueprint Studio */
+.gs-studio-3col {
+  display: grid;
+  grid-template-columns: 274px minmax(0, 1fr) 326px;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Center 4-Tab Visual Strategy Switcher */
+.gs-visual-tabs-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gs-visual-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+}
+
+.gs-visual-tabs button,
+.product-shell .catalog .gs-visual-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ui-text-2);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.gs-visual-tabs button span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gs-visual-tabs button strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ui-text);
+  line-height: 1.25;
+}
+
+.gs-visual-tabs button small {
+  font-size: 10px;
+  color: var(--ui-muted);
+  line-height: 1.2;
+}
+
+.gs-visual-tabs button:hover,
+.product-shell .catalog .gs-visual-tabs button:hover {
+  background: var(--ui-surface-2);
+}
+
+.gs-visual-tabs button[aria-pressed="true"],
+.product-shell .catalog .gs-visual-tabs button[aria-pressed="true"] {
+  background: linear-gradient(
+    135deg,
+    rgba(124, 92, 252, 0.34) 0%,
+    rgba(86, 54, 229, 0.16) 100%
+  );
+  border-color: var(--ui-accent-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.gs-visual-tabs button[aria-pressed="true"] svg {
+  color: var(--ui-accent-bright);
+}
+
+.gs-visual-sublinks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gs-sublink-pill,
+.product-shell .catalog button.gs-sublink-pill {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.gs-sublink-pill.is-active,
+.product-shell .catalog button.gs-sublink-pill.is-active {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+/* Screen 1 Center: Visual Site Architecture Timeline */
+.gs-arch-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.gs-arch-list::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 22px;
+  bottom: 22px;
+  width: 1.5px;
+  background: linear-gradient(180deg, var(--ui-accent-bright), rgba(124, 92, 252, 0.16));
+}
+
+.gs-arch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 11px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.gs-arch-row:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+}
+
+.gs-arch-node-dot {
+  position: absolute;
+  left: -17px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ui-accent-bright);
+  box-shadow: 0 0 10px rgba(124, 92, 252, 0.8);
+}
+
+.gs-arch-node-dot.is-done {
+  background: var(--ui-ok);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.7);
+}
+
+.gs-arch-thumb {
+  width: 78px;
+  height: 48px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-strong);
+  flex-shrink: 0;
+}
+
+.gs-arch-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gs-arch-copy {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.gs-arch-copy strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+
+.gs-arch-copy small {
+  font-size: 11px;
+  color: var(--ui-accent-bright);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.gs-arch-copy span {
+  font-size: 11.5px;
+  color: var(--ui-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Screen 1 Center Bottom: Hero Concepts Strip */
+.gs-concepts-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.gs-concepts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gs-concept-tile,
+.product-shell .catalog button.gs-concept-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  min-height: 0;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.gs-concept-tile.is-active,
+.product-shell .catalog button.gs-concept-tile.is-active {
+  border-color: var(--ui-accent-border);
+  box-shadow: 0 0 20px -6px rgba(124, 92, 252, 0.55);
+}
+
+.gs-concept-img {
+  position: relative;
+  height: 68px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.gs-concept-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gs-concept-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ui-accent);
+  color: #ffffff;
+}
+
+.gs-concept-tile > span {
+  font-size: 11px;
+  color: var(--ui-text-2);
+  padding: 0 2px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Screen 2 Center: Visual Blueprint Org-Chart Tree */
+.gs-blueprint-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+}
+
+.gs-blueprint-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gs-tree-root,
+.product-shell .catalog button.gs-tree-root {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  min-height: 0;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-accent-border);
+  box-shadow: 0 0 28px -8px rgba(124, 92, 252, 0.65);
+  text-align: left;
+}
+
+.gs-tree-root-visual {
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.gs-tree-root-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gs-tree-root-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px 4px;
+  color: var(--ui-text);
+}
+
+.gs-tree-root-meta strong {
+  display: block;
+  font-size: 13px;
+}
+
+.gs-tree-root-meta span {
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+.gs-tree-stem {
+  width: 1.5px;
+  height: 22px;
+  background: var(--ui-accent-bright);
+}
+
+.gs-tree-children {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1.5px solid rgba(164, 139, 255, 0.35);
+}
+
+.gs-tree-child,
+.product-shell .catalog button.gs-tree-child {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  text-align: left;
+  box-shadow: none;
+}
+
+.gs-tree-child.is-selected,
+.product-shell .catalog button.gs-tree-child.is-selected {
+  border-color: var(--ui-accent-border);
+  background: var(--ui-accent-soft);
+}
+
+.gs-tree-child-thumb {
+  height: 46px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.gs-tree-child-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gs-tree-child-info {
+  padding: 6px 3px 2px;
+  display: grid;
+  gap: 1px;
+}
+
+.gs-tree-child-info strong {
+  font-size: 11.5px;
+  color: var(--ui-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gs-tree-child-info small {
+  font-size: 10px;
+  color: var(--ui-muted);
+}
+
+.gs-tree-inspector {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 11px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+}
+
+.gs-tree-inspector h3 {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+
+.gs-section-pills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gs-section-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  font-size: 11.5px;
+}
+
+.gs-section-row svg {
+  color: var(--ui-accent-bright);
+  flex-shrink: 0;
+}
+
+.gs-section-row span {
+  color: var(--ui-muted);
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* Right Column: Live Website Preview & Bento Insights */
+.gs-live-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.gs-live-preview-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.gs-viewport-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gs-viewport-bar button,
+.gs-viewport-bar a,
+.product-shell .catalog .gs-viewport-bar button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  box-shadow: none;
+}
+
+.gs-viewport-bar button[aria-pressed="true"],
+.product-shell .catalog .gs-viewport-bar button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+.gs-preview-stage {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-strong);
+  background: #0d0b10;
+  transition: max-width 200ms ease;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.gs-preview-stage.is-tablet {
+  max-width: 260px;
+}
+
+.gs-preview-stage.is-mobile {
+  max-width: 190px;
+}
+
+.gs-preview-mock {
+  min-height: 214px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px 18px;
+  background:
+    linear-gradient(92deg, rgba(12, 10, 14, 0.88) 0%, rgba(12, 10, 14, 0.44) 60%, rgba(12, 10, 14, 0.25) 100%),
+    url("/assets/studio/hero-arch.jpg") center / cover no-repeat;
+  color: #f8f5f0;
+}
+
+.gs-preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 8px;
+}
+
+.gs-preview-nav strong {
+  color: #ffffff;
+  letter-spacing: 0.1em;
+  font-size: 10.5px;
+  text-transform: uppercase;
+}
+
+.gs-preview-hero {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.gs-preview-hero h3 {
+  margin: 0;
+  font-family: var(--font-editorial, Georgia, serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: #ffffff;
+  line-height: 1.18;
+}
+
+.gs-preview-hero p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.78);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gs-preview-ctas {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.gs-mock-btn-light {
+  padding: 5px 10px;
+  border-radius: 5px;
+  background: #f5efe6;
+  color: #161314;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.gs-mock-btn-ghost {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  color: #ffffff;
+  font-size: 10px;
+}
+
+.gs-mini-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+
+.gs-mini-title svg {
+  color: var(--ui-accent-bright);
+}
+
+.gs-mini-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--ui-accent-bright);
+}
+
+.gs-mini-thumbs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.gs-mini-thumb-card {
+  display: grid;
+  gap: 4px;
+  text-decoration: none;
+}
+
+.gs-mini-thumb-art {
+  height: 44px;
+  border-radius: 6px;
+  border: 1px solid var(--ui-border);
+  background: url("/assets/studio/storefront-showcase.svg") center / cover no-repeat;
+}
+
+.gs-mini-thumb-card span {
+  font-size: 10.5px;
+  color: var(--ui-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gs-mini-empty-link {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  color: var(--ui-accent-bright);
+}
+
+.gs-fact-checks {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.gs-fact-checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--ui-text-2);
+  line-height: 1.45;
+}
+
+.gs-fact-checks li svg {
+  color: var(--ui-ok);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.gs-lead-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  text-decoration: none;
+}
+
+.gs-lead-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ui-accent-grad);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.gs-lead-copy {
+  min-width: 0;
+  display: grid;
+}
+
+.gs-lead-copy strong {
+  font-size: 12px;
+  color: var(--ui-text);
+}
+
+.gs-lead-copy span {
+  font-size: 11px;
+  color: var(--ui-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Screen 2 Right Bottom: Build Tasks */
+.gs-build-tasks {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.gs-build-tasks li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  font-size: 12px;
+  color: var(--ui-text-2);
+}
+
+.gs-build-tasks li.is-active {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+.gs-build-tasks li small {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+.gs-build-tasks li.is-done small {
+  color: var(--ui-ok);
+}
+
+.gs-task-bullet {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ui-surface-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.gs-build-tasks li.is-done .gs-task-bullet {
+  background: var(--ui-ok-bg);
+  color: var(--ui-ok);
+}
+
+.gs-build-tasks li.is-active .gs-task-bullet {
+  background: var(--ui-accent);
+  color: #ffffff;
+}
+
+/* Bottom Sticky Launch Workflow Dock (Screens 1 & 2) */
+.gs-launch-dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border-strong);
+  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+}
+
+.gs-dock-brand {
+  display: grid;
+}
+
+.gs-dock-brand strong {
+  font-size: 13px;
+  color: var(--ui-text);
+}
+
+.gs-dock-brand small {
+  font-size: 10.5px;
+  color: var(--ui-muted);
+}
+
+.gs-dock-steps {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  justify-content: center;
+}
+
+.gs-dock-step,
+.product-shell .catalog button.gs-dock-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 5px 14px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ui-text-2);
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.gs-dock-step.is-active,
+.product-shell .catalog button.gs-dock-step.is-active {
+  background: linear-gradient(
+    90deg,
+    rgba(124, 92, 252, 0.36) 0%,
+    rgba(86, 54, 229, 0.14) 100%
+  );
+  border-color: var(--ui-accent-border);
+  box-shadow: 0 0 22px -6px rgba(124, 92, 252, 0.65);
+}
+
+.gs-dock-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gs-dock-step.is-done .gs-dock-badge {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.gs-dock-step.is-active .gs-dock-badge {
+  background: var(--ui-accent);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.gs-dock-text {
+  display: grid;
+}
+
+.gs-dock-text strong {
+  font-size: 12px;
+  color: var(--ui-text);
+  line-height: 1.2;
+}
+
+.gs-dock-text small {
+  font-size: 10px;
+  color: var(--ui-muted);
+  line-height: 1.2;
+}
+
+.gs-studio-fold {
+  border-radius: 12px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  padding: 12px 16px;
+}
+
+.gs-studio-fold > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ui-text-2);
+}
+
+/* Screen 4: 3-Column Visual Product Asset Library (DAM) */
+.gs-dam-layout {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr) 304px;
+  gap: 16px;
+  align-items: start;
+}
+
+.gs-dam-rail,
+.gs-dam-center,
+.gs-dam-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gs-curator-action,
+.product-shell .catalog button.gs-curator-action,
+.product-shell .catalog a.gs-curator-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  text-align: left;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.gs-curator-action:hover,
+.product-shell .catalog button.gs-curator-action:hover,
+.product-shell .catalog a.gs-curator-action:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+}
+
+.gs-curator-action svg {
+  color: var(--ui-accent-bright);
+  flex-shrink: 0;
+}
+
+.gs-curator-action strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+
+.gs-curator-action small {
+  display: block;
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+.gs-dam-insights {
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-border);
+}
+
+.gs-dam-insights h3 {
+  font-size: 12px;
+  margin: 0 0 10px;
+  color: var(--ui-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gs-dam-insights dl {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.gs-dam-insights dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+
+.gs-dam-insights dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ui-text-2);
+}
+
+.gs-dam-insights dd {
+  margin: 0;
+  font-weight: 650;
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-inspector-title {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-inspector-frame {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-well);
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+}
+
+.gs-inspector-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gs-inspector-doc {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+
+.gs-inspector-meta {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-border);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.gs-inspector-meta > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.gs-inspector-meta dt {
+  color: var(--ui-muted);
+}
+
+.gs-inspector-meta dd {
+  margin: 0;
+  color: var(--ui-text);
+  font-weight: 500;
+}
+
+.gs-inspector-empty {
+  padding: 36px 14px;
+  text-align: center;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  color: var(--ui-muted);
+}
+
+.gs-inspector-empty h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ui-text);
+}
+
+.gs-inspector-empty p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Screen 5: 3-Column Brand Facts & Knowledge Studio + Credibility Ring */
+.gs-facts-layout {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr) 280px;
+  gap: 16px;
+  align-items: start;
+}
+
+.gs-facts-rail .gs-segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.gs-facts-rail .gs-segmented button,
+.product-shell .catalog .gs-facts-rail .gs-segmented button {
+  justify-content: center;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.product-shell .gs-facts-layout .fact-register {
+  display: grid;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.product-shell .gs-facts-layout .fact-register .catalog-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 13px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+}
+
+.product-shell .gs-facts-layout .fact-register .catalog-fact .catalog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+}
+
+.product-shell .gs-facts-layout .fact-register .catalog-fact h2 {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 4px 0 0;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.product-shell .gs-facts-layout .fact-register .catalog-fact small {
+  font-size: 11.5px;
+  color: var(--ui-muted);
+}
+
+.gs-facts-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gs-credibility-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gs-ring-wrap {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  margin: 4px auto;
+  display: grid;
+  place-items: center;
+}
+
+.gs-cred-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.gs-ring-bg {
+  fill: none;
+  stroke: var(--ui-surface-2);
+  stroke-width: 8;
+}
+
+.gs-ring-fill {
+  fill: none;
+  stroke: var(--ui-accent-bright);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 320ms ease;
+}
+
+.gs-ring-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.gs-ring-label strong {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ui-text);
+  line-height: 1.1;
+}
+
+.gs-ring-label span {
+  font-size: 10.5px;
+  color: var(--ui-muted);
+}
+
+@media (max-width: 1280px) {
+  .gs-studio-3col,
+  .gs-dam-layout,
+  .gs-facts-layout {
+    grid-template-columns: 272px minmax(0, 1fr);
+  }
+  .gs-live-inspector,
+  .gs-dam-inspector {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 960px) {
+  .gs-studio-3col,
+  .gs-dam-layout,
+  .gs-facts-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gs-visual-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gs-concepts-grid,
+  .gs-section-pills {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

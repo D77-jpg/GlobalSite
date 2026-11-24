@@ -173,8 +173,8 @@
 - S3/R2 对象存储通过零外部依赖的 object-storage.service.ts（AWS SigV4）适配，STORAGE_DRIVER 默认 local 保持向后兼容，s3 模式严格按 ${prefix}/${organizationId}/${key} 隔离并保留 storage_bytes 计量。
 
 ## S29 暗黑旗舰 UI 设计系统
-- 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 与 web/src/ui/design-system.css 提供克制的建筑级编辑美学（默认暖白石膏 Alabaster `data-theme="light"`，支持顶栏/登录页一键切换中性炭黑 `data-theme="dark"`，偏好存 localStorage 的 globalsite_theme，不存任何凭证）；禁用泛滥霓虹紫渐变与光晕；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持白底中性画布以还原独立站真实视觉。
+- 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 与 web/src/ui/design-system.css 构建 Velvet Obsidian Luxury Visual Studio（默认暗黑绒面黑曜石 `data-theme="dark"` + 紫晶微光 + 本地建筑/山脊背景资源 `web/public/assets/studio/`，无外部运行依赖；支持顶栏/登录页一键切换浅色模式，偏好存 localStorage 的 globalsite_theme，不存任何凭证）；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持中性画布以还原独立站真实视觉。
 
-## S30 外贸工作台产品级重构
+## S30–S31 外贸视觉策略工作室产品级重构
 - 见 docs/design/S30-外贸工作台产品重构.md。web/src/ui/design-system.css 在 web/src/main.tsx 中于 obsidian-studio.css 之后确定性加载，禁止在特性 TSX 中懒加载 CSS 破坏层叠顺序。
-- 侧栏保持 5 大外贸支柱导航（指挥台 / 建站工作台 / 外贸资料中心 / 询盘与获客 / 系统设置）及「+ 新建外贸站」快捷入口，所有历史路由与 Ctrl K 深链保持兼容；SiteWorkspace 采用 4 阶段向导头与常驻左侧 AI 建站副驾驶（SiteCopilot），仍严格执行显式 AI 同意与结构/事实/审批门禁；外贸资料中心（KnowledgeShell）与系统设置中心（SettingsShell）分别整合原有分散路由，询盘收件箱采用分屏阅读与快捷跟进交互。
+- 侧栏采用双语双行 7 项创意工作室导航（视觉策略工作室 / 项目看板 / 产品资产 / 品牌知识与事实库 / 询盘与线索 / AI 服务商 / 团队与协作）与底部山脊氛围背景，所有历史路由与 Ctrl K 深链保持兼容；SiteWorkspace 采用顶栏建筑报头 + 三栏视觉策略/蓝图工作室（左侧 AI 策略顾问 + 中间可视化节点树与 Hero 方案 + 右侧实时预览/产品资产/企业事实/询盘洞察）+ 底部常驻上线流程条，仍严格执行显式 AI 同意与结构/事实/审批门禁；产品资产库（AssetsPage）与品牌知识与事实库（FactsPage）均升级为三栏工作室布局并保留全部真实 API 与事实核验门禁。

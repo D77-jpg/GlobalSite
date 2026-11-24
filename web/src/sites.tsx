@@ -3,6 +3,12 @@ import { diffPageDraft } from "./page-diff";
 import { RunList } from "./agent-tasks";
 export { RunList } from "./agent-tasks";
 import { SiteCopilot } from "./site-copilot";
+import {
+  LaunchWorkflowDock,
+  SiteBlueprintCanvas,
+  SiteLiveInspector,
+  StudioMasthead,
+} from "./site-studio-visuals";
 import { SiteDesign } from "./site-design";
 import { SiteGuide } from "./site-journey";
 import { BuyerWorkspace, SiteQuality } from "./b2b";
@@ -11,11 +17,13 @@ import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowRight,
+  ArrowUpRight,
   CheckCheck,
   ChevronRight,
   FileText,
   Layers3,
   Network,
+  Palette,
   Workflow,
 } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -637,59 +645,70 @@ export function SiteWorkspace({ locale, role }: Props) {
   ];
   const activeGroup =
     stageGroups.find((g) => g.tabs.includes(tab)) ?? stageGroups[0];
+  const isThreeCol = tab === "guide" || tab === "planning";
+  const visualTabs = [
+    { key: "guide", icon: Network, zh: "网站蓝图", en: "Site Blueprint" },
+    { key: "planning", icon: Layers3, zh: "页面结构", en: "Page Architecture" },
+    { key: "pages", icon: FileText, zh: "内容创意", en: "Content & Copy" },
+    { key: "design", icon: Palette, zh: "视觉风格", en: "Visual Style" },
+  ];
   return (
     <div className="catalog sites-workspace gs-studio-shell">
-      <header className="gs-studio-topbar">
-        <div className="gs-studio-identity">
-          <span className="gs-studio-monogram" aria-hidden="true">
-            {site.name.slice(0, 1).toUpperCase()}
-          </span>
-          <div>
-            <h1>{site.name}</h1>
-            <p>
-              {site.targetMarkets.join(", ")} ·{" "}
-              {languageLabels[site.language] ?? site.language ?? "English"}
-            </p>
-          </div>
-        </div>
-        <nav
-          className="gs-studio-stages"
-          aria-label={zh ? "建站阶段" : "Build stages"}
-        >
-          {stageGroups.map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              className={"gs-stage-pill" + (g.done ? " is-done" : "")}
-              aria-pressed={activeGroup.key === g.key}
-              onClick={() => setTab(g.tabs[0] ?? "guide")}
+      <StudioMasthead
+        eyebrow={
+          site.name +
+          " · " +
+          site.targetMarkets.join(", ") +
+          " · " +
+          (languageLabels[site.language] ?? site.language ?? "English")
+        }
+        title={
+          tab === "planning"
+            ? zh
+              ? "网站结构与蓝图"
+              : "Site Architecture"
+            : zh
+              ? "网站视觉策略工作室"
+              : "Visual Strategy Studio"
+        }
+        enTitle={tab === "planning" ? "Site Architecture" : "Visual Strategy Studio"}
+        subtitle={
+          tab === "planning"
+            ? zh
+              ? "用 AI 规划站点结构、页面内容与转化路径，构建清晰、专业、可扩展的 B2B 官网。"
+              : "Architect buyer-focused navigation, page sections, and high-conversion RFQ pathways."
+            : zh
+              ? "用 AI 打造高转化的企业官网，从策略、设计到上线的一体化工作流。"
+              : "Craft a high-converting multilingual export website from strategy and architecture to launch."
+        }
+        action={
+          <div className="gs-row">
+            <Link className="gs-btn gs-btn-sm" to={"/sites/" + id + "/publishing"}>
+              {t("buildPublish")}
+            </Link>
+            <Link
+              className="gs-btn gs-btn-sm"
+              to={"/sites/" + id + "/inquiry-settings"}
             >
-              <span className="gs-stage-num">{g.num}</span>
-              <span>{g.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="gs-row">
-          <Link className="gs-btn gs-btn-sm" to={"/sites/" + id + "/publishing"}>
-            {t("buildPublish")}
-          </Link>
-          <Link
-            className="gs-btn gs-btn-sm"
-            to={"/sites/" + id + "/inquiry-settings"}
-          >
-            {t("inquirySettings")}
-          </Link>
-          <Link
-            className="gs-btn gs-btn-sm gs-btn-primary"
-            to={"/sites/" + id + "/preview"}
-          >
-            {t("previewSite")}
-          </Link>
-        </div>
-      </header>
+              {t("inquirySettings")}
+            </Link>
+            <Link
+              className="gs-btn gs-btn-primary"
+              to={"/sites/" + id + "/preview"}
+            >
+              {zh ? "预览上线版本" : t("previewSite")}
+              <ArrowUpRight size={15} aria-hidden="true" />
+            </Link>
+          </div>
+        }
+      />
       <div
         className={
-          tab === "runs" ? "gs-stack" : "gs-studio-body"
+          tab === "runs"
+            ? "gs-stack"
+            : isThreeCol
+              ? "gs-studio-3col"
+              : "gs-studio-body"
         }
       >
         {tab !== "runs" && (
@@ -707,21 +726,40 @@ export function SiteWorkspace({ locale, role }: Props) {
           />
         )}
         <div className={"gs-studio-stage-main project-tab-" + tab}>
-          {activeGroup.tabs.length > 1 && (
-            <nav className="gs-segmented" aria-label={t("sites")}>
-              {activeGroup.tabs.map((k) => (
+          {/* 4-Tab Visual Strategy Switcher (Screens 1 & 2) */}
+          <div className="gs-visual-tabs-bar">
+            <nav className="gs-visual-tabs" aria-label={t("sites")}>
+              {visualTabs.map(({ key, icon: Icon, zh: zLabel, en: eLabel }) => (
                 <button
-                  key={k}
+                  key={key}
                   type="button"
-                  aria-pressed={tab === k}
-                  onClick={() => setTab(k)}
+                  aria-pressed={tab === key}
+                  onClick={() => setTab(key)}
                 >
-                  {t(k)}
+                  <Icon size={15} aria-hidden="true" />
+                  <span>
+                    <strong>{zh ? zLabel : eLabel}</strong>
+                    <small>{zh ? eLabel : zLabel}</small>
+                  </span>
                 </button>
               ))}
             </nav>
-          )}
-          {!["guide", "runs"].includes(tab) && (
+            <div className="gs-visual-sublinks">
+              {(["business", "interview", "quality", "runs", "settings"] as const).map(
+                (k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={"gs-sublink-pill" + (tab === k ? " is-active" : "")}
+                    onClick={() => setTab(k)}
+                  >
+                    {t(k)}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+          {!["guide", "runs", "planning"].includes(tab) && (
             <div
               className="studio-metrics"
               role="group"
@@ -793,19 +831,31 @@ export function SiteWorkspace({ locale, role }: Props) {
             saved={a.saved}
           />
           {tab === "guide" && (
-            <SiteGuide
-              site={site}
-              sources={sources.data}
-              pages={pages.data?.items}
-              runs={runs.data?.items}
-              locale={locale}
-              canEdit={canEdit}
-              busy={a.busy}
-              consent={consent}
-              setConsent={setConsent}
-              queue={(step) => a.run(() => queue(step))}
-              setTab={setTab}
-            />
+            <>
+              <SiteBlueprintCanvas
+                site={site}
+                pages={pages.data?.items}
+                locale={locale}
+                mode="strategy"
+                onSelectTab={setTab}
+              />
+              <details className="gs-studio-fold">
+                <summary>{zh ? "展开完整分步建站清单" : "Expand step-by-step build checklist"}</summary>
+                <SiteGuide
+                  site={site}
+                  sources={sources.data}
+                  pages={pages.data?.items}
+                  runs={runs.data?.items}
+                  locale={locale}
+                  canEdit={canEdit}
+                  busy={a.busy}
+                  consent={consent}
+                  setConsent={setConsent}
+                  queue={(step) => a.run(() => queue(step))}
+                  setTab={setTab}
+                />
+              </details>
+            </>
           )}
           {tab === "design" && (
             <SiteDesign
@@ -845,70 +895,79 @@ export function SiteWorkspace({ locale, role }: Props) {
             />
           )}
           {tab === "planning" && (
-            <div className="studio-planner-layout">
-              <PlanEditor
-                key={site.planRevision}
+            <div className="gs-stack">
+              <SiteBlueprintCanvas
                 site={site}
-                products={sources.data?.products ?? []}
-                t={t}
-                role={role}
-                done={(r) => {
-                  load.set(r);
-                  pages.reload();
-                  ready.reload();
-                }}
+                pages={pages.data?.items}
+                locale={locale}
+                mode="tree"
+                onSelectTab={setTab}
               />
-              <aside className="studio-planner-rail">
-                <div className="studio-rail-heading">
-                  <Workflow size={20} />
-                  <h2>{t("planningAgent")}</h2>
-                </div>
-                <section>
-                  <h3>{t("sourceMaterial")}</h3>
-                  <dl>
-                    <div>
-                      <dt>{t("products")}</dt>
-                      <dd>{sources.data?.products.length ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("confirmedFacts")}</dt>
-                      <dd>{sources.data?.facts.length ?? "—"}</dd>
-                    </div>
-                  </dl>
-                  <Link to="?tab=business">
-                    {t("business")} <ChevronRight size={14} />
-                  </Link>
-                </section>
-                <section>
-                  <h3>{t("research")}</h3>
-                  <p>{t("researchHint")}</p>
-                  {canEdit && (
-                    <button
-                      disabled={!consent || a.busy}
-                      onClick={() => void a.run(() => queue("research"))}
-                    >
-                      <Network size={15} />
-                      {t("generateResearch")}
-                    </button>
-                  )}
-                </section>
-                {runs.data?.items[0] && (
+              <div className="studio-planner-layout">
+                <PlanEditor
+                  key={site.planRevision}
+                  site={site}
+                  products={sources.data?.products ?? []}
+                  t={t}
+                  role={role}
+                  done={(r) => {
+                    load.set(r);
+                    pages.reload();
+                    ready.reload();
+                  }}
+                />
+                <aside className="studio-planner-rail">
+                  <div className="studio-rail-heading">
+                    <Workflow size={20} />
+                    <h2>{t("planningAgent")}</h2>
+                  </div>
                   <section>
-                    <h3>{t("latestActivity")}</h3>
-                    <p>
-                      {t(
-                        runs.data.items[0].step === "rewrite"
-                          ? "rewriteStep"
-                          : runs.data.items[0].step,
-                      )}{" "}
-                      · {t(runs.data.items[0].status)}
-                    </p>
-                    <Link to="?tab=runs">
-                      {t("viewExecution")} <ArrowRight size={14} />
+                    <h3>{t("sourceMaterial")}</h3>
+                    <dl>
+                      <div>
+                        <dt>{t("products")}</dt>
+                        <dd>{sources.data?.products.length ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("confirmedFacts")}</dt>
+                        <dd>{sources.data?.facts.length ?? "—"}</dd>
+                      </div>
+                    </dl>
+                    <Link to="?tab=business">
+                      {t("business")} <ChevronRight size={14} />
                     </Link>
                   </section>
-                )}
-              </aside>
+                  <section>
+                    <h3>{t("research")}</h3>
+                    <p>{t("researchHint")}</p>
+                    {canEdit && (
+                      <button
+                        disabled={!consent || a.busy}
+                        onClick={() => void a.run(() => queue("research"))}
+                      >
+                        <Network size={15} />
+                        {t("generateResearch")}
+                      </button>
+                    )}
+                  </section>
+                  {runs.data?.items[0] && (
+                    <section>
+                      <h3>{t("latestActivity")}</h3>
+                      <p>
+                        {t(
+                          runs.data.items[0].step === "rewrite"
+                            ? "rewriteStep"
+                            : runs.data.items[0].step,
+                        )}{" "}
+                        · {t(runs.data.items[0].status)}
+                      </p>
+                      <Link to="?tab=runs">
+                        {t("viewExecution")} <ArrowRight size={14} />
+                      </Link>
+                    </section>
+                  )}
+                </aside>
+              </div>
             </div>
           )}
           {tab === "interview" && (
@@ -1098,7 +1157,27 @@ export function SiteWorkspace({ locale, role }: Props) {
               <p>{t("readOnly")}</p>
             ))}
         </div>
+        {isThreeCol && (
+          <SiteLiveInspector
+            site={site}
+            sources={sources.data}
+            pages={pages.data?.items}
+            runs={runs.data?.items}
+            locale={locale}
+            mode={tab === "planning" ? "tree" : "strategy"}
+          />
+        )}
       </div>
+      <LaunchWorkflowDock
+        site={site}
+        pages={pages.data?.items}
+        locale={locale}
+        activeStageKey={activeGroup.key}
+        onSelectStage={(stageKey) => {
+          const target = stageGroups.find((g) => g.key === stageKey);
+          setTab(target?.tabs[0] ?? "guide");
+        }}
+      />
     </div>
   );
 }

@@ -1534,7 +1534,7 @@ function App() {
     localStorage.getItem("globalsite_locale") === "en" ? "en" : "zh",
   );
   const [theme, setThemeState] = useState<Theme>(
-    localStorage.getItem("globalsite_theme") === "dark" ? "dark" : "light",
+    localStorage.getItem("globalsite_theme") === "light" ? "light" : "dark",
   );
   const setLocale = (next: Locale) => {
     setLocaleState(next);
@@ -1554,7 +1554,7 @@ function App() {
     document.documentElement.dataset.theme = theme;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta)
-      meta.setAttribute("content", theme === "dark" ? "#0a0a0b" : "#f7f7f5");
+      meta.setAttribute("content", theme === "dark" ? "#08070d" : "#f7f7f5");
   }, [theme]);
   return (
     <ThemeCtx.Provider value={{ theme, toggleTheme }}>

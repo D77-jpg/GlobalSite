@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   Activity,
-  ArrowRight,
   ArrowUp,
+  Award,
   Check,
-  Compass,
+  LayoutGrid,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import type { Locale } from "./i18n";
 import { st } from "./sites-i18n";
@@ -14,8 +15,8 @@ import { Badge } from "./ui/primitives";
 type Row = Record<string, any>;
 
 const STEP_OPTIONS: Array<[string, [string, string]]> = [
-  ["research", ["规划网站结构", "Plan site structure"]],
-  ["design", ["生成双套首页方案", "Generate 2 homepage designs"]],
+  ["research", ["规划网站结构与策略", "Plan site structure"]],
+  ["design", ["生成双套视觉提案", "Generate 2 homepage designs"]],
   ["content", ["生成全站页面内容", "Generate full-site content"]],
   ["review", ["多端截图与质量审查", "Run multi-viewport QA review"]],
   ["refine", ["按审查报告自动改进", "Refine pages from QA report"]],
@@ -48,62 +49,50 @@ export function SiteCopilot({
   const pageList = pages ?? [];
   const approvedCount = pageList.filter((p) => p.status === "approved").length;
 
-  // Smart recommendation based on real site progress.
-  const recommended = !site.planConfirmed
-    ? {
-        step: "research",
-        title: zh ? "下一步：确认外贸网站结构" : "Next: Plan & confirm site structure",
-        body: zh
-          ? "让 AI 结合你的产品与目标市场规划栏目、关键词与买家采购路径。"
-          : "Let AI propose buyer-focused navigation, keywords, and page briefs.",
-        tab: "planning",
-        tabLabel: zh ? "查看规划" : "Open planner",
-      }
+  const recommendedStep = !site.planConfirmed
+    ? "research"
     : site.templateId === "adaptive" && !site.designDirection
-      ? {
-          step: "design",
-          title: zh ? "下一步：生成双套旗舰视觉方案" : "Next: Generate 2 visual concepts",
-          body: zh
-            ? "生成两套结构与风格截然不同的首页+代表详情提案，可视化对比后选定。"
-            : "Compare two distinct homepage + product detail concepts side by side.",
-          tab: "design",
-          tabLabel: zh ? "看设计方案" : "Compare designs",
-        }
+      ? "design"
       : !pageList.length
-        ? {
-            step: "content",
-            title: zh ? "下一步：一键生成全站草稿" : "Next: Generate all site pages",
-            body: zh
-              ? "严格依据已确认的企业与产品事实生成多语种正文，拒绝虚假参数。"
-              : "Draft all pages strictly from confirmed business & product facts.",
-            tab: "pages",
-            tabLabel: zh ? "查看页面" : "Open pages",
-          }
+        ? "content"
         : approvedCount < planCount
-          ? {
-              step: "review",
-              title: zh
-                ? `还有 ${planCount - approvedCount} 页待审定`
-                : `${planCount - approvedCount} pages need review`,
-              body: zh
-                ? "在右侧进入分屏编辑器微调文字或一键批量批准，通过后即可质检上线。"
-                : "Edit in the split-screen studio or batch-approve passing pages.",
-              tab: "pages",
-              tabLabel: zh ? "去精修审核" : "Review pages",
-            }
-          : {
-              step: "review",
-              title: zh ? "页面已全部批准，准备上线" : "All pages approved — ready for QA",
-              body: zh
-                ? "运行 375/768/1440 三端截图审查，或直接前往「构建与发布」上线并配置 SEO。"
-                : "Run responsive screenshot QA or head to Build & Publish to go live.",
-              tab: "quality",
-              tabLabel: zh ? "去质检上线" : "Open QA",
-            };
+          ? "review"
+          : "review";
 
-  const [step, setStep] = useState(recommended.step);
+  const [step, setStep] = useState(recommendedStep);
+  const [goal, setGoal] = useState<"inquiries" | "brand" | "showcase">("inquiries");
   const [instructions, setInstructions] = useState("");
   const [consent, setConsent] = useState(false);
+
+  const goals = [
+    {
+      id: "inquiries" as const,
+      icon: TrendingUp,
+      zh: "获取海外询盘",
+      en: "Generate Inquiries",
+      prompt: zh
+        ? "聚焦海外 B2B 工程与批发买家，在首屏、产品页与解决方案页强化询盘转化入口与交期/OEM 优势。"
+        : "Focus on B2B overseas buyers with prominent RFQ conversion flows and OEM/lead-time clarity.",
+    },
+    {
+      id: "brand" as const,
+      icon: Award,
+      zh: "提升品牌形象",
+      en: "Brand Positioning",
+      prompt: zh
+        ? "采用博物馆级旗舰品牌叙事与留白节奏，突出工艺材质、国际认证与项目案例信任背书。"
+        : "Craft a flagship editorial brand narrative emphasizing craftsmanship, certifications, and project trust.",
+    },
+    {
+      id: "showcase" as const,
+      icon: LayoutGrid,
+      zh: "展示产品与应用",
+      en: "Product Showcase",
+      prompt: zh
+        ? "以产品系列、规格参数表与真实空间应用场景为核心，方便采购商快速选型并提交询价清单。"
+        : "Highlight product families, structured spec sheets, and real application scenes for fast buyer selection.",
+    },
+  ];
 
   const needsPlan = ["design", "content", "review", "refine"].includes(step);
   const blocked = needsPlan && !site.planConfirmed;
@@ -111,39 +100,72 @@ export function SiteCopilot({
   return (
     <aside
       className="gs-copilot-rail"
-      aria-label={zh ? "AI 建站副驾驶" : "AI Site Co-Pilot"}
+      aria-label={zh ? "AI 策略顾问" : "AI Strategy Advisor"}
     >
-      <div className="gs-copilot-head">
-        <h2>
-          <Compass size={15} aria-hidden="true" />
-          {zh ? "建站助手" : "Site Assistant"}
-        </h2>
+      {/* Luminous AI Agent Header */}
+      <div className="gs-copilot-agent-head">
+        <span className="gs-ai-orb" aria-hidden="true" />
+        <div className="gs-copilot-agent-meta">
+          <h2>{zh ? "AI 策略顾问" : "AI Strategy Advisor"}</h2>
+          <small>{site.name} Agent</small>
+        </div>
         <Badge tone={activeRun ? "info" : "ok"}>
           <span className={"gs-dot " + (activeRun ? "gs-dot-info" : "gs-dot-ok")} />
-          {activeRun ? (zh ? "执行中" : "Running") : zh ? "就绪" : "Ready"}
+          {activeRun ? (zh ? "执行中" : "Running") : zh ? "在线" : "Online"}
         </Badge>
       </div>
 
-      {/* Contextual Next Best Action */}
-      <div className="gs-copilot-next">
-        <h3>{recommended.title}</h3>
-        <p>{recommended.body}</p>
-        <div className="gs-row">
+      <p className="gs-copilot-intro">
+        {zh
+          ? "基于你的产品、企业资料与目标市场，提供网站策略、结构与内容创意，并可一键生成方案。"
+          : "Craft buyer-focused site strategy, structure, and verified copy from your products and facts."}
+      </p>
+
+      {/* Conversational Prompt Bubble + 3 Goal Tiles (Screen 1) */}
+      <div className="gs-copilot-bubble">
+        {zh ? "我们这次的网站主要目标是什么？" : "What is the primary goal for this site?"}
+      </div>
+      <div className="gs-goal-grid" role="group" aria-label={zh ? "建站目标" : "Site goal"}>
+        {goals.map(({ id, icon: Icon, zh: zLabel, en: eLabel, prompt }) => (
           <button
+            key={id}
             type="button"
-            className="gs-btn gs-btn-sm"
-            onClick={() => onNavigateTab(recommended.tab)}
+            className="gs-goal-tile"
+            aria-pressed={goal === id}
+            onClick={() => {
+              setGoal(id);
+              setInstructions(prompt);
+            }}
           >
-            {recommended.tabLabel}
-            <ArrowRight size={13} />
+            <Icon size={15} aria-hidden="true" />
+            <strong>{zh ? zLabel : eLabel}</strong>
+            <span>{zh ? eLabel : zLabel}</span>
           </button>
-          <Link
-            className="gs-btn gs-btn-sm gs-btn-ghost"
-            to={"/sites/" + site.id + "/publishing"}
-          >
-            {zh ? "发布中心" : "Publish"}
-          </Link>
+        ))}
+      </div>
+
+      {/* Brand Positioning Snapshot */}
+      <div className="gs-positioning-box">
+        <div className="gs-positioning-head">
+          <Sparkles size={13} aria-hidden="true" />
+          <span>{zh ? "品牌定位与核心信息" : "Brand positioning"}</span>
         </div>
+        <div className="gs-positioning-tags">
+          {(site.targetMarkets ?? []).slice(0, 3).map((m: string) => (
+            <span key={m} className="gs-chip">
+              {m}
+            </span>
+          ))}
+          <span className="gs-chip">
+            {(site.productIds?.length ?? 0)} {zh ? "款产品" : "products"}
+          </span>
+          {site.language && (
+            <span className="gs-chip">{site.language.toUpperCase()}</span>
+          )}
+        </div>
+        {site.businessBrief && (
+          <p className="gs-positioning-brief">{site.businessBrief}</p>
+        )}
       </div>
 
       {/* Direct AI Mission Composer */}
@@ -160,7 +182,7 @@ export function SiteCopilot({
           }}
         >
           <label>
-            {zh ? "下达 AI 建站指令" : "Run AI task"}
+            {zh ? "执行任务" : "AI mission"}
             <select
               value={step}
               onChange={(e) => setStep(e.target.value)}
@@ -181,14 +203,14 @@ export function SiteCopilot({
             onChange={(e) => setInstructions(e.target.value)}
             placeholder={
               zh
-                ? "用大白话告诉 AI 你的偏好（如：面向欧美工程采购商、强调 OEM 定制与交期优势…）"
-                : "Describe your goals in plain language (e.g. emphasize OEM capability and fast lead time)…"
+                ? "补充你的业务卖点、目标买家或视觉偏好…"
+                : "Add buyer priorities, certifications, or visual direction…"
             }
           />
           {blocked && (
-            <p className="muted">
+            <p className="gs-copilot-warn">
               {zh
-                ? "请先在「结构与视觉」确认网站地图后再执行此步骤。"
+                ? "请先在「结构与蓝图」确认网站结构后再执行此步骤。"
                 : "Confirm the site structure first before running this step."}
             </p>
           )}
@@ -207,33 +229,42 @@ export function SiteCopilot({
           </label>
           <button
             type="submit"
-            className="gs-btn gs-btn-primary"
+            className="gs-btn gs-btn-primary gs-btn-lg"
             disabled={busy || !consent || blocked}
           >
-            <span>{busy ? (zh ? "正在提交…" : "Submitting…") : zh ? "让 AI 开始执行" : "Run with AI"}</span>
-            <ArrowUp size={15} />
+            <Sparkles size={14} aria-hidden="true" />
+            <span>
+              {busy
+                ? zh
+                  ? "正在提交…"
+                  : "Submitting…"
+                : zh
+                  ? "让 AI 生成方案"
+                  : "Generate with AI"}
+            </span>
+            <ArrowUp size={14} aria-hidden="true" />
           </button>
         </form>
       )}
 
-      {/* Live Recent Runs Stream */}
-      <div className="gs-stack-sm">
-        <div className="gs-row-between">
-          <small className="muted">
-            <Activity size={12} aria-hidden="true" />{" "}
-            {zh ? "实时任务动态" : "Live activity"}
-          </small>
-          <button
-            type="button"
-            className="gs-btn gs-btn-sm gs-btn-ghost"
-            onClick={() => onNavigateTab("runs")}
-          >
-            {zh ? "全部记录" : "All runs"}
-          </button>
-        </div>
-        {(runs ?? []).length ? (
+      {/* Compact Recent Runs */}
+      {(runs ?? []).length > 0 && (
+        <div className="gs-stack-sm">
+          <div className="gs-row-between">
+            <small className="muted">
+              <Activity size={12} aria-hidden="true" />
+              {zh ? "近期执行记录" : "Recent runs"}
+            </small>
+            <button
+              type="button"
+              className="gs-btn gs-btn-sm gs-btn-ghost"
+              onClick={() => onNavigateTab("runs")}
+            >
+              {zh ? "全部" : "All"}
+            </button>
+          </div>
           <div className="gs-copilot-runs">
-            {(runs ?? []).slice(0, 4).map((r) => {
+            {(runs ?? []).slice(0, 3).map((r) => {
               const done = (r.steps ?? []).filter(
                 (s: Row) => s.status === "succeeded",
               ).length;
@@ -260,12 +291,8 @@ export function SiteCopilot({
               );
             })}
           </div>
-        ) : (
-          <p className="muted">
-            {zh ? "还没有运行记录，从上方发起第一个 AI 任务。" : "No runs yet. Launch your first AI task above."}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 }
