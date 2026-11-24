@@ -1534,7 +1534,7 @@ function App() {
     localStorage.getItem("globalsite_locale") === "en" ? "en" : "zh",
   );
   const [theme, setThemeState] = useState<Theme>(
-    localStorage.getItem("globalsite_theme") === "light" ? "light" : "dark",
+    localStorage.getItem("globalsite_studio_theme") === "light" ? "light" : "dark",
   );
   const setLocale = (next: Locale) => {
     setLocaleState(next);
@@ -1543,7 +1543,7 @@ function App() {
   const toggleTheme = () => {
     setThemeState((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
-      localStorage.setItem("globalsite_theme", next);
+      localStorage.setItem("globalsite_studio_theme", next);
       return next;
     });
   };

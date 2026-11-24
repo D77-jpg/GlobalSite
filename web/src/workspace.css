@@ -28,6 +28,24 @@ body {
   background: #fbfcfb;
   border-color: var(--line);
 }
+.site-switcher {
+  display: grid;
+  gap: 6px;
+  margin: 8px 4px 14px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.site-switcher small,
+.site-switcher a {
+  color: var(--muted);
+  font-size: 12px;
+}
+.site-switcher select {
+  width: 100%;
+  min-height: 36px;
+}
 .ws-shell .sidebar > .brand {
   font:
     710 23px/1.2 Inter,

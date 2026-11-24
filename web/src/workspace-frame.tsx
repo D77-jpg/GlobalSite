@@ -12,8 +12,10 @@ import {
   FileStack,
   Globe2,
   Inbox,
+  Layers3,
   LayoutDashboard,
   LayoutGrid,
+  Network,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -29,6 +31,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { api } from "./api";
+import { rememberSite, readPage, readSite } from "./current-site";
 import { messages, type Locale, type Key } from "./i18n";
 
 type Item = {
@@ -54,6 +57,12 @@ const copy = {
     work: "工作空间",
     studio: "视觉策略工作室",
     studioSub: "Visual Strategy Studio",
+    blueprint: "结构蓝图",
+    blueprintSub: "Site Blueprint",
+    refine: "页面精修",
+    refineSub: "Page Studio",
+    currentSite: "当前站点",
+    allSites: "全部项目",
     hub: "项目看板",
     hubSub: "Launch Cockpit",
     products: "产品资产",
@@ -82,6 +91,12 @@ const copy = {
     work: "Workspace",
     studio: "Visual Strategy Studio",
     studioSub: "Site Architecture & AI",
+    blueprint: "Site Blueprint",
+    blueprintSub: "Structure & Pages",
+    refine: "Page Studio",
+    refineSub: "Canvas & Inspector",
+    currentSite: "Current site",
+    allSites: "All projects",
     hub: "Launch Cockpit",
     hubSub: "Overview & KPIs",
     products: "Product Library",
@@ -159,6 +174,13 @@ export function WorkspaceFrame({
   const [popup, setPopup] = useState<"menu" | "search" | null>(null);
   const [query, setQuery] = useState("");
   const [logoutError, setLogoutError] = useState(false);
+  const [sites, setSites] = useState<Array<{ id: string; name: string }>>([]);
+  const routeSite =
+    location.pathname.match(/^\/sites\/([a-f0-9]{24})(?:\/|$)/)?.[1] ?? "";
+  const storedSite = readSite();
+  const knownStored = sites.some((site) => site.id === storedSite);
+  const currentSiteId =
+    routeSite || (knownStored ? storedSite : "") || sites[0]?.id || "";
   const [navPreference, setNavPreference] = useState<boolean | null>(null);
   const collapsed =
     navPreference ??
@@ -166,14 +188,41 @@ export function WorkspaceFrame({
 
   // Bilingual 2-line luxury studio sidebar matching all 5 reference views.
   const navItems = useMemo<Item[]>(() => {
+    const tab = new URLSearchParams(location.search).get("tab") ?? "guide";
+    const sitePath = (nextTab: string) =>
+      currentSiteId ? `/sites/${currentSiteId}?tab=${nextTab}` : "/sites";
+    const refinePath = currentSiteId
+      ? readPage(currentSiteId)
+        ? `/pages/${readPage(currentSiteId)}`
+        : sitePath("pages")
+      : "/sites";
+    const onSite =
+      location.pathname.startsWith("/sites/") &&
+      !location.pathname.startsWith("/sites/new");
     const base: Item[] = [
       {
-        path: "/sites",
+        path: sitePath("guide"),
         label: c.studio,
         sublabel: c.studioSub,
         icon: LayoutGrid,
         match: (p) =>
-          p.startsWith("/sites") || p.startsWith("/pages") || p === "/agent",
+          onSite &&
+          !["planning", "pages"].includes(tab) &&
+          !p.startsWith("/pages"),
+      },
+      {
+        path: sitePath("planning"),
+        label: c.blueprint,
+        sublabel: c.blueprintSub,
+        icon: Network,
+        match: () => onSite && tab === "planning",
+      },
+      {
+        path: refinePath,
+        label: c.refine,
+        sublabel: c.refineSub,
+        icon: Layers3,
+        match: (p) => p.startsWith("/pages/") || (onSite && tab === "pages"),
       },
       {
         path: "/",
@@ -224,13 +273,33 @@ export function WorkspaceFrame({
         ),
     });
     return base;
-  }, [c, role]);
+  }, [c, role, location.pathname, location.search, currentSiteId]);
 
   // Full deep-link directory preserved inside Ctrl+K Command Palette.
   const paletteItems = useMemo(() => {
     const items: Array<{ path: string; label: string; icon: LucideIcon }> = [
       { path: "/", label: c.hub, icon: LayoutDashboard },
-      { path: "/sites", label: c.studio, icon: LayoutGrid },
+      ...(currentSiteId
+        ? [
+            {
+              path: `/sites/${currentSiteId}?tab=guide`,
+              label: c.studio,
+              icon: LayoutGrid,
+            },
+            {
+              path: `/sites/${currentSiteId}?tab=planning`,
+              label: c.blueprint,
+              icon: Network,
+            },
+            {
+              path: readPage(currentSiteId)
+                ? `/pages/${readPage(currentSiteId)}`
+                : `/sites/${currentSiteId}?tab=pages`,
+              label: c.refine,
+              icon: Layers3,
+            },
+          ]
+        : [{ path: "/sites", label: c.studio, icon: LayoutGrid }]),
       ...(role !== "viewer"
         ? [{ path: "/sites/new", label: c.newSite, icon: Plus }]
         : []),
@@ -252,7 +321,7 @@ export function WorkspaceFrame({
         : []),
     ];
     return items;
-  }, [c, role, locale]);
+  }, [c, role, locale, t, currentSiteId]);
 
   const activeNav =
     navItems.find((item) => item.match?.(location.pathname)) ?? navItems[0];
@@ -263,6 +332,24 @@ export function WorkspaceFrame({
       item.label.toLowerCase().includes(query.trim().toLowerCase()) ||
       item.path.toLowerCase().includes(query.trim().toLowerCase()),
   );
+
+  useEffect(() => {
+    if (routeSite) rememberSite(routeSite);
+  }, [routeSite]);
+
+  useEffect(() => {
+    let alive = true;
+    api<{ items: Array<{ id: string; name: string }> }>("/sites?limit=50")
+      .then((res) => {
+        if (alive) setSites(res.items ?? []);
+      })
+      .catch(() => {
+        if (alive) setSites([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     setPopup(null);
@@ -306,11 +393,42 @@ export function WorkspaceFrame({
         </div>
         <ChevronRight size={14} />
       </Link>
+      {sites.length > 0 && (
+        <label className="site-switcher">
+          <small>{c.currentSite}</small>
+          <select
+            aria-label={c.currentSite}
+            value={currentSiteId}
+            onChange={(event) => {
+              const next = event.target.value;
+              rememberSite(next);
+              const tab = new URLSearchParams(location.search).get("tab");
+              const keep =
+                location.pathname.startsWith("/pages/")
+                  ? "pages"
+                  : tab === "planning" || tab === "pages"
+                    ? tab
+                    : "guide";
+              navigate(`/sites/${next}?tab=${keep}`);
+              setPopup(null);
+            }}
+          >
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+          <Link to="/sites" onClick={() => setPopup(null)}>
+            {c.allSites}
+          </Link>
+        </label>
+      )}
       <nav aria-label={t("workspace")}>
         <div className="ws-group">
           {navItems.map(({ path, icon: Icon, label, sublabel, match }) => (
             <NavLink
-              key={path}
+              key={label}
               to={path}
               title={label}
               end={path === "/"}

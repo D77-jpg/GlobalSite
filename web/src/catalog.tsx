@@ -1310,9 +1310,20 @@ export function AssetsPage({ locale, role }: Props) {
     }
   }
   const zh = locale === "zh";
+  const [search, setSearch] = useState("");
   const allAssets: Item[] = load.data?.items ?? [];
+  const filteredAssets = search.trim()
+    ? allAssets.filter((x) =>
+        `${x.fileName ?? ""} ${x.kind ?? ""} ${x.mime ?? ""}`
+          .toLowerCase()
+          .includes(search.trim().toLowerCase()),
+      )
+    : allAssets;
   const inspected =
-    (selected && allAssets.find((x) => x.id === selected.id)) ?? allAssets[0];
+    (selected && filteredAssets.find((x) => x.id === selected.id)) ??
+    (selected && allAssets.find((x) => x.id === selected.id)) ??
+    filteredAssets[0] ??
+    allAssets[0];
   const imgCount = allAssets.filter((x) => x.kind === "image").length;
   const docCount = allAssets.filter((x) => x.kind === "document").length;
   const certCount = allAssets.filter((x) => x.kind === "certificate").length;
@@ -1567,9 +1578,17 @@ export function AssetsPage({ locale, role }: Props) {
               ))}
             </div>
             <div className="asset-view-options">
+              <input
+                type="search"
+                className="asset-search-input"
+                value={search}
+                placeholder={zh ? "搜索资产名称或格式..." : "Search assets..."}
+                aria-label={zh ? "搜索资产" : "Search assets"}
+                onChange={(e) => setSearch(e.target.value)}
+              />
               {load.data && (
                 <span>
-                  {load.data.items.length} {t("assetsOnPage")}
+                  {filteredAssets.length} {t("assetsOnPage")}
                 </span>
               )}
               <div role="group" aria-label={t("assetView")}>
@@ -1610,13 +1629,14 @@ export function AssetsPage({ locale, role }: Props) {
             </div>
           )}
           <div className={"asset-grid" + (view === "list" ? " asset-list" : "")}>
-            {allAssets.map((r: Item) => (
+            {filteredAssets.map((r: Item) => (
               <AssetTile
                 key={r.id}
                 asset={r}
                 t={t}
                 canEdit={role !== "viewer"}
                 busy={a.busy}
+                selected={inspected?.id === r.id}
                 onPreview={() => {
                   a.clear();
                   setSelected(r);
@@ -1651,12 +1671,14 @@ export function AssetsPage({ locale, role }: Props) {
           )}
         </section>
 
-        {/* Right: Persistent Live Asset Inspector (Screen 4) */}
+        {/* Right: Persistent Live Asset Inspector + Filmstrip Carousel (Screen 4) */}
         <aside className="gs-card gs-dam-inspector" aria-label={zh ? "资产详情" : "Asset inspector"}>
           {inspected ? (
             <div className="gs-stack-sm">
               <div className="gs-row-between">
-                <strong className="gs-inspector-title">{inspected.fileName}</strong>
+                <strong className="gs-inspector-title" title={inspected.fileName}>
+                  {inspected.fileName}
+                </strong>
                 <span className="gs-badge gs-badge-accent">{t(inspected.kind)}</span>
               </div>
               <div className="gs-inspector-frame">
@@ -1672,13 +1694,44 @@ export function AssetsPage({ locale, role }: Props) {
                   </div>
                 )}
               </div>
+              {allAssets.length > 1 && (
+                <div className="gs-dam-filmstrip" aria-label={zh ? "快速切换资产" : "Asset filmstrip"}>
+                  {allAssets.slice(0, 5).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={
+                        "gs-dam-strip-thumb" +
+                        (item.id === inspected.id ? " is-active" : "")
+                      }
+                      title={item.fileName}
+                      onClick={() => setSelected(item)}
+                    >
+                      {item.mime?.startsWith("image/") ? (
+                        <img
+                          src={item.thumbnailUrl ?? item.url}
+                          alt={item.fileName}
+                        />
+                      ) : (
+                        <FileText size={14} aria-hidden="true" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
               <dl className="gs-inspector-meta">
                 <div>
                   <dt>{zh ? "文件类型" : "Type"}</dt>
                   <dd>{inspected.mime ?? "—"}</dd>
                 </div>
+                {inspected.width ? (
+                  <div>
+                    <dt>{zh ? "分辨率" : "Dimensions"}</dt>
+                    <dd>{inspected.width} × {inspected.height}</dd>
+                  </div>
+                ) : null}
                 <div>
-                  <dt>{zh ? "大小" : "Size"}</dt>
+                  <dt>{zh ? "文件大小" : "Size"}</dt>
                   <dd>
                     {inspected.bytes
                       ? `${Math.max(1, Math.round(inspected.bytes / 1024))} KB`
@@ -1760,8 +1813,18 @@ export function FactsPage({ locale, role }: Props) {
         ...(cursor ? { cursor } : {}),
       }),
   );
+  const [categoryTab, setCategoryTab] = useState<"all" | "org" | "product" | "cert">("all");
   const allLoaded: Item[] = load.data?.items ?? [];
-  const confirmedCount = allLoaded.filter((f) => f.status === "confirmed").length;
+  const certRegex = /cert|iso|ce|en\s?13501|rohs|fsc|reach|ul|astm|sgs|认证|标准|资质/i;
+  const visibleFacts = allLoaded.filter((f) => {
+    if (categoryTab === "org") return f.subjectType === "organization";
+    if (categoryTab === "product") return f.subjectType === "product";
+    if (categoryTab === "cert")
+      return certRegex.test(`${f.type ?? ""} ${f.value ?? ""}`);
+    return true;
+  });
+  const confirmedFacts = allLoaded.filter((f) => f.status === "confirmed");
+  const confirmedCount = confirmedFacts.length;
   const candidates: Item[] = allLoaded.filter((f) => f.status === "candidate");
   const activeSelected = candidates.filter((f) => selectedIds.includes(f.id));
   const credibilityPct = allLoaded.length
@@ -1769,6 +1832,11 @@ export function FactsPage({ locale, role }: Props) {
     : 0;
   const ringCircumference = 2 * Math.PI * 42;
   const ringOffset = ringCircumference * (1 - credibilityPct / 100);
+  const certFacts = confirmedFacts.filter((f) =>
+    certRegex.test(`${f.type ?? ""} ${f.value ?? ""}`),
+  );
+  const orgFactsCount = allLoaded.filter((f) => f.subjectType === "organization").length;
+  const prodFactsCount = allLoaded.filter((f) => f.subjectType === "product").length;
 
   return (
     <div className="catalog gs-stack">
@@ -1866,8 +1934,134 @@ export function FactsPage({ locale, role }: Props) {
           </div>
         </aside>
 
-        {/* Center: Core Facts Register & Batch Confirm */}
+        {/* Center: Category Tabs + 2-Column Core Facts Bento + Compact Sources Table (Screen 5) */}
         <section className="gs-stack">
+          <div className="gs-facts-tabs" role="tablist" aria-label={zh ? "事实维度" : "Fact categories"}>
+            {(
+              [
+                ["all", zh ? "全部事实" : "All Facts", allLoaded.length],
+                ["org", zh ? "企业信息" : "Company", orgFactsCount],
+                ["product", zh ? "产品与能力" : "Products", prodFactsCount],
+                ["cert", zh ? "认证与标准" : "Certifications", certFacts.length],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={categoryTab === key}
+                onClick={() => setCategoryTab(key)}
+              >
+                <span>{label}</span>
+                <small>{count}</small>
+              </button>
+            ))}
+          </div>
+
+          {editing !== undefined && (
+            <FactForm
+              key={editing?.id ?? "new"}
+              fact={editing}
+              t={t}
+              done={() => {
+                setEditing(undefined);
+                load.reload();
+              }}
+              close={() => setEditing(undefined)}
+            />
+          )}
+
+          {/* 2-Column High-Density Core Facts Bento */}
+          <div className="gs-facts-bento">
+            <section className="gs-card gs-facts-ledger-card">
+              <div className="gs-row-between">
+                <h2 className="gs-mini-title">
+                  <Sparkles size={14} aria-hidden="true" />
+                  {zh ? "核心事实" : "Core Facts"}
+                </h2>
+                {role !== "viewer" && (
+                  <button
+                    type="button"
+                    className="gs-btn gs-btn-sm"
+                    onClick={() => setEditing(null)}
+                  >
+                    <Plus size={12} aria-hidden="true" />
+                    {zh ? "添加事实" : t("addFact")}
+                  </button>
+                )}
+              </div>
+              {visibleFacts.length > 0 ? (
+                <dl className="gs-facts-ledger">
+                  {visibleFacts.slice(0, 6).map((f) => (
+                    <div key={f.id} className="gs-facts-ledger-row">
+                      <dt>{f.type}</dt>
+                      <dd>
+                        <strong>
+                          {f.value}
+                          {f.unit ? " " + f.unit : ""}
+                        </strong>
+                        <span
+                          className={
+                            "gs-dot " +
+                            (f.status === "confirmed"
+                              ? "gs-dot-ok"
+                              : f.status === "candidate"
+                                ? "gs-dot-warn"
+                                : "gs-dot-err")
+                          }
+                          title={t(f.status)}
+                        />
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="muted gs-facts-empty">
+                  {zh ? "当前筛选下暂无事实记录，可点击右上角添加或从文档提取。" : "No facts in this view yet."}
+                </p>
+              )}
+            </section>
+
+            <section className="gs-card gs-facts-summary-card">
+              <h2 className="gs-mini-title">
+                <ShieldCheck size={14} aria-hidden="true" />
+                {zh ? "品牌定位与核验摘要" : "Verification Summary"}
+              </h2>
+              <div className="gs-facts-summary-stats">
+                <div>
+                  <span>{zh ? "已确认" : "Confirmed"}</span>
+                  <strong>{confirmedCount}</strong>
+                </div>
+                <div>
+                  <span>{zh ? "待确认" : "Pending"}</span>
+                  <strong>{candidates.length}</strong>
+                </div>
+                <div>
+                  <span>{zh ? "企业 / 产品" : "Org / Prod"}</span>
+                  <strong>{orgFactsCount}/{prodFactsCount}</strong>
+                </div>
+              </div>
+              <div className="gs-facts-tag-block">
+                <small>{zh ? "已核验资质与标签" : "Verified claims"}</small>
+                <div className="gs-positioning-tags">
+                  {(confirmedFacts.length > 0
+                    ? confirmedFacts.slice(0, 6).map((f) => f.type)
+                    : [zh ? "等待确认首条企业事实" : "Awaiting verified facts"]
+                  ).map((tag, idx) => (
+                    <span className="gs-chip" key={idx}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="gs-copilot-intro">
+                {zh
+                  ? "所有数字、交付能力与认证仅在管理员确认后才会进入站点构建与 AI 页面生成上下文。"
+                  : "Numbers, lead times, and certifications enter site generation only after admin confirmation."}
+              </p>
+            </section>
+          </div>
+
           {role === "admin" && candidates.length > 0 && (
             <div className="studio-batch-bar">
               <div className="catalog-actions">
@@ -1892,7 +2086,7 @@ export function FactsPage({ locale, role }: Props) {
               </div>
               <button
                 type="button"
-                className="gs-btn gs-btn-primary"
+                className="gs-btn gs-btn-sm gs-btn-primary"
                 disabled={a.busy || !activeSelected.length}
                 onClick={() =>
                   void a.run(async () => {
@@ -1911,151 +2105,172 @@ export function FactsPage({ locale, role }: Props) {
               </button>
             </div>
           )}
-          {editing !== undefined && (
-            <FactForm
-              key={editing?.id ?? "new"}
-              fact={editing}
-              t={t}
-              done={() => {
-                setEditing(undefined);
-                load.reload();
-              }}
-              close={() => setEditing(undefined)}
-            />
-          )}
-          <div className="catalog-list fact-register">
-            <Rows items={load.data?.items} error={load.error} t={t}>
-              {(f) => (
-                <article key={f.id} className="catalog-fact">
-                  <div className="catalog-heading">
-                    <div>
-                      {role === "admin" && f.status === "candidate" && (
-                        <label className="catalog-check">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(f.id)}
-                            onChange={(e) =>
-                              setSelectedIds((old) =>
-                                e.target.checked
-                                  ? [...new Set([...old, f.id])]
-                                  : old.filter((x) => x !== f.id),
-                              )
-                            }
-                          />
-                          {t("select")}
-                        </label>
-                      )}
-                      <small>
-                        {f.type} · {t(f.subjectType)} · {t("revision")} {f.revision}
-                      </small>
-                      <h2>
-                        {f.value}
-                        {f.unit ? " " + f.unit : ""}
-                      </h2>
-                    </div>
-                    <Badge value={f.status} t={t} />
-                  </div>
-                  <details className="fact-evidence">
-                    <summary>{t("source")}</summary>
-                    <Source fact={f} t={t} />
-                  </details>
-                  <div className="catalog-actions">
-                    {role === "admin" && (
-                      <>
-                        <button
-                          className="gs-btn gs-btn-sm gs-btn-primary"
-                          disabled={a.busy || f.status === "confirmed"}
-                          onClick={() =>
-                            void a.run(async () => {
-                              await api("/facts/" + f.id + "/confirm", "POST", {
-                                revision: f.revision,
-                              });
-                              load.reload();
-                            })
-                          }
-                        >
-                          {t("confirm")}
-                        </button>
-                        <button
-                          className="secondary"
-                          disabled={a.busy || f.status === "rejected"}
-                          onClick={() =>
-                            void a.run(async () => {
-                              await api("/facts/" + f.id + "/reject", "POST", {
-                                revision: f.revision,
-                              });
-                              load.reload();
-                            })
-                          }
-                        >
-                          {t("reject")}
-                        </button>
-                      </>
-                    )}
-                    {role !== "viewer" && (
-                      <button className="secondary" onClick={() => setEditing(f)}>
-                        {t("edit")}
-                      </button>
-                    )}
-                    <button
-                      className="secondary"
-                      onClick={() =>
-                        setHistoryId(historyId === f.id ? undefined : f.id)
-                      }
-                    >
-                      {t("history")}
-                    </button>
-                  </div>
-                  {historyId === f.id && <FactHistory id={f.id} t={t} />}
-                </article>
-              )}
-            </Rows>
-          </div>
+
+          {/* Compact Sources & Evidence Data Table (Ref Image 5 Bottom) */}
+          <section className="gs-card gs-facts-table-card">
+            <div className="gs-row-between">
+              <h2 className="gs-mini-title">
+                <FileCheck2 size={14} aria-hidden="true" />
+                {zh ? "资料与来源" : "Facts & Sources"}
+                <span className="gs-inline-en">
+                  {zh ? "可信度依据" : "Verified Evidence"}
+                </span>
+              </h2>
+              <span className="gs-badge">
+                {visibleFacts.length} {zh ? "条记录" : "items"}
+              </span>
+            </div>
+            {visibleFacts.length > 0 ? (
+              <div className="gs-facts-table-wrap">
+                <table className="gs-facts-table">
+                  <thead>
+                    <tr>
+                      {role === "admin" && <th aria-label={t("select")} />}
+                      <th>{zh ? "事实维度" : t("type")}</th>
+                      <th>{zh ? "数值与来源依据" : t("value")}</th>
+                      <th>{t("status")}</th>
+                      <th>{zh ? "操作" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleFacts.map((f) => (
+                      <tr key={f.id}>
+                        {role === "admin" && (
+                          <td className="gs-facts-check-col">
+                            {f.status === "candidate" ? (
+                              <input
+                                type="checkbox"
+                                aria-label={t("select") + " " + f.type}
+                                checked={selectedIds.includes(f.id)}
+                                onChange={(e) =>
+                                  setSelectedIds((old) =>
+                                    e.target.checked
+                                      ? [...new Set([...old, f.id])]
+                                      : old.filter((x) => x !== f.id),
+                                  )
+                                }
+                              />
+                            ) : null}
+                          </td>
+                        )}
+                        <td className="gs-facts-type-col">
+                          <strong>{f.type}</strong>
+                          <small>
+                            {t(f.subjectType)} · v{f.revision}
+                          </small>
+                        </td>
+                        <td className="gs-facts-val-col">
+                          <div className="gs-facts-val-main">
+                            {f.value}
+                            {f.unit ? " " + f.unit : ""}
+                          </div>
+                          <details className="gs-facts-quote-fold">
+                            <summary>
+                              {t(f.source?.kind ?? "manual")}
+                              {f.source?.label ? " · " + f.source.label : ""}
+                            </summary>
+                            <Source fact={f} t={t} />
+                          </details>
+                          {historyId === f.id && <FactHistory id={f.id} t={t} />}
+                        </td>
+                        <td>
+                          <Badge value={f.status} t={t} />
+                        </td>
+                        <td className="gs-facts-actions-col">
+                          <div className="gs-facts-row-btns">
+                            {role === "admin" && f.status !== "confirmed" && (
+                              <button
+                                type="button"
+                                className="gs-btn gs-btn-sm gs-btn-primary"
+                                disabled={a.busy}
+                                onClick={() =>
+                                  void a.run(async () => {
+                                    await api("/facts/" + f.id + "/confirm", "POST", {
+                                      revision: f.revision,
+                                    });
+                                    load.reload();
+                                  })
+                                }
+                              >
+                                {t("confirm")}
+                              </button>
+                            )}
+                            {role === "admin" && f.status !== "rejected" && (
+                              <button
+                                type="button"
+                                className="gs-btn gs-btn-sm"
+                                disabled={a.busy}
+                                onClick={() =>
+                                  void a.run(async () => {
+                                    await api("/facts/" + f.id + "/reject", "POST", {
+                                      revision: f.revision,
+                                    });
+                                    load.reload();
+                                  })
+                                }
+                              >
+                                {t("reject")}
+                              </button>
+                            )}
+                            {role !== "viewer" && (
+                              <button
+                                type="button"
+                                className="gs-btn gs-btn-sm"
+                                onClick={() => setEditing(f)}
+                              >
+                                {t("edit")}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="gs-btn gs-btn-sm"
+                              onClick={() =>
+                                setHistoryId(historyId === f.id ? undefined : f.id)
+                              }
+                            >
+                              {t("history")}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Rows items={load.data?.items} error={load.error} t={t}>
+                {() => null}
+              </Rows>
+            )}
+          </section>
           <Pager list={load.data} pages={pages} t={t} />
         </section>
 
-        {/* Right: Credibility Ring & Application Scope (Screen 5) */}
+        {/* Right: Mini Site Preview + Application Scope + Credibility Ring (Screen 5) */}
         <aside className="gs-stack">
-          <section className="gs-card gs-credibility-card">
-            <h3 className="gs-mini-title">
-              <ShieldCheck size={15} aria-hidden="true" />
-              {zh ? "事实可信度评估" : "Fact Credibility"}
-            </h3>
-            <div className="gs-ring-wrap">
-              <svg viewBox="0 0 100 100" className="gs-cred-ring" aria-hidden="true">
-                <circle className="gs-ring-bg" cx="50" cy="50" r="42" />
-                <circle
-                  className="gs-ring-fill"
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  strokeDasharray={ringCircumference}
-                  strokeDashoffset={ringOffset}
-                />
-              </svg>
-              <div className="gs-ring-label">
-                <strong>{credibilityPct}%</strong>
-                <span>{zh ? "已确认事实" : "Confirmed"}</span>
+          <section className="gs-card gs-facts-mini-preview">
+            <div className="gs-row-between">
+              <h3 className="gs-mini-title">
+                <Globe2 size={14} aria-hidden="true" />
+                {zh ? "网站使用预览" : "Storefront Usage"}
+              </h3>
+              <Link className="gs-mini-link" to="/sites" aria-label={t("sites")}>
+                <ArrowUpRight size={13} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="gs-facts-preview-visual">
+              <img src="/assets/studio/hero-arch.jpg" alt="" />
+              <div className="gs-facts-preview-overlay">
+                <strong>
+                  {zh
+                    ? `${confirmedCount} 条事实已可供官网引用`
+                    : `${confirmedCount} facts ready for site`}
+                </strong>
+                <span>
+                  {zh ? "首页 · 产品参数 · 资质背书" : "Home · Specs · Trust"}
+                </span>
               </div>
             </div>
-            <ul className="gs-fact-checks">
-              <li>
-                <Check size={12} aria-hidden="true" />
-                <span>
-                  {zh
-                    ? `已确认 ${confirmedCount} 条 · 待审 ${candidates.length} 条`
-                    : `${confirmedCount} confirmed · ${candidates.length} pending`}
-                </span>
-              </li>
-              <li>
-                <Check size={12} aria-hidden="true" />
-                <span>{zh ? "建站数字与认证强制溯源" : "All numbers & certs verified"}</span>
-              </li>
-              <li>
-                <Check size={12} aria-hidden="true" />
-                <span>{zh ? "修改事实自动触发页面复审" : "Edits auto-recheck pages"}</span>
-              </li>
-            </ul>
           </section>
 
           <section className="gs-card">
@@ -2075,6 +2290,48 @@ export function FactsPage({ locale, role }: Props) {
               <li>
                 <Check size={12} aria-hidden="true" />
                 <span>{zh ? "8 语种本地化建站与发布门禁" : "8-language storefronts & launch gate"}</span>
+              </li>
+            </ul>
+          </section>
+
+          <section className="gs-card gs-credibility-card">
+            <h3 className="gs-mini-title">
+              <ShieldCheck size={15} aria-hidden="true" />
+              {zh ? "事实可信度评估" : "Fact Credibility"}
+            </h3>
+            <div className="gs-ring-wrap">
+              <svg viewBox="0 0 100 100" className="gs-cred-ring" aria-hidden="true">
+                <circle className="gs-ring-bg" cx="50" cy="50" r="42" />
+                <circle
+                  className="gs-ring-fill"
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringOffset}
+                />
+              </svg>
+              <div className="gs-ring-label">
+                <strong>{credibilityPct}%</strong>
+                <span>{zh ? "高可信度" : "Confirmed"}</span>
+              </div>
+            </div>
+            <ul className="gs-fact-checks">
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>
+                  {zh
+                    ? `已确认 ${confirmedCount} 条 · 待审 ${candidates.length} 条`
+                    : `${confirmedCount} confirmed · ${candidates.length} pending`}
+                </span>
+              </li>
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "建站数字与认证强制溯源" : "All numbers & certs verified"}</span>
+              </li>
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "修改事实自动触发页面复审" : "Edits auto-recheck pages"}</span>
               </li>
             </ul>
           </section>

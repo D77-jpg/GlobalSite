@@ -211,12 +211,98 @@
   border-radius: 10px;
   background: #f7faf8;
 }
+.studio-split.page-refine {
+  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-areas: "layers inspector";
+}
+.studio-split.page-refine.has-preview {
+  grid-template-columns: 220px minmax(280px, 1fr) minmax(300px, 380px);
+  grid-template-areas: "layers canvas inspector";
+}
+.studio-split.page-refine .refine-layers {
+  grid-area: layers;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.studio-split.page-refine .refine-layer-title {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.studio-split.page-refine .studio-block-item {
+  display: flex;
+  width: 100%;
+}
+.studio-split.page-refine .studio-block-item > button:first-child {
+  flex: 1;
+  text-align: left;
+}
+.studio-split.page-refine .studio-preview-pane {
+  grid-area: canvas;
+}
+.studio-split.page-refine .studio-editor-col {
+  grid-area: inspector;
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
+}
+.refine-inspector-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-bottom: 8px;
+  background: var(--ws-bg);
+}
+.refine-inspector-tabs button {
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.refine-inspector-tabs button[aria-selected="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+.refine-page-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+.refine-page-strip a {
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  text-decoration: none;
+}
+.refine-page-strip a[aria-current="page"] {
+  background: var(--ink);
+  color: #fff;
+}
 @media (max-width: 1180px) {
-  .studio-split.has-preview {
+  .studio-split.has-preview,
+  .studio-split.page-refine,
+  .studio-split.page-refine.has-preview {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "layers" "canvas" "inspector";
   }
-  .studio-preview-pane {
+  .studio-preview-pane,
+  .studio-split.page-refine .refine-layers,
+  .studio-split.page-refine .studio-editor-col {
     position: static;
+    max-height: none;
   }
 }
 .sites-workspace pre {
