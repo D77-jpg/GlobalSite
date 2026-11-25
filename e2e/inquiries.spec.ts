@@ -205,6 +205,7 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
     let nextPageRequests = 0;
     await page.route(pickerRoute, async (route) => {
       const params = new URL(route.request().url()).searchParams;
+      if (params.get("limit") !== "100") return route.continue();
       expect(params.get("limit")).toBe("100");
       if (!params.has("cursor")) {
         const realResponse = await route.fetch();
@@ -238,7 +239,7 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
     await more.click();
     await expect(page.getByText("未能加载这批站点。")).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Fixture Buyer", exact: true }),
+      page.locator(".gs-inbox-item", { hasText: "Fixture Buyer" }),
     ).toBeVisible();
     await expect(picker.locator("option")).toHaveCount(102);
     await page.getByRole("button", { name: "重新加载站点" }).click();
@@ -252,11 +253,19 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
     await picker.selectOption(site.id);
     await page.getByRole("button", { name: "应用筛选" }).click();
     await expect(
-      page.getByRole("link", { name: "Fixture Buyer", exact: true }),
+      page.locator(".gs-inbox-item", { hasText: "Fixture Buyer" }),
     ).toBeVisible();
     await page.unroute(pickerRoute);
   });
-  await page.getByRole("link", { name: "Fixture Buyer", exact: true }).click();
+  await page.locator(".gs-inbox-item", { hasText: "Fixture Buyer" }).click();
+  await page
+    .locator(".gs-inbox-detail")
+    .getByRole("link", { name: "查看详情", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/inquiries\/[a-f0-9]{24}$/);
+  await expect(
+    page.getByRole("heading", { name: "询盘详情", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText(
       "Please discuss the product options for our purchasing project.",
@@ -302,12 +311,21 @@ test("S6 preview: privacy choices, multi-product inquiry with attachment, manage
   await expect(page.locator(".mobile-menu")).toBeVisible();
   await expect(page.getByLabel("状态", { exact: true })).toBeVisible();
   await page.goto("/inquiries?siteId=" + site.id);
-  await page.getByRole("button", { name: "跟进中", exact: true }).click();
-  const buyer = page.getByRole("link", { name: "Fixture Buyer", exact: true });
-  const record = page.locator("tr").filter({ has: buyer });
+  await page
+    .getByRole("group", { name: "状态", exact: true })
+    .getByRole("button", { name: "跟进中", exact: true })
+    .click();
+  const record = page.locator(".gs-inbox-item", { hasText: "Fixture Buyer" });
   await expect(record.getByText("跟进中", { exact: true })).toBeVisible();
-  await expect(record).toHaveCSS("display", "grid");
-  await buyer.click();
+  await record.click();
+  await page
+    .locator(".gs-inbox-detail")
+    .getByRole("link", { name: "查看详情", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/inquiries\/[a-f0-9]{24}$/);
+  await expect(
+    page.getByRole("heading", { name: "询盘详情", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("状态", { exact: true })).toHaveValue(
     "following",
   );

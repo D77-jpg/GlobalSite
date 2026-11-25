@@ -107,6 +107,10 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
   let historyRequests = 0,
     retryCalls = 0;
   // Recorded UI states only. Real retry/cancel and Worker persistence are covered by sites/server tests.
+  await page.route(
+    "**/api/v1/sites/" + siteId + "/agent-runs/stream",
+    (route) => route.fulfill({ status: 503, body: "" }),
+  );
   await page.route("**/api/v1/sites/" + siteId + "/agent-runs*", (route) => {
     const older = new URL(route.request().url()).searchParams.has("cursor");
     if (older) historyRequests++;

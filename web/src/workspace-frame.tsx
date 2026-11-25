@@ -560,6 +560,13 @@ export function WorkspaceFrame({
               placeholder={c.searchLabel}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && results[0]) {
+                  e.preventDefault();
+                  setPopup(null);
+                  navigate(results[0].path);
+                }
+              }}
             />
             <button aria-label={c.close} onClick={() => setPopup(null)}>
               <X size={16} />
@@ -569,6 +576,7 @@ export function WorkspaceFrame({
             {results.map(({ path, label, icon: Icon }) => (
               <li key={path}>
                 <button
+                  data-path={path}
                   onClick={() => {
                     setPopup(null);
                     navigate(path);
@@ -580,7 +588,11 @@ export function WorkspaceFrame({
                 </button>
               </li>
             ))}
-            {!results.length && <li className="ws-empty">{c.noResults}</li>}
+            {!results.length && (
+              <li className="ws-empty" role="status">
+                {c.noResults}
+              </li>
+            )}
           </ul>
         </Modal>
       )}
