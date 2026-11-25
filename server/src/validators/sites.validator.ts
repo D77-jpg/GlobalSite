@@ -370,6 +370,8 @@ export const presentation = z
     headline: z.string().trim().min(1).max(100),
     summary: z.string().trim().min(1).max(240),
     primaryActionLabel: z.string().trim().min(1).max(32),
+    inquiryHeading: z.string().trim().min(1).max(80).optional(),
+    inquiryLead: z.string().trim().min(1).max(240).optional(),
     visualStyle: z.enum(["organic", "industrial", "minimal"]),
     heroLayout: z.enum(["split", "stacked", "editorial", "panorama"]),
     composition: composition.optional(),

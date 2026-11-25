@@ -193,12 +193,12 @@ const en: StorefrontCopy = {
   nextImage: "Next image",
   inspectImage: "Inspect full image",
   verifiedFactBadge: "Verified",
-  inquiryHeading: "Let us talk about your collection",
+  inquiryHeading: "Tell us what you need to source",
   inquiryEnabledLead:
     "Tell us which products you have in mind. Our team will follow up on your request.",
   inquiryPreviewLead:
-    "Explore the contact form for this site preview. It will accept inquiries once the site owner enables it.",
-  previewContactForm: "Preview the contact form",
+    "Preview how to share your models, quantities and destination market. Submissions open when inquiries are enabled.",
+  previewContactForm: "Preview the inquiry form",
   yourInquiry: "Your inquiry",
   fieldName: "Your name",
   fieldCompany: "Company",

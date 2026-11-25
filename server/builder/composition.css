@@ -2279,3 +2279,38 @@ body.composed-site:has(.quote-bar:not([hidden])) .gs-cookie {
   left: auto;
   right: -16px;
 }
+
+
+/* S33 visual fixes: hero headline fit, compact decision rows, one floating layer at a time */
+.composed-site.b2b-site .composition-hero-split h1,
+.composed-site.b2b-site .composition-hero-editorial:not(.has-visual) h1 {
+  font-size: clamp(40px, 4.4vw, 68px);
+  line-height: 1.02;
+  max-width: 18ch;
+}
+.composed-site.b2b-site .hero :is(p, .hero-summary) {
+  font-family: var(--body);
+}
+.composed-site .layout-compact .feature-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.composed-site .layout-compact .feature-grid article {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.composed-site .layout-compact .feature-grid article p,
+.composed-site .feature-grid article p {
+  max-width: none;
+}
+body.composed-site:has(.gs-cookie:not([hidden])) .quote-bar {
+  display: none;
+}
+body.composed-site:has(.gs-cookie:not([hidden])) .gs-cookie {
+  bottom: 16px;
+}
+@media (max-width: 760px) {
+  .composed-site .layout-compact .feature-grid {
+    grid-template-columns: 1fr;
+  }
+}

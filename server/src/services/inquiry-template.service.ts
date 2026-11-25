@@ -12,15 +12,23 @@ const e = (v: unknown) =>
 
 export function renderInquiry(s: Snapshot, p: any) {
   const copy = getStorefrontCopy(s.site.language);
-  const c = (s as any).inquiry ?? {},
+  const c = s.inquiry ?? {},
     products = s.pages.filter((v) => v.type === "product" && v.productId),
     endpoint = c.publicId ? c.gatewayUrl + "/sites/" + c.publicId : "";
+  // S33: business-specific inquiry copy from the page, else the homepage, else defaults.
+  const home = s.pages.find((v) => v.type === "home");
+  const pick = (k: "inquiryHeading" | "inquiryLead") =>
+    p?.presentation?.[k] ?? home?.presentation?.[k];
+  const lead = pick("inquiryLead");
   return (
     '<section class="section" id="inquiry"><div class="inquiry"><h2>' +
-    e(copy.inquiryHeading) +
+    e(pick("inquiryHeading") ?? copy.inquiryHeading) +
     "</h2><p>" +
-    e(c.enabled ? copy.inquiryEnabledLead : copy.inquiryPreviewLead) +
+    e(
+      lead ?? (c.enabled ? copy.inquiryEnabledLead : copy.inquiryPreviewLead),
+    ) +
     "</p>" +
+    (!c.enabled && lead ? "<p>" + e(copy.inquiryPreviewLead) + "</p>" : "") +
     (!c.enabled
       ? '<details class="inquiry-preview"><summary>' +
         e(copy.previewContactForm) +

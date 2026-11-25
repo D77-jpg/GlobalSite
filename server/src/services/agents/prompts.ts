@@ -32,6 +32,9 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
       headline: "A clear, subject-specific headline",
       summary: "A short, visitor-focused introduction.",
       primaryActionLabel: "Explore the collection",
+      inquiryHeading: "Optional: buyer-specific inquiry heading for this business",
+      inquiryLead:
+        "Optional: what to include in a request and what the buyer receives back.",
       visualStyle: "organic",
       heroLayout: "split",
       designNotes:

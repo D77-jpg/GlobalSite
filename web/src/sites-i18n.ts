@@ -393,6 +393,10 @@ export const siteMessages = {
     "正在取消，等待当前调用结束。",
     "Cancelling; waiting for the current call.",
   ],
+  COPY_AUDIT_LANGUAGE: [
+    "文案出现内部审核用语（如 confirmed / is listed with），请改为面向采购商的表达",
+    "Copy uses internal audit wording (e.g. confirmed / is listed with); rewrite for buyers",
+  ],
   UNSOURCED_YEAR: [
     "成立年份缺少已确认依据",
     "Founding year lacks confirmed evidence",

@@ -84,6 +84,8 @@ export function validatePage(
 ): Issue[] {
   const issues: Issue[] = [],
     factMap = new Map(facts.map((f) => [String(f._id ?? f.id), f]));
+  const hasBuyerCopy =
+    data.presentation?.inquiryHeading || data.presentation?.inquiryLead;
   const add = (code: string, field: string, key: string | null, token = "") => {
     if (
       issues.length < 500 &&
@@ -196,6 +198,13 @@ export function validatePage(
       )
     )
       add("UNSOURCED_YEAR", field, key, "year");
+    // Pages using the buyer-copy fields opt into the new editorial check.
+    if (hasBuyerCopy && (context.language ?? "en") === "en") {
+      const audit = value.match(
+        /\b(?:is|are) (?:confirmed|listed|verified) (?:with|as|at)\b|\bconfirmed (?:labels?|details?|facts?|specifications?)\b|\b(?:ask|contact) (?:our|the) team to confirm\b|\baccording to (?:our|the) records\b|\bconfirmed (?:grinder |machine |product )?(?:moq|lead time)\b/i,
+      );
+      if (audit) add("COPY_AUDIT_LANGUAGE", field, key, audit[0]);
+    }
     if (
       /\bcertified\b/i.test(value) &&
       !candidates.some((f) => /cert|compliance|standard/i.test(f.type))
@@ -220,8 +229,16 @@ export function validatePage(
       "headline",
       "summary",
       "primaryActionLabel",
+      "inquiryHeading",
+      "inquiryLead",
     ] as const)
-      text(data.presentation[field], data.refs, "presentation." + field, null);
+      if (data.presentation[field])
+        text(
+          data.presentation[field]!,
+          data.refs,
+          "presentation." + field,
+          null,
+        );
   }
   for (const label of context.navigationLabels ?? [])
     text(label, data.refs, "navigation", null);

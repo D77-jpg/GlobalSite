@@ -191,6 +191,19 @@ test("B2B blocks escape item text, omit unsupported proof and use approved page 
   assert(catalogueHtml(s).includes("Resting collection"));
   s.pages[2].title = "Resting collection | SEO-only suffix";
   assert(!renderInquiry(s, home).includes("SEO-only suffix"));
+  home.presentation = {
+    ...home.presentation,
+    inquiryHeading: "Furniture & fixtures",
+    inquiryLead: "Share your preferred materials.",
+  };
+  const inherited = renderInquiry(s, s.pages[2]);
+  assert(inherited.includes("Furniture &amp; fixtures"));
+  assert(inherited.includes("Share your preferred materials."));
+  assert(inherited.includes("Submissions open when inquiries are enabled."));
+  s.pages[2].presentation = { inquiryHeading: "Request a model quote" };
+  const specific = renderInquiry(s, s.pages[2]);
+  assert(specific.includes("Request a model quote"));
+  assert(specific.includes("Share your preferred materials."));
 });
 test("B2B multi-page build includes an offline catalogue and safe downloadable PDFs", async () => {
   const s = fixture(),

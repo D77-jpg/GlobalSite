@@ -1287,6 +1287,8 @@ test("brand presentation round-trips through HTTP, blocks unsupported claims and
     headline: "Everyday cat essentials",
     summary: "Explore the collection for a home shared with cats.",
     primaryActionLabel: "Explore collection",
+    inquiryHeading: "Tell us what you need to source",
+    inquiryLead: "Share your chosen products and intended market.",
     visualStyle: "organic",
     heroLayout: "split",
     designNotes: "A welcoming visual direction.",
@@ -1313,7 +1315,12 @@ test("brand presentation round-trips through HTTP, blocks unsupported claims and
       revision: p.revision,
       data: {
         ...draft(),
-        presentation: { ...presentation, headline: "Made for 500 customers" },
+        presentation: {
+          ...presentation,
+          headline: "Made for 500 customers",
+          inquiryHeading: "Confirmed specifications",
+          inquiryLead: "Share your plans for 500 units.",
+        },
       },
     })
   ).body.data;
@@ -1322,6 +1329,18 @@ test("brand presentation round-trips through HTTP, blocks unsupported claims and
     p.issues.some(
       (i: any) =>
         i.code === "UNSOURCED_NUMBER" && i.field === "presentation.headline",
+    ),
+  );
+  assert(
+    p.issues.some(
+      (i: any) =>
+        i.code === "UNSOURCED_NUMBER" && i.field === "presentation.inquiryLead",
+    ),
+  );
+  assert(
+    p.issues.some(
+      (i: any) =>
+        i.code === "COPY_AUDIT_LANGUAGE" && i.field === "presentation.inquiryHeading",
     ),
   );
   assert.equal(
