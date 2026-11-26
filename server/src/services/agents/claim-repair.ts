@@ -6,6 +6,7 @@
 // it strictly reduces validation issues and introduces no new issue codes.
 import type { PageInput } from "../../validators/sites.validator";
 import { validatePage, type Issue } from "../page-validation.service";
+import { hasBrokenFragment, intactSentences } from "../copy-integrity";
 
 type Context = Parameters<typeof validatePage>[2];
 type Fact = Parameters<typeof validatePage>[1][number];
@@ -115,4 +116,49 @@ export function repairUnsourcedClaims(
     issues = after;
   }
   return page;
+}
+
+/**
+ * S35 acceptance fix: drop whole sentences whose figures were cut out by an
+ * earlier rewrite ("Specify the VG- for …", ": mm flat burrs", "-day lead
+ * time"). Only deletes. presentation.summary keeps its text when no intact
+ * sentence remains (the renderer then falls back); emptied required product
+ * sections use the safe placeholder. Kept only when it adds no issue.
+ */
+export function repairBrokenFragments(
+  input: PageInput,
+  facts: Fact[],
+  context: Context,
+): PageInput {
+  const out = structuredClone(input);
+  let changed = false;
+  const summary = out.presentation?.summary;
+  if (out.presentation && summary && hasBrokenFragment(summary)) {
+    const kept = intactSentences(summary);
+    if (kept) {
+      out.presentation.summary = kept;
+      changed = true;
+    }
+  }
+  for (const block of out.blocks) {
+    if (block.body && hasBrokenFragment(block.body)) {
+      const required =
+        context.type === "product" && REQUIRED_SECTIONS.includes(block.key);
+      block.body =
+        intactSentences(block.body) || (required ? SAFE_PLACEHOLDER : "");
+      changed = true;
+    }
+    for (const item of block.items ?? [])
+      if (item.body && hasBrokenFragment(item.body)) {
+        item.body = intactSentences(item.body);
+        changed = true;
+      }
+  }
+  if (!changed) return input;
+  const before = validatePage(input, facts, context);
+  const after = validatePage(out, facts, context);
+  const known = new Set(before.map((i) => i.code));
+  return after.length > before.length || after.some((i) => !known.has(i.code))
+    ? input
+    : out;
 }

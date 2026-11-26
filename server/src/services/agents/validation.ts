@@ -5,7 +5,7 @@ import { resolveAgentPage } from "../section-design.service";
 import { compositionIssues } from "../site-composition.service";
 import { validatePage } from "../page-validation.service";
 import { repairFaq } from "./faq-repair";
-import { repairUnsourcedClaims } from "./claim-repair";
+import { repairBrokenFragments, repairUnsourcedClaims } from "./claim-repair";
 import type {
   AgentRunDoc,
   AgentStepUnit,
@@ -124,7 +124,8 @@ export function repairDraftPage(
     allowDemoFacts: !!site.demoMode,
   };
   const faq = repairFaq(page, run.inputSnapshot.facts, context);
-  return repairUnsourcedClaims(faq, run.inputSnapshot.facts, context);
+  const claims = repairUnsourcedClaims(faq, run.inputSnapshot.facts, context);
+  return repairBrokenFragments(claims, run.inputSnapshot.facts, context);
 }
 
 export const outputSchemas = {
@@ -463,6 +464,7 @@ export function prepareDesignPage(
   };
   d.page = repairFaq(d.page, run.inputSnapshot.facts, pageContext);
   d.page = repairUnsourcedClaims(d.page, run.inputSnapshot.facts, pageContext);
+  d.page = repairBrokenFragments(d.page, run.inputSnapshot.facts, pageContext);
   validateGeneratedComposition(run, d.page, node.type);
   ensure(
     d.page.blocks.every((b) => !!b.design),

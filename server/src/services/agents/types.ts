@@ -51,6 +51,9 @@ export type AgentCaptureMetric = {
   h1Width?: number;
   h1Height?: number;
   h1LineHeight?: number;
+  /** S35 acceptance fix: loaded <img> count and "Illustrative" labels. */
+  images?: number;
+  conceptImages?: number;
 };
 
 export type AgentCaptureData = {

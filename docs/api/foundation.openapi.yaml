@@ -15424,6 +15424,9 @@ components:
       description: >-
         S35 baseline scores (1-5). method "structural" means deterministic page/browser rules only;
         "structural+visual" means a vision model also scored the screenshots (visualInput=true).
+        signals.images ({rendered, broken, illustrative}, null for older captures) counts the images the
+        isolated browser actually loaded; labelled AI illustrations count as rendered and are reported
+        separately (signals.heroIllustrative for the first screen).
       properties:
         version:
           const: s35-v1

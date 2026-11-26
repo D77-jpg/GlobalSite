@@ -1,5 +1,6 @@
 import { sectionClasses } from "./section-design.service";
 import { getStorefrontCopy } from "./storefront-i18n.service";
+import { intactSentences } from "./copy-integrity";
 import type { Snapshot } from "./static-template.service";
 
 const e = (v: unknown) =>
@@ -15,6 +16,97 @@ export const pendingDetail = (v: string) =>
   /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
     v?.trim() ?? "",
   );
+
+// S35 acceptance fix: product-card copy never shows a sentence whose figures
+// were cut out ("Specify the VG- for …"). Intact summaries are returned as-is;
+// otherwise only intact sentences, then the intact SEO description, else "".
+export function cardSummary(v: any): string {
+  const summary = v?.presentation?.summary;
+  if (typeof summary !== "string" || !summary) return "";
+  const kept = intactSentences(summary);
+  if (kept) return kept;
+  const meta = intactSentences(v?.metaDescription ?? "");
+  return meta && !pendingDetail(meta) ? meta : "";
+}
+
+// S35 acceptance fix: card spec values skip placeholders and buying notes
+// ("Confirm exact model code … on the quote") and Model/Name rows that only
+// repeat the card title. On rendering-pack pages rows with figures come first.
+const NOTE_VALUE =
+  /^(?:confirm|review|check|verify|ask|contact|discuss|request|specify|share|tell us|please|subject to)\b|\b(?:on|in|with|via) (?:the|your|a|each) (?:quote|quotation|inquiry|enquiry|order)\b|\b(?:to be confirmed|tbc|tbd|on request|upon request)\b/i;
+export function specNote(value: unknown) {
+  const t = String(value ?? "").trim();
+  return (
+    !t ||
+    /^[-–—·]+$/.test(t) ||
+    pendingDetail(t) ||
+    NOTE_VALUE.test(t) ||
+    (t.split(/\s+/).length > 8 && /[.!?]$/.test(t))
+  );
+}
+const IDENTITY_LABEL =
+  /^(?:model|model name|model no\.?|model number|name|product|product name|item)$/i;
+const plainText = (x: string) =>
+  x
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+const modelCodes = (x: string) =>
+  (
+    x
+      .normalize("NFKC")
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*/gu) ?? []
+  ).filter((w) => /\p{N}/u.test(w) && /\p{L}/u.test(w));
+function repeatsTitle(label: string, value: string, titles: string[]) {
+  if (!IDENTITY_LABEL.test(label.trim())) return false;
+  const v = plainText(value),
+    raw = value.normalize("NFKC").toLowerCase();
+  return titles.some((title) => {
+    const t = plainText(title);
+    if (!t || !v) return false;
+    return (
+      v.includes(t) ||
+      t.includes(v) ||
+      modelCodes(title).some((code) => raw.includes(code))
+    );
+  });
+}
+export function cardSpecs(v: any, titles: string[], preferFigures = false) {
+  const rows: unknown[][] =
+    v.blocks.find((b: any) => b.type === "specs" && b.table?.rows?.length)
+      ?.table?.rows ?? [];
+  const specs = rows
+    .map((r) => ({
+      label: String(r[0] ?? ""),
+      value: r
+        .slice(1)
+        .filter((x) => !specNote(x))
+        .map(String)
+        .join(" · "),
+    }))
+    .filter((r) => r.value && !repeatsTitle(r.label, r.value, titles));
+  if (preferFigures)
+    specs.sort((a, b) => Number(/\d/.test(b.value)) - Number(/\d/.test(a.value)));
+  return specs.slice(0, 2);
+}
+const packOf = (s: Snapshot, p: any): string | undefined => {
+  const home = s.pages.find((v) => v.path === "/");
+  return (
+    s.site.designDirection?.composition ??
+    home?.presentation?.composition ??
+    p?.presentation?.composition
+  )?.pack;
+};
+
+// S35 acceptance fix: href of the action a cta block renders (same rule as below).
+export function ctaTarget(b: any): string {
+  return (
+    (b.items ?? []).filter((i: any) => !pendingDetail(i.body))[0]?.href ??
+    "#inquiry"
+  );
+}
 
 // S35: localized "Illustrative" label for generated concept images.
 const ILLUSTRATIVE: Record<string, string> = {
@@ -160,10 +252,18 @@ export function productCards(
         const category = categories.find((c) =>
           v.path.startsWith(c.path.replace(/\/$/, "") + "/"),
         );
-        const specs =
-          v.blocks
-            .find((b: any) => b.type === "specs" && b.table?.rows.length)
-            ?.table?.rows.slice(0, 2) ?? [];
+        const cardTitle =
+          v.presentation?.navigationLabel ?? v.title.split("|")[0].trim();
+        const specs = cardSpecs(
+          v,
+          [
+            cardTitle,
+            v.title.split("|")[0].trim(),
+            s.products?.find((x) => x.id === v.productId)?.name ?? "",
+          ],
+          !!packOf(s, p),
+        );
+        const summary = cardSummary(v);
         return (
           '<article class="product-card" data-product-card data-category="' +
           e(category?.path ?? "") +
@@ -182,20 +282,18 @@ export function productCards(
           '</p><h3><a href="' +
           e(v.path) +
           '">' +
-          e(v.presentation?.navigationLabel ?? v.title.split("|")[0].trim()) +
+          e(cardTitle) +
           "</a></h3>" +
-          (v.presentation?.summary
-            ? "<p>" + e(v.presentation.summary) + "</p>"
-            : "") +
+          (summary ? "<p>" + e(summary) + "</p>" : "") +
           (specs.length
             ? '<dl class="card-specs">' +
               specs
                 .map(
-                  (r: string[]) =>
+                  (r) =>
                     "<div><dt>" +
-                    e(r[0]) +
+                    e(r.label) +
                     "</dt><dd>" +
-                    e(r.slice(1).join(" · ")) +
+                    e(r.value) +
                     "</dd></div>",
                 )
                 .join("") +
@@ -665,7 +763,11 @@ export function catalogueHtml(s: Snapshot) {
           '">' +
           e(p.title.split("|")[0]) +
           "</a></h2><p>" +
-          e(p.presentation?.summary ?? p.metaDescription) +
+          e(
+            p.presentation?.summary
+              ? cardSummary(p)
+              : intactSentences(p.metaDescription ?? ""),
+          ) +
           "</p>" +
           p.blocks
             .filter((b: any) => b.type === "specs" && b.table?.rows.length)

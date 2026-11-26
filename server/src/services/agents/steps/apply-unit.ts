@@ -18,7 +18,11 @@ import {
   reviewOutput,
   validateGeneratedComposition,
 } from "../validation";
-import { baselineFindings, baselineReport } from "../quality-baseline";
+import {
+  baselineFindings,
+  baselineReport,
+  reconcileImageFindings,
+} from "../quality-baseline";
 import type { AgentRunDoc, AgentTaskDoc, DesignDirection } from "../types";
 
 export async function applyUnit(
@@ -88,8 +92,10 @@ export async function applyUnit(
       );
       const { scores: _modelScores, ...reportBody } = report;
       void _modelScores;
+      // S35 acceptance fix: images the isolated browser loaded are available,
+      // whether they are product photos or labelled AI illustrations.
       reportBody.findings = [
-        ...reportBody.findings,
+        ...reconcileImageFindings(reportBody.findings, capture.metrics),
         ...measuredFindings(capture.metrics),
         ...baselineFindings(baseline),
       ].slice(0, 11);

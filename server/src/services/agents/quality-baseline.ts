@@ -24,13 +24,26 @@ export type BaselineMetric = {
   blankSections?: number;
   h1Height?: number;
   h1LineHeight?: number;
+  /** S35 acceptance fix: <img> elements on the page and "Illustrative" labels. */
+  images?: number;
+  conceptImages?: number;
   sections?: Array<{
     id?: string;
     height?: number;
     words?: number;
     images?: number;
+    /** Images in this section that did not load. */
+    broken?: number;
+    /** Labelled AI illustrations in this section. */
+    concepts?: number;
     frame?: string | null;
   }>;
+};
+
+export type ImageAvailability = {
+  rendered: number;
+  broken: number;
+  illustrative: number;
 };
 
 export type BaselineImprovement = {
@@ -51,6 +64,10 @@ export type BaselineReport = {
   signals: {
     blocks: number;
     heroImage: boolean;
+    /** The rendered hero image is a labelled AI illustration. */
+    heroIllustrative: boolean;
+    /** Images actually loaded by the isolated browser (null for older captures). */
+    images: ImageAvailability | null;
     headlineWords: number;
     h1Lines: number | null;
     repeatedNeighbours: number;
@@ -77,6 +94,43 @@ function hasRefs(b: PageInput["blocks"][number]) {
   );
 }
 
+/**
+ * S35 acceptance fix: image availability from what the isolated browser
+ * actually rendered, not from product asset lists. Labelled AI illustrations
+ * count as rendered images and are reported separately. Null when the capture
+ * predates these measurements.
+ */
+export function imageAvailability(
+  metrics: ReadonlyArray<BaselineMetric>,
+): ImageAvailability | null {
+  const measured = metrics.filter((m) => typeof m.images === "number");
+  if (!measured.length) return null;
+  const desktop = measured.find((m) => m.width === 1440) ?? measured[0];
+  const broken = Math.max(0, ...metrics.map((m) => m.brokenImages ?? 0));
+  return {
+    rendered: Math.max(0, (desktop.images ?? 0) - (desktop.brokenImages ?? 0)),
+    broken,
+    illustrative: desktop.conceptImages ?? 0,
+  };
+}
+
+const UNAVAILABLE_IMAGE =
+  /\b(?:unavailable|not available|broken|fail(?:s|ed)? to load|(?:does|did) not load|not loading|unknown (?:asset|image)s?|not (?:in|part of|found in|listed in|included in|among) (?:the |an? )?(?:selected |supplied |approved )?(?:product )?(?:asset|image|media|photo)s?(?: list| inventory| library)?|missing from (?:the |an? )?(?:selected |supplied )?(?:product )?(?:asset|image|media)s?(?: list| inventory| library)?|not (?:a |an )?(?:selected|supplied|approved) (?:product )?(?:asset|image|photo)s?)/i;
+
+/**
+ * Drops model "imagery" findings that claim images are unavailable when the
+ * isolated browser loaded every image. Other imagery critique is kept.
+ */
+export function reconcileImageFindings<
+  T extends { code: string; recommendation: string },
+>(findings: T[], metrics: ReadonlyArray<BaselineMetric>): T[] {
+  const images = imageAvailability(metrics);
+  if (!images || images.broken > 0 || images.rendered === 0) return findings;
+  return findings.filter(
+    (f) => !(f.code === "imagery" && UNAVAILABLE_IMAGE.test(f.recommendation)),
+  );
+}
+
 export function structuralBaseline(
   page: PageInput,
   metrics: ReadonlyArray<BaselineMetric>,
@@ -85,10 +139,12 @@ export function structuralBaseline(
   const blocks = page.blocks;
   const desktop = metrics.find((m) => m.width === 1440);
   const firstSection = desktop?.sections?.[0];
+  // Rendered hero images count, including labelled AI illustrations.
   const heroImage =
     typeof firstSection?.images === "number"
-      ? firstSection.images > 0
+      ? firstSection.images - (firstSection.broken ?? 0) > 0
       : blocks.some((b) => b.type === "image" && !!b.assetId);
+  const heroIllustrative = heroImage && (firstSection?.concepts ?? 0) > 0;
   const headline = page.presentation?.headline ?? page.title;
   const headlineWords = headline.trim().split(/\s+/).filter(Boolean).length;
   const h1Lines =
@@ -169,6 +225,8 @@ export function structuralBaseline(
     signals: {
       blocks: blocks.length,
       heroImage,
+      heroIllustrative,
+      images: imageAvailability(metrics),
       headlineWords,
       h1Lines,
       repeatedNeighbours,

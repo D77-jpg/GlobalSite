@@ -8,7 +8,10 @@ import {
   quoteBar,
   brandDock,
   conceptNote,
+  cardSummary,
+  ctaTarget,
 } from "./b2b-template.service";
+import { intactSentences } from "./copy-integrity";
 import { wordmarkSvg } from "./brand-mark.service";
 import {
   renderInquiry,
@@ -488,9 +491,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
                 '">' +
                 e(v.presentation?.navigationLabel ?? cleanTitle(v)) +
                 "</a></h3>" +
-                (v.presentation?.summary
-                  ? "<p>" + e(v.presentation.summary) + "</p>"
-                  : "") +
+                (cardSummary(v) ? "<p>" + e(cardSummary(v)) + "</p>" : "") +
                 '<a class="text-link" href="' +
                 e(v.path) +
                 '">' +
@@ -528,6 +529,29 @@ export function renderStaticPage(s: Snapshot, p: any) {
         .join("") +
       "</ul></details></section>"
     : "";
+  const inquiryHtml = renderInquiry(s, p);
+  const rendered = p.blocks
+    .filter((b: any) => b !== firstImage && !pending(b))
+    .map((b: any) => ({ block: b, html: section(s, b, p) }));
+  // S35 acceptance fix: a closing cta band that leads to the inquiry section
+  // directly below it repeats that section; the inquiry section keeps the action.
+  const closing = [...rendered].reverse().find((r) => r.html);
+  const inquiryAnchor = (href: string) => {
+    const [path, fragment] = href.split("#");
+    return (
+      fragment === "inquiry" &&
+      (!path || path.replace(/\/$/, "") === p.path.replace(/\/$/, ""))
+    );
+  };
+  if (
+    closing &&
+    closing.block.type === "cta" &&
+    !detailRequest &&
+    inquiryHtml.includes('id="inquiry"') &&
+    inquiryAnchor(String(ctaTarget(closing.block)))
+  )
+    closing.html = "";
+  const blocksHtml = rendered.map((r: { html: string }) => r.html).join("");
   // S35 B2: the selected (uploaded or generated) logo, else a deterministic
   // SVG wordmark of the exact site name instead of the former initial letter.
   const brand =
@@ -540,7 +564,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
       : wordmarkSvg(s.site.name)) +
     "</a>";
   const heading = presentation.headline ?? cleanTitle(p);
-  const lead = presentation.summary ?? p.metaDescription;
+  // S35 acceptance fix: never show a lead sentence whose figures were cut out.
+  const lead =
+    presentation.summary != null
+      ? cardSummary(p)
+      : intactSentences(p.metaDescription ?? "");
   const hero =
     '<section class="hero ' +
     (composition ? "composition-hero-" : "hero-") +
@@ -793,12 +821,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
     hero +
     (s.site.buyerProfile && p.type === "product" ? productGuide(s, p) : "") +
     grid +
-    p.blocks
-      .filter((b: any) => b !== firstImage && !pending(b))
-      .map((b: any) => section(s, b, p))
-      .join("") +
+    blocksHtml +
     detailRequest +
-    renderInquiry(s, p) +
+    inquiryHtml +
     quoteBar(s, p) +
     brandDock(s) +
     lightbox +

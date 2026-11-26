@@ -40,6 +40,34 @@ function BaselinePanel({ baseline, locale }: { baseline: Row; locale: Locale }) 
             ? "结构评分：仅基于页面结构与浏览器测量，模型未查看截图。"
             : "Structural score: page structure and browser measurements only; no model viewed the screenshots."}
       </p>
+      {baseline.signals?.images && (
+        <p className="muted">
+          {zh
+            ? "截图中实际显示 " +
+              baseline.signals.images.rendered +
+              " 张图片" +
+              (baseline.signals.images.illustrative
+                ? "，其中 " +
+                  baseline.signals.images.illustrative +
+                  " 张为 AI 示意图（已标注，不作为事实证据）"
+                : "") +
+              (baseline.signals.images.broken
+                ? "；" + baseline.signals.images.broken + " 张未能加载"
+                : "") +
+              "。"
+            : baseline.signals.images.rendered +
+              " images rendered in the screenshots" +
+              (baseline.signals.images.illustrative
+                ? ", including " +
+                  baseline.signals.images.illustrative +
+                  " labelled AI illustrations (not evidence)"
+                : "") +
+              (baseline.signals.images.broken
+                ? "; " + baseline.signals.images.broken + " failed to load"
+                : "") +
+              "."}
+        </p>
+      )}
       <dl className="result-measurements">
         {Object.entries(baselineLabels).map(([key, label]) => (
           <div key={key}>

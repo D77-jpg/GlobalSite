@@ -105,6 +105,37 @@ export function logoSubject(d: LogoDesign, index: number) {
   ).slice(0, 600);
 }
 
+/**
+ * S35 acceptance fix: transparent safe margin on every side, as a share of
+ * each output dimension, so trimmed lettering never touches the edge.
+ */
+export const LOGO_SAFE_MARGIN = 0.1;
+
+// Derived from the factory so it works whether or not sharp's typings expose
+// a `sharp` namespace under this module setting.
+type SharpImage = ReturnType<typeof sharp>;
+
+async function fitWithMargin(
+  base: SharpImage,
+  width: number,
+  height: number,
+) {
+  const x = Math.round(width * LOGO_SAFE_MARGIN),
+    y = Math.round(height * LOGO_SAFE_MARGIN);
+  const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
+  // sharp always applies extend after resize, so the result is width x height.
+  return base
+    .clone()
+    .ensureAlpha()
+    .resize(width - 2 * x, height - 2 * y, {
+      fit: "contain",
+      background: transparent,
+    })
+    .extend({ top: y, bottom: y, left: x, right: x, background: transparent })
+    .png()
+    .toBuffer();
+}
+
 /** Square (512) and wide (960x320) PNG variants with transparent padding. */
 export async function logoVariants(body: Buffer) {
   let base = sharp(body, { limitInputPixels: 20_000_000 });
@@ -113,17 +144,8 @@ export async function logoVariants(body: Buffer) {
   } catch {
     base = sharp(body, { limitInputPixels: 20_000_000 });
   }
-  const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
-  const square = await base
-    .clone()
-    .resize(512, 512, { fit: "contain", background: transparent })
-    .png()
-    .toBuffer();
-  const wide = await base
-    .clone()
-    .resize(960, 320, { fit: "contain", background: transparent })
-    .png()
-    .toBuffer();
+  const square = await fitWithMargin(base, 512, 512);
+  const wide = await fitWithMargin(base, 960, 320);
   return { square, wide };
 }
 

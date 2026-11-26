@@ -77,6 +77,9 @@ try {
         brokenImages: [...document.images].filter(
           (n) => !n.complete || !n.naturalWidth,
         ).length,
+        // S35 acceptance fix: rendered image count and labelled AI illustrations.
+        images: document.images.length,
+        conceptImages: document.querySelectorAll(".concept-note").length,
         navigation: [
           ...document.querySelectorAll("header nav a,.main-nav a"),
         ].map((n) => ({
@@ -90,6 +93,10 @@ try {
             height: Math.round(box.height),
             words: (n.innerText ?? "").split(/\s+/).filter(Boolean).length,
             images: n.querySelectorAll("img").length,
+            broken: [...n.querySelectorAll("img")].filter(
+              (img) => !img.complete || !img.naturalWidth,
+            ).length,
+            concepts: n.querySelectorAll(".concept-note").length,
             frame: [...n.classList].find((c) => c.startsWith("frame-")) ?? null,
             media: [...n.querySelectorAll("img")].map((img) => {
               const r = img.getBoundingClientRect(),
