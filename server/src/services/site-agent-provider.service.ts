@@ -6,6 +6,14 @@ import { decrypt } from "./credential-crypto";
 import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
+import {
+  AiUsageUnknownError,
+  parseProviderJson,
+  providerTokens,
+  readCappedBody,
+  usageUnknown,
+  type UsageUnknownStage,
+} from "./ai-usage-unknown";
 export type AgentResult = {
   output: any;
   tokens: number;
@@ -21,6 +29,20 @@ export type AgentResult = {
   visualInput?: boolean;
   reviewMode?: "structural" | "text" | "visual";
 };
+
+// S35 acceptance fix: total wait for full-page JSON tasks (design/content/
+// refine). AI_FULL_PAGE_TIMEOUT_MS, default 240000, clamped to 120000-600000.
+// The Worker heartbeat renews the fenced task lease every 20 s, so the lease
+// covers any allowed wait. Billing is unchanged: the same reservation is kept.
+export const AI_FULL_PAGE_TIMEOUT_DEFAULT_MS = 240000;
+export function fullPageTimeoutMs(
+  raw: string | undefined = process.env.AI_FULL_PAGE_TIMEOUT_MS,
+): number {
+  const n = Number(raw);
+  if (raw === undefined || !raw.trim() || !Number.isInteger(n))
+    return AI_FULL_PAGE_TIMEOUT_DEFAULT_MS;
+  return Math.min(600000, Math.max(120000, n));
+}
 
 function resolveTaskRouteKey(task?: string): string | undefined {
   if (!task) return undefined;
@@ -160,6 +182,7 @@ export async function callSiteAgent(
     messages,
   });
   let known = false;
+  let stage: UsageUnknownStage = "request";
   try {
     const authHeader =
       "Bearer " +
@@ -170,8 +193,11 @@ export async function callSiteAgent(
         method: "POST",
         redirect: "error",
         // Full-page JSON generation shares the model's reasoning/output cap.
-        // Keep a bounded 240s deadline while the Worker renews its fenced lease.
-        signal: AbortSignal.timeout(fullPageTask ? 240000 : 120000),
+        // Keep a bounded deadline (AI_FULL_PAGE_TIMEOUT_MS, default 240 s)
+        // while the Worker renews its fenced lease.
+        signal: AbortSignal.timeout(
+          fullPageTask ? fullPageTimeoutMs() : 120000,
+        ),
         headers: {
           "Content-Type": "application/json",
           Authorization: authHeader,
@@ -186,6 +212,7 @@ export async function callSiteAgent(
       response = await send(false);
     }
     if (!response.ok) {
+      stage = "persist";
       await settle("ai_tokens", operationId, 0);
       known = true;
       throw new AppError(
@@ -197,31 +224,12 @@ export async function callSiteAgent(
             : "AI_REQUEST_FAILED",
       );
     }
-    ensure(response.body, 502, "AI_USAGE_UNKNOWN");
-    const reader = response.body.getReader(),
-      parts: Uint8Array[] = [];
-    let bytes = 0;
-    try {
-      for (;;) {
-        const v = await reader.read();
-        if (v.done) break;
-        bytes += v.value.length;
-        if (bytes > 512 * 1024) {
-          await reader.cancel();
-          throw new AppError(502, "AI_USAGE_UNKNOWN");
-        }
-        parts.push(v.value);
-      }
-    } finally {
-      reader.releaseLock();
-    }
-    const body = JSON.parse(Buffer.concat(parts).toString("utf8")),
-      tokens = body.usage?.total_tokens;
-    ensure(
-      Number.isSafeInteger(tokens) && tokens >= 0 && tokens <= budget,
-      502,
-      "AI_USAGE_UNKNOWN",
-    );
+    // S35 acceptance fix: every unknown outcome keeps a fixed reason code.
+    if (!response.body) throw new AiUsageUnknownError("usage_missing");
+    const body = parseProviderJson(
+        await readCappedBody(response.body, 512 * 1024),
+      ) as any,
+      tokens = providerTokens(body, budget);
     const responseText = String(
       body.choices?.[0]?.message?.content ?? "",
     ).trim();
@@ -264,12 +272,13 @@ export async function callSiteAgent(
       visualInput: !!(provider.supportsVision && images.length),
       ...(errorCode ? { errorCode, invalidReason, responseDiagnostics } : {}),
     };
+    stage = "persist";
     await save(result);
     await settle("ai_tokens", operationId, tokens);
     known = true;
     return result;
   } catch (e) {
     if (known) throw e;
-    throw new AppError(502, "AI_USAGE_UNKNOWN");
+    throw usageUnknown(e, stage);
   }
 }

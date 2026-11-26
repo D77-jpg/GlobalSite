@@ -128,7 +128,7 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
   await expect(page.getByText("邀请已发送", { exact: true })).toBeVisible();
   await settingsNav.getByRole("link", { name: "套餐与用量" }).click();
   await expect(
-    page.getByRole("progressbar", { name: "AI Tokens", exact: true }),
+    page.getByRole("progressbar", { name: "AI 额度", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "切换语言" }).click();
   await expect(

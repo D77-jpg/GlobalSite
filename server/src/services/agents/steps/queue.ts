@@ -23,6 +23,7 @@ import { assertSiteEditable } from "../../publication-lock.service";
 import { siteSkillProfile } from "../../site-skill-profile";
 import { validatePage } from "../../page-validation.service";
 import { queueAutoLogo } from "../../site-media.service";
+import { absorbUnknownUsage } from "../../usage.service";
 import {
   agentDto,
   assertSnapshot,
@@ -478,15 +479,25 @@ export async function retryAgent(id: string, actor: string) {
       { $inc: { lockVersion: 1 } },
       { session },
     );
-    ensure(
-      ["failed", "paused"].includes(r.status) &&
-        (r.errorCode !== "AI_USAGE_UNKNOWN" ||
-          r.steps.some((s) => !!s.pendingResult)),
-      409,
-      r.errorCode === "AI_USAGE_UNKNOWN"
-        ? "AI_USAGE_UNKNOWN"
-        : "RUN_NOT_RETRYABLE",
-    );
+    ensure(["failed", "paused"].includes(r.status), 409, "RUN_NOT_RETRYABLE");
+    // S35 acceptance fix: an explicit retry of an unknown outcome is absorbed
+    // by the platform (reservation released, customer not charged, record
+    // marked for reconciliation), also above the monthly automatic limit. A
+    // saved result keeps its reservation: the retry settles its known usage.
+    if (
+      r.errorCode === "AI_USAGE_UNKNOWN" &&
+      !r.steps.some((s) => !!s.pendingResult)
+    ) {
+      const unit = r.steps.find((s) => s.status !== "succeeded");
+      if (unit?.operationId)
+        await absorbUnknownUsage(
+          "ai_tokens",
+          unit.operationId,
+          unit.usageUnknownReason ?? "unrecorded",
+          session,
+          { force: true },
+        );
+    }
     ensure(
       !(await AgentRun.exists({
         siteId: r.siteId,

@@ -34,6 +34,19 @@ export function cardSummary(v: any): string {
 // repeat the card title. On rendering-pack pages rows with figures come first.
 const NOTE_VALUE =
   /^(?:confirm|review|check|verify|ask|contact|discuss|request|specify|share|tell us|please|subject to)\b|\b(?:on|in|with|via) (?:the|your|a|each) (?:quote|quotation|inquiry|enquiry|order)\b|\b(?:to be confirmed|tbc|tbd|on request|upon request)\b/i;
+// Imperative guidance sentences ("Map the three-grouphead layout to …").
+// Only whole sentences of four or more words ending in a full stop count, so
+// spec values such as "Matte black" or "Plan view 600 mm" are not notes.
+const INSTRUCTION_START =
+  /^(?:map|plan|match|choose|select|share|include|send|ask|confirm|check|discuss|specify|review|use|tell|verify|contact|request|provide|compare|consider|attach|prepare|mention|align|agree|define)\b/i;
+export function instructionNote(value: unknown) {
+  const t = String(value ?? "").trim();
+  return (
+    INSTRUCTION_START.test(t) &&
+    /[.!?]$/.test(t) &&
+    t.split(/\s+/).length >= 4
+  );
+}
 export function specNote(value: unknown) {
   const t = String(value ?? "").trim();
   return (
@@ -41,6 +54,7 @@ export function specNote(value: unknown) {
     /^[-–—·]+$/.test(t) ||
     pendingDetail(t) ||
     NOTE_VALUE.test(t) ||
+    instructionNote(t) ||
     (t.split(/\s+/).length > 8 && /[.!?]$/.test(t))
   );
 }
@@ -73,20 +87,122 @@ function repeatsTitle(label: string, value: string, titles: string[]) {
     );
   });
 }
+
+// S35 acceptance fix (spec tables): buying-note columns and cells never reach
+// public spec, comparison or catalogue tables. A column is a note column when
+// its heading names notes/guidance, or when every filled cell is a note. The
+// first column is the row label and is always kept.
+const NOTE_COLUMN =
+  /\b(?:notes?|remarks?|comments?|guidance|buyers?|buying|purchas\w*|planning|how to|tips?)\b/i;
+const dashCell = (x: string) => /^[-–—·]+$/.test(x.trim());
+const placeholderCell = (x: string) => dashCell(x) || pendingDetail(x);
+const noteCell = (x: string) => {
+  const t = x.trim();
+  return (
+    !!t && !placeholderCell(t) && (NOTE_VALUE.test(t) || instructionNote(t))
+  );
+};
+const realCell = (x: string) =>
+  !!x.trim() && !placeholderCell(x) && !noteCell(x);
+function cellRows(rows: unknown): string[][] {
+  return Array.isArray(rows)
+    ? rows.map((r) =>
+        Array.isArray(r) ? r.map((x) => String(x ?? "")) : [String(r ?? "")],
+      )
+    : [];
+}
+function valueColumns(heads: string[], rows: string[][]): number[] {
+  const width = Math.max(heads.length, 0, ...rows.map((r) => r.length));
+  const all: number[] = [];
+  for (let i = 1; i < width; i++) all.push(i);
+  const byContent = new Set(
+    all.filter((i) => {
+      const filled = rows
+        .map((r) => (r[i] ?? "").trim())
+        .filter((x) => x && !placeholderCell(x));
+      return filled.length > 0 && filled.every(noteCell);
+    }),
+  );
+  const content = all.filter((i) => !byContent.has(i));
+  const kept = content.filter((i) => !NOTE_COLUMN.test(heads[i] ?? ""));
+  // A heading alone never removes every value column.
+  return kept.length ? kept : content;
+}
+/** Titles a Model/Name row may repeat on this page (card, headline, product). */
+export function pageTitles(s: Snapshot, p: any): string[] {
+  return [
+    p?.presentation?.navigationLabel,
+    p?.presentation?.headline,
+    String(p?.title ?? "").split("|")[0].trim(),
+    s.products?.find((x) => x.id === p?.productId)?.name,
+  ].filter((x): x is string => typeof x === "string" && !!x.trim());
+}
+/**
+ * Public view of a spec/comparison table: note columns removed, single note
+ * cells blanked, rows with neither a value nor a pending placeholder dropped
+ * and, when titles are given, Model/Name rows repeating the page title
+ * dropped. A table whose rows hold no real value returns no rows, so callers
+ * fall back to the "information on request" summary instead of an empty table.
+ */
+export type PublicTable = { columns: string[]; rows: string[][] };
+export function publicTable(
+  table: unknown,
+  titles: string[] = [],
+): PublicTable {
+  const t = (table ?? {}) as { columns?: unknown; rows?: unknown };
+  const heads = Array.isArray(t.columns)
+    ? t.columns.map((c) => String(c ?? ""))
+    : [];
+  const rows = cellRows(t.rows);
+  if (Math.max(heads.length, 0, ...rows.map((r) => r.length)) <= 1) {
+    // Single-column table: the only column carries the values.
+    const single = rows.filter((r) => realCell(r[0] ?? ""));
+    return {
+      columns: heads.slice(0, 1),
+      rows: single.map((r) => r.slice(0, 1)),
+    };
+  }
+  const values = valueColumns(heads, rows);
+  // Every value column holds only buying notes: nothing public remains.
+  if (!values.length) return { columns: [], rows: [] };
+  const keep = [0, ...values];
+  const informative = (r: string[]) =>
+    values.some((i) => realCell(r[i] ?? "") || placeholderCell(r[i] ?? ""));
+  let kept = rows.filter(
+    (r) =>
+      informative(r) &&
+      !(titles.length && repeatsTitle(r[0] ?? "", r[values[0]] ?? "", titles)),
+  );
+  if (!kept.some((r) => values.some((i) => realCell(r[i] ?? "")))) kept = [];
+  return {
+    columns: keep.map((i) => heads[i] ?? ""),
+    rows: kept.map((r) =>
+      keep.map((i) => {
+        const x = r[i] ?? "";
+        return i > 0 && noteCell(x) ? "" : x;
+      }),
+    ),
+  };
+}
 export function cardSpecs(v: any, titles: string[], preferFigures = false) {
-  const rows: unknown[][] =
-    v.blocks.find((b: any) => b.type === "specs" && b.table?.rows?.length)
-      ?.table?.rows ?? [];
+  const table = v.blocks.find(
+    (b: any) => b.type === "specs" && b.table?.rows?.length,
+  )?.table;
+  const rows = cellRows(table?.rows);
+  const heads: string[] = Array.isArray(table?.columns)
+    ? table.columns.map((c: unknown) => String(c ?? ""))
+    : [];
+  // Only the first value column (the specification value) is shown on cards.
+  const column = valueColumns(heads, rows)[0];
+  if (column === undefined) return [];
   const specs = rows
-    .map((r) => ({
-      label: String(r[0] ?? ""),
-      value: r
-        .slice(1)
-        .filter((x) => !specNote(x))
-        .map(String)
-        .join(" · "),
-    }))
-    .filter((r) => r.value && !repeatsTitle(r.label, r.value, titles));
+    .map((r) => ({ label: r[0] ?? "", value: (r[column] ?? "").trim() }))
+    .filter(
+      (r) =>
+        r.value &&
+        !specNote(r.value) &&
+        !repeatsTitle(r.label, r.value, titles),
+    );
   if (preferFigures)
     specs.sort((a, b) => Number(/\d/.test(b.value)) - Number(/\d/.test(a.value)));
   return specs.slice(0, 2);
@@ -154,7 +270,8 @@ export function productGuide(s: Snapshot, p: any) {
   const copy = getStorefrontCopy(s.site.language);
   const links = p.blocks.filter(
     (b: any) =>
-      (b.type === "specs" && b.table?.rows?.length) ||
+      (b.type === "specs" &&
+        publicTable(b.table, pageTitles(s, p)).rows.length > 0) ||
       (b.type === "faq" && b.faq?.length) ||
       (b.type === "gallery" && b.items?.some((i: any) => i.assetId && s.assets[i.assetId])) ||
       (b.type === "downloads" &&
@@ -563,23 +680,26 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '">' +
       e(items[0]?.title ?? copy.discussRequirements) +
       "</a></div>";
-  else if (b.type === "comparison")
-    content =
-      '<div class="table-scroll"><table><caption>' +
-      e(b.heading) +
-      "</caption><thead><tr>" +
-      (b.table?.columns ?? [])
-        .map((v: string) => '<th scope="col">' + e(v) + "</th>")
-        .join("") +
-      "</tr></thead><tbody>" +
-      (b.table?.rows ?? [])
-        .map(
-          (r: string[]) =>
-            "<tr>" + r.map((v) => "<td>" + e(v) + "</td>").join("") + "</tr>",
-        )
-        .join("") +
-      "</tbody></table></div>";
-  else if (b.type === "downloads")
+  else if (b.type === "comparison") {
+    // S35 acceptance fix: no buying-note columns/cells, and no empty table.
+    const table = publicTable(b.table);
+    content = table.rows.length
+      ? '<div class="table-scroll"><table><caption>' +
+        e(b.heading) +
+        "</caption><thead><tr>" +
+        table.columns
+          .map((v) => '<th scope="col">' + e(v) + "</th>")
+          .join("") +
+        "</tr></thead><tbody>" +
+        table.rows
+          .map(
+            (r) =>
+              "<tr>" + r.map((v) => "<td>" + e(v) + "</td>").join("") + "</tr>",
+          )
+          .join("") +
+        "</tbody></table></div>"
+      : "";
+  } else if (b.type === "downloads")
     content =
       '<div class="resource-grid">' +
       items
@@ -772,15 +892,19 @@ export function catalogueHtml(s: Snapshot) {
           p.blocks
             .filter((b: any) => b.type === "specs" && b.table?.rows.length)
             .map(
-              (b: any) =>
+              (b: any): PublicTable => publicTable(b.table, pageTitles(s, p)),
+            )
+            .filter((table: PublicTable) => table.rows.length > 0)
+            .map(
+              (table: PublicTable) =>
                 "<table><caption>" +
                 e(copy.confirmedSpecsCaption) +
                 "</caption><tbody>" +
-                b.table.rows
+                table.rows
                   .map(
                     (r: string[]) =>
                       "<tr>" +
-                      r.map((x) => "<td>" + e(x) + "</td>").join("") +
+                      r.map((x: string) => "<td>" + e(x) + "</td>").join("") +
                       "</tr>",
                   )
                   .join("") +

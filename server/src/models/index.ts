@@ -164,6 +164,12 @@ export const UsageRecord = entity<UsageRow>(
     amount: Number,
     state: { type: String, enum: ["reserved", "settled", "released"] },
     actual: Number,
+    // S35 acceptance fix: unknown outcome released by the platform (customer
+    // not charged), kept for reconciliation against provider bills.
+    absorbed: Boolean,
+    unknownReason: String,
+    absorbedAt: Date,
+    absorbedBy: { type: String, enum: ["auto", "retry"] },
   },
   {},
   [[{ organizationId: 1, metric: 1, operationId: 1 }, { unique: true }]],
@@ -425,6 +431,8 @@ export const AgentRun = entity<any>(
     errorCode: String,
     // S35: private diagnostic for failed AI fact suggestions (never model text).
     invalidReason: String,
+    // S35 acceptance fix: fixed reason code of an AI_USAGE_UNKNOWN catalog run.
+    usageUnknownReason: String,
     resultIds: { type: [Schema.Types.ObjectId], default: [] },
     rejectedCount: Number,
     tokens: Number,

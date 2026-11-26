@@ -11,7 +11,11 @@ import { AppError, ensure } from "../../../errors";
 import * as v from "../../../validators/sites.validator";
 import { decrypt, encrypt } from "../../credential-crypto";
 import { authorizeActor } from "../../catalog-authority";
-import { settle } from "../../usage.service";
+import { absorbUnknownUsage, settle } from "../../usage.service";
+import {
+  AiUsageUnknownError,
+  usageUnknownReasonOf,
+} from "../../ai-usage-unknown";
 import {
   callSiteAgent,
   type AgentResult,
@@ -135,11 +139,11 @@ export async function processSiteAgent(
             metric: "ai_tokens",
             operationId: unit.operationId,
           });
-          ensure(
-            !previous || previous.state === "released",
-            409,
-            "AI_USAGE_UNKNOWN",
-          );
+          // S35 acceptance fix: a released (incl. platform-absorbed) or settled
+          // previous operation is closed; the next attempt reserves again under
+          // a new operation ID. An open reservation means an interrupted call.
+          if (previous && !["released", "settled"].includes(previous.state))
+            throw new AiUsageUnknownError("interrupted");
         }
         await mongoose.connection.transaction(async (session) => {
           await fenceRun(task, session);
@@ -170,6 +174,8 @@ export async function processSiteAgent(
           const storedUnit = { ...unit };
           // The decrypted repair candidate is transient prompt input only.
           delete storedUnit.draftCandidate;
+          // The unknown-outcome reason describes the previous attempt only.
+          delete storedUnit.usageUnknownReason;
           fresh.steps[index] = storedUnit;
           fresh.markModified("steps");
           await fresh.save({ session });
@@ -452,15 +458,37 @@ export async function processSiteAgent(
       const index = fresh.steps.findIndex((u) => u.status !== "succeeded");
       const unit = index >= 0 ? fresh.steps[index] : null;
       const cancelled = fresh.cancelRequested || code === "AGENT_CANCELLED";
-      const paused = [
-        "QUOTA_EXCEEDED",
-        "AI_UNCONFIGURED",
-        "AI_USAGE_UNKNOWN",
-      ].includes(code);
+      // S35 acceptance fix: the platform absorbs an unknown outcome. The
+      // customer's reservation is released (not charged) and the record is
+      // marked for reconciliation; the unit then retries like AI_TRANSIENT
+      // within its three attempts. Above AI_UNKNOWN_ABSORB_LIMIT per month the
+      // job pauses until the user retries. A saved result (pendingResult) is a
+      // known outcome and keeps the previous pause-and-settle behaviour.
+      const unknown = code === "AI_USAGE_UNKNOWN";
+      const unknownReason = unknown
+        ? (usageUnknownReasonOf(error) ?? unit?.usageUnknownReason ?? "unrecorded")
+        : undefined;
+      const absorption =
+        unknownReason && unit && !unit.pendingResult && unit.operationId
+          ? await absorbUnknownUsage(
+              "ai_tokens",
+              unit.operationId,
+              unknownReason,
+              session,
+            )
+          : "none";
+      const paused =
+        ["QUOTA_EXCEEDED", "AI_UNCONFIGURED"].includes(code) ||
+        (unknown && (absorption === "limit" || !!unit?.pendingResult));
       const retry =
         !cancelled &&
         !paused &&
-        ["AI_TRANSIENT", "AI_RATE_LIMIT", "AI_OUTPUT_INVALID"].includes(code) &&
+        [
+          "AI_TRANSIENT",
+          "AI_RATE_LIMIT",
+          "AI_OUTPUT_INVALID",
+          "AI_USAGE_UNKNOWN",
+        ].includes(code) &&
         (unit?.attempts ?? 3) < 3;
       fresh.status = cancelled
         ? "cancelled"
@@ -493,6 +521,7 @@ export async function processSiteAgent(
                 ? "pending"
                 : "failed",
           errorCode: fresh.errorCode,
+          ...(unknownReason ? { usageUnknownReason: unknownReason } : {}),
           ...(code === "AI_OUTPUT_INVALID"
             ? {
                 pendingResult: undefined,

@@ -182,8 +182,10 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
     fullPage: true,
     animations: "disabled",
   });
-  await detail.getByText("执行详情与用量", { exact: true }).click();
-  await expect(detail.getByText("117,774", { exact: true })).toBeVisible();
+  await detail.getByText("执行详情", { exact: true }).click();
+  // S35: diagnostics no longer show raw model units to customers.
+  await expect(detail.getByText("117,774", { exact: true })).toHaveCount(0);
+  await expect(detail.getByText(/token/i)).toHaveCount(0);
   await detail
     .locator(".task-diagnostics > details")
     .first()

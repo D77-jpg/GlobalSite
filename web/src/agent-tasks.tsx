@@ -57,8 +57,7 @@ const copy = {
     designAction: "查看设计方案",
     interviewAction: "回答补充问题",
     openPage: "查看页面",
-    diagnostics: "执行详情与用量",
-    tokens: "AI 用量（Token）",
+    diagnostics: "执行详情",
     duration: "累计执行耗时",
     attempts: "执行次数",
     sources: "输入资料",
@@ -129,8 +128,7 @@ const copy = {
     designAction: "View design proposals",
     interviewAction: "Answer questions",
     openPage: "Open page",
-    diagnostics: "Execution details & usage",
-    tokens: "AI usage (tokens)",
+    diagnostics: "Execution details",
     duration: "Total execution time",
     attempts: "Attempts",
     sources: "Input sources",
@@ -524,12 +522,6 @@ export function RunList({
                 <summary>{c.diagnostics}</summary>
                 <dl>
                   <div>
-                    <dt>{c.tokens}</dt>
-                    <dd>
-                      {new Intl.NumberFormat(locale).format(run.tokens ?? 0)}
-                    </dd>
-                  </div>
-                  <div>
                     <dt>{c.duration}</dt>
                     <dd>
                       {((run.elapsedMs ?? 0) / 1000).toFixed(1)} {c.seconds}
@@ -556,11 +548,15 @@ export function RunList({
                       {c.attempts} {s.attempts ?? 0}
                     </summary>
                     <p>
-                      {c.tokens}{" "}
-                      {new Intl.NumberFormat(locale).format(s.tokens ?? 0)} ·{" "}
                       {c.duration} {((s.elapsedMs ?? 0) / 1000).toFixed(1)}{" "}
                       {c.seconds}
                     </p>
+                    {s.usageUnknownReason && (
+                      <p>
+                        {t("usageReason_" + s.usageUnknownReason)} ·{" "}
+                        {t("usageNotCharged")}
+                      </p>
+                    )}
                     {s.inputSummary && (
                       <p>
                         {c.products} {s.inputSummary.products ?? "—"} ·{" "}
@@ -614,9 +610,7 @@ export function RunList({
                     {(s.history ?? []).map((h: Row, j: number) => (
                       <p key={j}>
                         {c.attempts} {h.attempt} · {t(h.status)} ·{" "}
-                        {new Intl.NumberFormat(locale).format(h.tokens ?? 0)}{" "}
-                        Token · {((h.elapsedMs ?? 0) / 1000).toFixed(1)}{" "}
-                        {c.seconds}
+                        {((h.elapsedMs ?? 0) / 1000).toFixed(1)} {c.seconds}
                         {h.errorCode ? " · " + humanError(h.errorCode) : ""}
                       </p>
                     ))}
@@ -664,6 +658,9 @@ export function RunList({
                   {humanError(run.errorCode)}
                 </p>
               )}
+              {run.errorCode === "AI_USAGE_UNKNOWN" && (
+                <p className="task-problem-detail">{t("usageNotCharged")}</p>
+              )}
               <div className="task-actions" aria-busy={busy === run.id}>
                 {attention(run) && run.errorCode === "AI_UNCONFIGURED" && (
                   <Link className="button secondary" to="/ai">
@@ -671,14 +668,11 @@ export function RunList({
                     <ArrowUpRight size={13} />
                   </Link>
                 )}
-                {attention(run) &&
-                  ["QUOTA_EXCEEDED", "AI_USAGE_UNKNOWN"].includes(
-                    run.errorCode,
-                  ) && (
-                    <Link className="button secondary" to="/usage">
-                      {c.usage}
-                    </Link>
-                  )}
+                {attention(run) && run.errorCode === "QUOTA_EXCEEDED" && (
+                  <Link className="button secondary" to="/usage">
+                    {c.usage}
+                  </Link>
+                )}
                 {attention(run) &&
                   ["SOURCE_CHANGED", "SOURCE_WITHDRAWN"].includes(
                     run.errorCode,

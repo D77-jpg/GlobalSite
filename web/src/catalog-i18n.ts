@@ -327,8 +327,8 @@ export const catalogMessages = {
     "Ask an administrator to configure AI first.",
   ],
   AI_USAGE_UNKNOWN: [
-    "AI 调用结果尚不确定，额度暂时保留，请联系管理员核查。",
-    "The AI result is uncertain; reserved usage is retained for administrator review.",
+    "生成服务暂时不稳定，请稍后重试或联系客服。",
+    "The generation service is temporarily unstable. Please retry later or contact support.",
   ],
   AI_OUTPUT_INVALID: [
     "AI 返回内容无法使用，请核对来源后重试。",

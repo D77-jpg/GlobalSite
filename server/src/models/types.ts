@@ -67,6 +67,11 @@ export type UsageRow = TenantBase & {
   amount: number;
   state: string;
   actual?: number;
+  /** S35: unknown AI outcome released by the platform for reconciliation. */
+  absorbed?: boolean;
+  unknownReason?: string;
+  absorbedAt?: Date;
+  absorbedBy?: "auto" | "retry";
 };
 export type BucketRow = TenantBase & {
   period: string;

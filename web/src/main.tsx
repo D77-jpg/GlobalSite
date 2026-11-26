@@ -1093,6 +1093,33 @@ function UsagePage() {
                   ? 0
                   : (100 * (row.consumed + row.reserved)) / data.limits[key],
               );
+              // S35: the AI allowance is shown as a share of the plan only,
+              // never as raw model units.
+              if (key === "ai_tokens") {
+                const used = Math.round(percent);
+                return (
+                  <section className="usage-line" key={key}>
+                    <span className="eyebrow">{t(key)}</span>
+                    {data.limits[key] === null ? (
+                      <h2>{t("unlimited")}</h2>
+                    ) : (
+                      <>
+                        <h2>{used}%</h2>
+                        <p>
+                          {t("aiUsedPercent")
+                            .replace("{used}", String(used))
+                            .replace("{left}", String(Math.max(0, 100 - used)))}
+                        </p>
+                        <progress
+                          max={100}
+                          value={percent}
+                          aria-label={t(key)}
+                        />
+                      </>
+                    )}
+                  </section>
+                );
+              }
               return (
                 <section className="usage-line" key={key}>
                   <span className="eyebrow">{t(key)}</span>

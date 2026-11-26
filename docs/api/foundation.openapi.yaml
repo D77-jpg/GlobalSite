@@ -6405,6 +6405,12 @@ paths:
     post:
       operationId: s4postagentrunsidretry
       summary: S4 /agent-runs/{id}/retry; tenant scoped editor
+      description: >-
+        Retries a failed or paused run. S35: a run paused with AI_USAGE_UNKNOWN
+        (monthly automatic absorption limit reached) can be retried directly;
+        the open reservation of the unknown operation is released and marked
+        absorbed for platform reconciliation, so the organization is not
+        charged. A step with a saved result settles its known usage instead.
       security:
         - cookieAuth: []
           csrfHeader: []
@@ -15573,6 +15579,24 @@ components:
           type:
             - string
             - "null"
+        usageUnknownReason:
+          description: >-
+            S35. Fixed reason code of the step's last AI_USAGE_UNKNOWN outcome
+            (never model text). Present only when recorded. The platform
+            absorbs unknown outcomes: the organization's reservation is
+            released (not charged) and the step retries within its three
+            attempts; above AI_UNKNOWN_ABSORB_LIMIT per month the run pauses
+            and an explicit retry is absorbed as well.
+          enum:
+            - timeout
+            - network
+            - body_too_large
+            - usage_missing
+            - usage_over_budget
+            - parse
+            - persist
+            - interrupted
+            - unrecorded
         history:
           type: array
           items:

@@ -1,6 +1,7 @@
 // S35 Verona acceptance fixes (no database): cut-out figures in card copy,
 // card spec values, rendered-image availability in review, a closing CTA
-// duplicating the inquiry section and the AI logo safe margin.
+// duplicating the inquiry section, the AI logo safe margin, buying-note
+// columns in spec tables and unknown AI outcome classification.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -14,9 +15,23 @@ import {
 import {
   cardSpecs,
   cardSummary,
+  catalogueHtml,
+  instructionNote,
   productCards,
+  publicTable,
+  renderB2BBlock,
   specNote,
 } from "../src/services/b2b-template.service";
+import {
+  AiUsageUnknownError,
+  classifyUsageUnknown,
+  parseProviderJson,
+  providerTokens,
+  readCappedBody,
+  usageUnknown,
+} from "../src/services/ai-usage-unknown";
+import { fullPageTimeoutMs } from "../src/services/site-agent-provider.service";
+import { unknownAbsorbLimit } from "../src/services/usage.service";
 import {
   renderStaticPage,
   type Snapshot,
@@ -492,4 +507,239 @@ test("AI logo variants keep a transparent safe margin on every side", async () =
   // The trimmed mark still fills the inner width of the wide variant.
   const wideBox = await opaqueBox(wide);
   assert.ok(wideBox.maxX - wideBox.minX + 1 >= 700);
+});
+
+const vb3gTable = (rows: string[][]) =>
+  block({
+    key: "specs",
+    type: "specs",
+    heading: "Specifications",
+    table: { columns: ["Specification", "Details", "Buyer notes"], rows },
+  });
+const vb3g = (rows: string[][]) =>
+  product({
+    id: "vb-3g",
+    path: "/espresso/vb-3g",
+    title: "VB-3G Flagship Multi-Boiler Espresso Machine | Verona Brewtech",
+    presentation: {
+      navigationLabel: "VB-3G Flagship",
+      headline: "VB-3G Flagship",
+      summary: "Multi-boiler espresso machine for high-volume cafés.",
+      primaryActionLabel: "Request a quote",
+    },
+    blocks: [vb3gTable(rows)],
+  });
+const VB3G_ROWS = [
+  [
+    "Model",
+    "VB-3G Flagship Multi-Boiler Espresso Machine",
+    "Confirm exact model code and configuration on the quote.",
+  ],
+  [
+    "Groupheads",
+    "3 independent groupheads",
+    "Map the three-grouphead layout to your service peak.",
+  ],
+  ["Boiler architecture", "Multi-boiler", "Match boiler capacity to your menu."],
+  ["Finish", "Matte black", ""],
+];
+
+test("cards show only the spec value column; detail tables drop buying notes and the repeated model row", () => {
+  const s = snapshot([vb3g(VB3G_ROWS)]);
+  const cards = productCards(s, s.pages[0]);
+  assert.match(cards, /<dt>Groupheads<\/dt><dd>3 independent groupheads<\/dd>/);
+  assert.doesNotMatch(cards, /Map the three-grouphead|Match boiler| · /);
+  assert.doesNotMatch(cards, /<dt>Model<\/dt>/);
+
+  const detail = renderStaticPage(s, s.pages[1]);
+  const table = detail.slice(detail.indexOf("<table"), detail.indexOf("</table>"));
+  assert.match(table, /<th scope="col">Specification<\/th><th scope="col">Details<\/th><\/tr>/);
+  assert.doesNotMatch(table, /Buyer notes|Confirm exact model code|Map the three|Match boiler/);
+  assert.doesNotMatch(table, /<td>Model<\/td>/);
+  assert.match(table, /<tr><td>Groupheads<\/td><td>3 independent groupheads<\/td><\/tr>/);
+  assert.match(table, /<tr><td>Finish<\/td><td>Matte black<\/td><\/tr>/);
+  assert.doesNotMatch(detail, /Confirm exact model code and configuration on the quote/);
+  assert.match(detail, /href="#block-specs"/);
+
+  // The catalogue applies the same public table.
+  const catalogue = catalogueHtml(s);
+  assert.doesNotMatch(catalogue, /Confirm exact model code|Map the three|<td>Model<\/td>/);
+  assert.match(catalogue, /<td>Groupheads<\/td><td>3 independent groupheads<\/td>/);
+
+  // A single note cell in a value column renders empty, not as text.
+  const mixed = publicTable({
+    columns: ["Specification", "Details"],
+    rows: [
+      ["Groupheads", "3 groupheads"],
+      ["Lead time", "Confirm lead time on the quote."],
+      ["Boiler", "Multi-boiler"],
+    ],
+  });
+  assert.deepEqual(mixed.rows, [
+    ["Groupheads", "3 groupheads"],
+    ["Boiler", "Multi-boiler"],
+  ]);
+  const blanked = publicTable({
+    columns: ["Specification", "EU", "US"],
+    rows: [
+      ["Voltage", "230 V", "Confirm the US voltage on the quote."],
+      ["Boiler", "Multi-boiler", "Multi-boiler"],
+    ],
+  });
+  assert.deepEqual(blanked.rows[0], ["Voltage", "230 V", ""]);
+});
+
+test("comparison tables drop note columns and never render empty", () => {
+  const s = snapshot([vb3g(VB3G_ROWS)]);
+  const comparison = (table: unknown) =>
+    renderB2BBlock(
+      s,
+      s.pages[0],
+      block({ key: "compare", type: "comparison", heading: "Compare models", table }),
+    );
+  const html = comparison({
+    columns: ["Model", "Groupheads", "Planning notes"],
+    rows: [
+      ["VB-2G", "2", "Plan two barista stations per shift."],
+      ["VB-3G", "3", "Plan three barista stations per shift."],
+    ],
+  })!;
+  assert.doesNotMatch(html, /Planning notes|Plan two barista/);
+  assert.match(html, /<tr><td>VB-3G<\/td><td>3<\/td><\/tr>/);
+  assert.equal(
+    comparison({
+      columns: ["Model", "Buyer guidance"],
+      rows: [["VB-3G", "Share your service peak with the quote request."]],
+    }),
+    "",
+  );
+});
+
+test("a spec table with only notes or placeholders falls back to the information-request summary", () => {
+  const rows = [
+    ["Model", "VB-3G Flagship Multi-Boiler Espresso Machine", ""],
+    ["Lead time", "Confirm lead time and freight on the quote.", ""],
+    ["Material", SAFE_PLACEHOLDER, "Specify the finish you need for your cafe."],
+  ];
+  const s = snapshot([vb3g(rows)]);
+  const html = renderStaticPage(s, s.pages[1]);
+  assert.doesNotMatch(html, /<table/);
+  assert.match(html, /class="section information-request"/);
+  assert.match(html, /<li id="block-specs">Specifications<\/li>/);
+  assert.doesNotMatch(html, /href="#block-specs"/);
+  assert.doesNotMatch(html, /Confirm lead time|Specify the finish/);
+  assert.doesNotMatch(productCards(s, s.pages[0]), /card-specs/);
+  assert.deepEqual(
+    publicTable(
+      { columns: ["Specification", "Details", "Buyer notes"], rows },
+      ["VB-3G Flagship"],
+    ).rows,
+    [],
+  );
+});
+
+test("ordinary spec values are not mistaken for buying notes", () => {
+  for (const value of [
+    "Matte black",
+    "Plan view 600 mm",
+    "Use with 220 V supply",
+    "Selectable pre-infusion",
+    "Confirmed",
+    "Map light",
+    "83 mm",
+  ]) {
+    assert.equal(specNote(value), false, value);
+    assert.equal(instructionNote(value), false, value);
+  }
+  for (const value of [
+    "Map the three-grouphead layout to your service peak.",
+    "Plan the water line before installation.",
+    "Choose the voltage for your market.",
+    "Include your expected daily cups in the request.",
+  ])
+    assert.equal(instructionNote(value), true, value);
+  const kept = publicTable({
+    columns: ["Specification", "Details"],
+    rows: [
+      ["Finish", "Matte black"],
+      ["Footprint", "Plan view 600 mm"],
+    ],
+  });
+  assert.equal(kept.rows.length, 2);
+  // A heading alone never removes the only value column.
+  assert.equal(
+    publicTable({ columns: ["Spec", "Buyer requirement"], rows: [["Finish", "Matte black"]] })
+      .rows.length,
+    1,
+  );
+  // Cards keep reading the first value column of legacy two-column tables.
+  assert.deepEqual(
+    cardSpecs(
+      { blocks: [block({ type: "specs", table: { columns: ["Spec", "Value"], rows: [["Finish", "Matte black"]] } })] },
+      [],
+    ),
+    [{ label: "Finish", value: "Matte black" }],
+  );
+});
+
+test("unknown AI outcomes carry a fixed reason code and never model text", async () => {
+  const named = (name: string, cause?: unknown) =>
+    Object.assign(new Error("fixture"), { name, ...(cause ? { cause } : {}) });
+  assert.equal(classifyUsageUnknown(named("TimeoutError")), "timeout");
+  assert.equal(
+    classifyUsageUnknown(named("AbortError", named("TimeoutError"))),
+    "timeout",
+  );
+  assert.equal(classifyUsageUnknown(new TypeError("fetch failed")), "network");
+  assert.equal(classifyUsageUnknown(new SyntaxError("Unexpected end")), "parse");
+  assert.equal(classifyUsageUnknown(new Error("write conflict"), "persist"), "persist");
+  assert.equal(
+    classifyUsageUnknown(new AiUsageUnknownError("usage_over_budget"), "persist"),
+    "usage_over_budget",
+  );
+  const error = usageUnknown(new TypeError("socket hang up"));
+  assert.equal(error.code, "AI_USAGE_UNKNOWN");
+  assert.equal(error.status, 502);
+  assert.equal(error.reason, "network");
+  assert.equal(error.message, "AI_USAGE_UNKNOWN");
+  await assert.rejects(
+    () => readCappedBody(new Response("x".repeat(64)).body!, 16),
+    (e: unknown) => e instanceof AiUsageUnknownError && e.reason === "body_too_large",
+  );
+  assert.equal(
+    (await readCappedBody(new Response("{}").body!, 16)).toString("utf8"),
+    "{}",
+  );
+  assert.throws(
+    () => parseProviderJson(Buffer.from('{"choices":[')),
+    (e: unknown) => e instanceof AiUsageUnknownError && e.reason === "parse",
+  );
+  assert.throws(
+    () => providerTokens({ choices: [] }, 100),
+    (e: unknown) => e instanceof AiUsageUnknownError && e.reason === "usage_missing",
+  );
+  assert.throws(
+    () => providerTokens({ usage: { total_tokens: 101 } }, 100),
+    (e: unknown) =>
+      e instanceof AiUsageUnknownError && e.reason === "usage_over_budget",
+  );
+  assert.equal(providerTokens({ usage: { total_tokens: 42 } }, 100), 42);
+});
+
+test("full-page timeout and the monthly absorption limit are bounded settings", () => {
+  assert.equal(fullPageTimeoutMs(undefined), 240000);
+  assert.equal(fullPageTimeoutMs(""), 240000);
+  assert.equal(fullPageTimeoutMs("abc"), 240000);
+  assert.equal(fullPageTimeoutMs("360000"), 360000);
+  assert.equal(fullPageTimeoutMs("900000"), 600000);
+  assert.equal(fullPageTimeoutMs("1000"), 120000);
+  assert.equal(unknownAbsorbLimit(undefined), 5);
+  assert.equal(unknownAbsorbLimit("0"), 0);
+  assert.equal(unknownAbsorbLimit("-2"), 0);
+  assert.equal(unknownAbsorbLimit("x"), 5);
+  for (const file of [".env.example", "production.env.example", "compose.yaml"]) {
+    const text = fs.readFileSync(path.resolve(__dirname, "../..", file), "utf8");
+    assert.match(text, /AI_FULL_PAGE_TIMEOUT_MS/, file);
+    assert.match(text, /AI_UNKNOWN_ABSORB_LIMIT/, file);
+  }
 });

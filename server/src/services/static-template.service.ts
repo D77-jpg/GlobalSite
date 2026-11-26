@@ -10,6 +10,8 @@ import {
   conceptNote,
   cardSummary,
   ctaTarget,
+  pageTitles,
+  publicTable,
 } from "./b2b-template.service";
 import { intactSentences } from "./copy-integrity";
 import { wordmarkSvg } from "./brand-mark.service";
@@ -128,23 +130,27 @@ function section(s: Snapshot, b: any, p?: any) {
   const copy = getStorefrontCopy(s.site.language);
   let html = "";
   if (b.type === "image") html = image(s, b.assetId, b.alt);
-  else if (b.type === "specs" && b.table)
+  else if (b.type === "specs" && b.table) {
+    // S35 acceptance fix: buying-note columns/cells and Model/Name rows that
+    // repeat this page's product title are not part of the public table.
+    const table = publicTable(b.table, p ? pageTitles(s, p) : []);
+    if (!table.rows.length) return "";
     html =
       '<div class="table-scroll"><table><caption>' +
       e(b.heading || copy.specifications) +
       "</caption><thead><tr>" +
-      b.table.columns
-        .map((c: string) => '<th scope="col">' + e(c) + "</th>")
+      table.columns
+        .map((c) => '<th scope="col">' + e(c) + "</th>")
         .join("") +
       "</tr></thead><tbody>" +
-      b.table.rows
+      table.rows
         .map(
-          (r: string[]) =>
+          (r) =>
             "<tr>" + r.map((c) => "<td>" + e(c) + "</td>").join("") + "</tr>",
         )
         .join("") +
       "</tbody></table></div>";
-  else if (b.type === "faq")
+  } else if (b.type === "faq")
     html = (b.faq ?? [])
       .map(
         (f: any) =>
@@ -502,14 +508,23 @@ export function renderStaticPage(s: Snapshot, p: any) {
             .join("") +
           "</div></section>"
       : "";
+  // S35 acceptance fix: a spec table with no public value rows (only buying
+  // notes, placeholders or a repeated model row) joins the "information on
+  // request" summary instead of rendering an empty table.
+  const titles = pageTitles(s, p);
+  const emptySpecs = (b: any) =>
+    b.type === "specs" &&
+    !!b.table &&
+    !publicTable(b.table, titles).rows.length;
   const pending = (b: any) =>
-    /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
+    emptySpecs(b) ||
+    (/^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
       b.body?.trim() ?? "",
     ) &&
-    !b.faq?.length &&
-    !b.items?.length &&
-    !["product-grid", "category-grid", "downloads", "cta"].includes(b.type) &&
-    (!b.table || !b.table.rows?.length);
+      !b.faq?.length &&
+      !b.items?.length &&
+      !["product-grid", "category-grid", "downloads", "cta"].includes(b.type) &&
+      (!b.table || !b.table.rows?.length));
   const pendingBlocks = p.blocks.filter(pending);
   const detailRequest = pendingBlocks.length
     ? '<section class="section information-request"><details><summary>' +

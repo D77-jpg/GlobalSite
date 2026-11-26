@@ -153,6 +153,10 @@ export function agentDto(r: AgentRunDoc) {
       tokens: s.tokens ?? 0,
       elapsedMs: s.elapsedMs ?? 0,
       errorCode: s.errorCode ?? null,
+      // S35 acceptance fix: fixed reason code only, when one was recorded.
+      ...(s.usageUnknownReason
+        ? { usageUnknownReason: s.usageUnknownReason }
+        : {}),
       history: s.history ?? [],
     })),
     tokens: r.tokens ?? 0,

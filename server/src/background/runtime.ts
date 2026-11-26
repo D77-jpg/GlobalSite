@@ -13,6 +13,8 @@ import { processLogo } from "../services/site-media.service";
 import { authorizeActor } from "../services/catalog-authority";
 import { ProductImport, WebsiteRead, AgentRun } from "../models";
 import { AppError } from "../errors";
+import { usageUnknownReasonOf } from "../services/ai-usage-unknown";
+import { absorbUnknownUsage } from "../services/usage.service";
 // Adapted from GlobalCRM server/src/background/runtime.ts @ a94a285.
 // Mongo lease + fencing, no marketing/inbox schedulers or unrestricted tenant bypass.
 import { randomUUID } from "node:crypto";
@@ -241,10 +243,26 @@ export async function tick(lane?: TaskLane): Promise<boolean> {
             task.attempts < 8;
           await mongoose.connection.transaction(async (session) => {
             await fenceTask(task, session);
+            const reason = usageUnknownReasonOf(error);
+            // S35: the platform absorbs the unknown outcome of a failed AI
+            // catalog run (customer not charged) within the monthly limit.
+            const operation =
+              task.kind === "catalog.extract"
+                ? "extract:" + task.payload.runId
+                : task.kind === "catalog.suggest"
+                  ? "suggest:" + task.payload.runId
+                  : null;
+            if (reason && operation)
+              await absorbUnknownUsage("ai_tokens", operation, reason, session);
             await model.updateOne(
               { _id: task.payload.runId },
               {
-                $set: { status: retry ? "queued" : "failed", errorCode: code },
+                $set: {
+                  status: retry ? "queued" : "failed",
+                  errorCode: code,
+                  // S35: fixed code only (timeout/network/…), never model text.
+                  ...(reason ? { usageUnknownReason: reason } : {}),
+                },
               },
               { session },
             );

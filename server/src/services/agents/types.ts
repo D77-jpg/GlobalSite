@@ -1,6 +1,7 @@
 import type mongoose from "mongoose";
 import type { z } from "zod";
 import type { AgentResult } from "../site-agent-provider.service";
+import type { UsageUnknownReason } from "../ai-usage-unknown";
 import type * as v from "../../validators/sites.validator";
 
 export type Block = z.infer<typeof v.block>;
@@ -212,6 +213,8 @@ export type AgentStepUnit = {
   errorCode: string | null;
   responseDiagnostics?: AgentResult["responseDiagnostics"];
   validationFeedback?: AgentValidationFeedback[];
+  /** S35 acceptance fix: fixed reason of the last AI_USAGE_UNKNOWN (never model text). */
+  usageUnknownReason?: UsageUnknownReason | null;
   history: AgentHistoryEntry[];
 };
 
