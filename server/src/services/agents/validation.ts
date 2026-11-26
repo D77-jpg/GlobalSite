@@ -151,6 +151,7 @@ export function repairDraftPage(
   run: AgentRunDoc,
   unit: AgentStepUnit,
   page: v.PageInput,
+  options?: { preserveImageLayouts?: boolean },
 ): v.PageInput {
   const site = run.inputSnapshot.site;
   const node = unit.node;
@@ -166,7 +167,13 @@ export function repairDraftPage(
     allowDemoFacts: !!site.demoMode,
     identifiers: snapshotIdentifiers(run),
   };
-  return repairGeneratedPage(run, page, context);
+  // The image pass still needs the proposed layout so it can fill its slots.
+  // Validate and capture the final draft with the same layout fallback as design.
+  return repairGeneratedPage(
+    run,
+    options?.preserveImageLayouts ? page : resolveAgentPage(page),
+    context,
+  );
 }
 
 export const outputSchemas = {

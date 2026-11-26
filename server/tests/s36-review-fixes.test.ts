@@ -21,6 +21,8 @@ import {
   stripAppendedValue,
 } from "../src/services/agents/claim-repair";
 import { repairFaq } from "../src/services/agents/faq-repair";
+import { repairDraftPage } from "../src/services/agents/validation";
+import type { AgentRunDoc, AgentStepUnit } from "../src/services/agents/types";
 import {
   packHeroAvailable,
   planImageSlots,
@@ -801,6 +803,46 @@ test("AI hero illustrations skip pack pages that already have a real image sourc
   assert.equal(
     packHeroAvailable(run(false), unit("machines"), textOnly),
     false,
+  );
+});
+
+test("draft capture uses a text layout when an optional illustration is absent", () => {
+  const run = {
+    inputSnapshot: {
+      site: { name: "Verona", productIds: [], language: "en" },
+      products: [],
+      facts: [],
+    },
+  } as unknown as AgentRunDoc;
+  const unit = { node: { type: "category" } } as AgentStepUnit;
+  const input = page([
+    block({
+      type: "split",
+      body: "Compare the published product specifications.",
+      design: {
+        purpose: "context",
+        frame: "split",
+        ratio: "landscape",
+        fit: "cover",
+        focus: "center",
+        density: "compact",
+      },
+    }),
+  ]);
+  const beforeImages = repairDraftPage(run, unit, input, {
+    preserveImageLayouts: true,
+  });
+  assert.equal(beforeImages.blocks[0].design?.frame, "split");
+  const fallback = repairDraftPage(run, unit, input);
+  assert.equal(fallback.blocks[0].design?.frame, "band");
+  assert.equal(fallback.blocks[0].layout, "compact");
+  assert.equal(fallback.blocks[0].body, input.blocks[0].body);
+  const illustrated = page([
+    { ...input.blocks[0], alt: "Commercial machine", assetId: ID(2) },
+  ]);
+  assert.equal(
+    repairDraftPage(run, unit, illustrated).blocks[0].design?.frame,
+    "split",
   );
 });
 

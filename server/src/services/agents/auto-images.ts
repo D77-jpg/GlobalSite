@@ -288,7 +288,9 @@ export async function fillUnitImages(
   } & Record<string, unknown>;
   const parsed = v.pageInput.safeParse(raw?.page);
   if (!parsed.success) return result;
-  const page = repairDraftPage(run, unit, parsed.data);
+  const page = repairDraftPage(run, unit, parsed.data, {
+    preserveImageLayouts: true,
+  });
   // Only spend on pages whose remaining issues are image-related.
   if (issueCount(run, unit, page, false) > 0) return result;
   const isHome = unit.node.type === "home";
