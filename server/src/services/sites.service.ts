@@ -24,7 +24,9 @@ import { ensure, AppError } from "../errors";
 import * as v from "../validators/sites.validator";
 import { pinAssets, productDto, factDto, sha } from "./catalog.service";
 import {
+  CONTENT_VALIDATION_VERSION,
   validatePage,
+  validationIdentifiers,
   renderPage,
   isDemoFact,
   type Issue,
@@ -338,7 +340,11 @@ export async function demoFactRows(
   ensure(facts.length <= 100, 409, "AGENT_INPUT_TOO_LARGE");
   return facts;
 }
-export async function setSiteOptions(id: string, input: unknown, actor: string) {
+export async function setSiteOptions(
+  id: string,
+  input: unknown,
+  actor: string,
+) {
   const d = v.siteOptionsInput.parse(input);
   let result: any;
   await mongoose.connection.transaction(async (session) => {
@@ -413,9 +419,18 @@ export async function pageView(
   page: any,
   site?: any,
   session?: mongoose.ClientSession,
+  validateForApproval = false,
 ) {
   site ??= await ownSite(String(page.siteId), session);
   const data = await pageData(page, session),
+    hash = sha(
+      JSON.stringify({
+        data,
+        path: page.path,
+        siteRevision: site.revision,
+        planHash: site.confirmedPlanHash ?? null,
+      }),
+    ),
     refIds = [
       ...new Set(
         [
@@ -429,7 +444,13 @@ export async function pageView(
     ],
     facts = await FactSheet.find({ _id: { $in: refIds } }).session(
       session ?? null,
-    );
+    ),
+    // S36 review fix: model codes in product names / plan titles are identifiers.
+    productNames = (
+      await Product.find({ _id: { $in: site.productIds } })
+        .select("name")
+        .session(session ?? null)
+    ).map((p: any) => p.name);
   const node = site.plan?.nodes.find((n: any) => n.key === page.nodeKey),
     issues = validatePage(data, facts, {
       productId: page.productId ? String(page.productId) : null,
@@ -445,6 +466,15 @@ export async function pageView(
       requireComposition: !!site.designDirection?.composition,
       paths: site.plan?.nodes.map((n: any) => n.path),
       allowDemoFacts: !!site.demoMode,
+      legacyCopyRules:
+        !validateForApproval &&
+        page.approvedHash === hash &&
+        !page.contentValidationVersion,
+      identifiers: validationIdentifiers(
+        site.name,
+        productNames,
+        site.plan?.nodes,
+      ),
     });
   // S35 stage C: demo data may be previewed but never approved or published.
   if (facts.some((f: any) => isDemoFact(f)))
@@ -514,14 +544,6 @@ export async function pageView(
       blockKey: null,
       token: "",
     });
-  const hash = sha(
-    JSON.stringify({
-      data,
-      path: page.path,
-      siteRevision: site.revision,
-      planHash: site.confirmedPlanHash ?? null,
-    }),
-  );
   const status = issues.length
     ? "blocked"
     : page.approvedHash === hash
@@ -757,7 +779,7 @@ export async function reviewPage(
       { $inc: { lockVersion: 1 } },
       { session },
     );
-    const data = await pageView(page, site, session);
+    const data = await pageView(page, site, session, approve);
     if (approve) {
       ensure(
         !data.issues.some((i: Issue) => i.code === "DEMO_FACTS_UNCONFIRMED"),
@@ -787,7 +809,12 @@ export async function reviewPage(
       {
         $set: {
           reviewStatus: approve ? "approved" : "rejected",
-          ...(approve ? { approvedHash: data.hash } : {}),
+          ...(approve
+            ? {
+                approvedHash: data.hash,
+                contentValidationVersion: CONTENT_VALIDATION_VERSION,
+              }
+            : {}),
           reviewedBy: actor,
           reviewedAt: new Date(),
           reviewReason: reason ?? null,
@@ -854,6 +881,7 @@ export async function preview(
 ) {
   const page = draft ? { siteId: draft.site._id } : await ownedPage(id),
     site = draft?.site ?? (await ownSite(String(page.siteId))),
+    draftRows = draft ? await sourceRows(site) : null,
     data = draft
       ? {
           ...draft.data,
@@ -861,7 +889,7 @@ export async function preview(
           issues: validatePage(
             draft.data,
             [
-              ...(await sourceRows(site)).facts,
+              ...(draftRows?.facts ?? []),
               ...(site.demoMode ? await demoFactRows(site) : []),
             ].map(factDto),
             {
@@ -874,6 +902,11 @@ export async function preview(
               requireComposition: !!site.designDirection?.composition,
               paths: site.plan.nodes.map((n: any) => n.path),
               allowDemoFacts: !!site.demoMode,
+              identifiers: validationIdentifiers(
+                site.name,
+                draftRows?.products ?? [],
+                site.plan?.nodes,
+              ),
             },
           ),
         }

@@ -548,7 +548,7 @@ export const siteMessages = {
   addBlock: ["添加段落", "Add section"],
   addFaq: ["添加 FAQ", "Add FAQ"],
   question: ["问题", "Question"],
-  directAnswer: ["直接回答（40–60 个英文单词）", "Direct answer (40–60 words)"],
+  directAnswer: ["直接回答（30–80 个英文单词）", "Direct answer (30–80 words)"],
   detail: ["补充说明（可选）", "Additional explanation (optional)"],
   words: ["单词", "words"],
   preview: ["查看已保存的预览", "Preview saved page"],
@@ -609,8 +609,12 @@ export const siteMessages = {
     "Site content must be in English",
   ],
   FAQ_DIRECT_ANSWER_REQUIRED: [
-    "FAQ 开头需用 40–60 个单词直接回答",
-    "FAQ needs a direct 40–60 word answer",
+    "FAQ 开头需用 30–80 个单词直接回答",
+    "FAQ needs a direct 30–80 word answer",
+  ],
+  FAQ_DUPLICATE_ANSWER: [
+    "FAQ 答案与同一区块的另一条答案重复，请针对各自问题分别回答",
+    "FAQ answer repeats another answer in this section; answer each question on its own",
   ],
   IMAGE_ALT_REQUIRED: [
     "请选图片并填写 Alt",

@@ -21,7 +21,10 @@ import {
 import { factDto, productDto, sha } from "../../catalog.service";
 import { assertSiteEditable } from "../../publication-lock.service";
 import { siteSkillProfile } from "../../site-skill-profile";
-import { validatePage } from "../../page-validation.service";
+import {
+  validatePage,
+  validationIdentifiers,
+} from "../../page-validation.service";
 import { queueAutoLogo } from "../../site-media.service";
 import { absorbUnknownUsage } from "../../usage.service";
 import {
@@ -567,6 +570,11 @@ export async function acceptQualityReview(id: string, actor: string) {
           requireComposition: !!site.designDirection?.composition,
           paths: (site.plan?.nodes ?? []).map((n) => n.path),
           allowDemoFacts: !!site.demoMode,
+          identifiers: validationIdentifiers(
+            site.name,
+            run.inputSnapshot.products,
+            site.plan?.nodes,
+          ),
         }).length,
         409,
         "QUALITY_BLOCKED",

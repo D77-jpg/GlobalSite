@@ -216,6 +216,36 @@ const packOf = (s: Snapshot, p: any): string | undefined => {
   )?.pack;
 };
 
+/**
+ * S36 review fix (rendering pack only): later specs blocks whose public rows
+ * are all covered by the first public spec table are not rendered (and not
+ * linked from the product guide). Every value cell must already appear in the
+ * first table; labels may differ ("Specification" vs "Burr size").
+ */
+export function redundantSpecKeys(s: Snapshot, p: any): Set<string> {
+  const out = new Set<string>();
+  if (!packOf(s, p) || !Array.isArray(p?.blocks)) return out;
+  const titles = pageTitles(s, p);
+  const specs = (p.blocks as any[])
+    .filter((b) => b.type === "specs" && b.table)
+    .map((b) => ({ key: String(b.key), rows: publicTable(b.table, titles).rows }))
+    .filter((x) => x.rows.length);
+  const first = specs[0];
+  if (!first) return out;
+  const cells = first.rows
+    .flatMap((r) => r.slice(1))
+    .map(plainText)
+    .filter(Boolean);
+  const known = (x: string) =>
+    !x ||
+    cells.includes(x) ||
+    (x.length >= 4 && cells.some((c) => c.includes(x)));
+  for (const x of specs.slice(1))
+    if (x.rows.every((r) => r.slice(1).map(plainText).every(known)))
+      out.add(x.key);
+  return out;
+}
+
 // S35 acceptance fix: href of the action a cta block renders (same rule as below).
 export function ctaTarget(b: any): string {
   return (
@@ -268,9 +298,11 @@ function productImage(s: Snapshot, v: any, fallbackId?: string | null) {
 
 export function productGuide(s: Snapshot, p: any) {
   const copy = getStorefrontCopy(s.site.language);
+  const redundant = redundantSpecKeys(s, p);
   const links = p.blocks.filter(
     (b: any) =>
       (b.type === "specs" &&
+        !redundant.has(b.key) &&
         publicTable(b.table, pageTitles(s, p)).rows.length > 0) ||
       (b.type === "faq" && b.faq?.length) ||
       (b.type === "gallery" && b.items?.some((i: any) => i.assetId && s.assets[i.assetId])) ||

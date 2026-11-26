@@ -1,30 +1,25 @@
 // S35: deterministic FAQ repair for generated drafts. It never adds wording or
 // facts: it only (1) rebalances existing sentences between answer and detail
-// to meet the 40–60 word direct-answer lead, (2) cites confirmed facts whose
-// literal value already appears in the FAQ text, and (3) drops FAQ items that
-// still fail the fact gate, unless dropping would break the page composition.
+// to meet the 30–80 word direct-answer lead (S36; was 40–60), (2) cites
+// citable facts whose value the FAQ text already quotes (shared S36 rule in
+// ref-completion.ts), and (3) drops unsupported FAQ items when the page
+// composition allows it. Duplicate answers remain visible to the retry gate.
 import type { PageInput } from "../../validators/sites.validator";
-import { isDemoFact, validatePage } from "../page-validation.service";
+import {
+  FAQ_MAX_WORDS,
+  FAQ_MIN_WORDS,
+  validatePage,
+} from "../page-validation.service";
 import { compositionIssues } from "../site-composition.service";
+import { citeQuotedFacts, type ProductName } from "./ref-completion";
 
 type Context = Parameters<typeof validatePage>[2];
 type Fact = Parameters<typeof validatePage>[1][number];
-type FactLike = {
-  _id?: unknown;
-  id?: unknown;
-  status?: string;
-  value?: unknown;
-  revision?: number;
-  subjectType?: string;
-  subjectId?: unknown;
-  source?: { kind?: string } | null;
-};
 
-const MIN = 40,
-  MAX = 60,
+const MIN = FAQ_MIN_WORDS,
+  MAX = FAQ_MAX_WORDS,
   ANSWER_MAX = 1800,
-  DETAIL_MAX = 2500,
-  REFS_MAX = 50;
+  DETAIL_MAX = 2500;
 const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 const sentences = (s: string) =>
   s
@@ -32,8 +27,6 @@ const sentences = (s: string) =>
     .split(/(?<=[.!?])\s+/)
     .map((x) => x.trim())
     .filter(Boolean);
-const norm = (s: string) =>
-  s.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
 
 export function rebalanceFaqAnswer(answer: string, detail: string) {
   const a = sentences(answer),
@@ -63,43 +56,16 @@ function citeLiteralFacts(
   text: string,
   facts: Fact[],
   context: Context,
+  products: ReadonlyArray<ProductName>,
 ) {
-  const t = norm(text);
-  for (const f of facts as FactLike[]) {
-    if (block.refs.length >= REFS_MAX) return;
-    const id = String(f._id ?? f.id ?? "");
-    const value = String(f.value ?? "");
-    if (
-      !id ||
-      !(
-        f.status === "confirmed" ||
-        (!!context.allowDemoFacts && isDemoFact(f))
-      ) ||
-      typeof f.revision !== "number" ||
-      !/\d/.test(value)
-    )
-      continue;
-    if (
-      f.subjectType === "product" &&
-      (!context.productIds.includes(String(f.subjectId)) ||
-        (context.productId && String(f.subjectId) !== context.productId))
-    )
-      continue;
-    const literal = norm(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const exact = new RegExp(
-      `(?<![\\p{L}\\p{N}_])(?<!\\d[.,])${literal}(?![\\p{L}\\p{N}_]|[.,]\\d)`,
-      "u",
-    );
-    if (!exact.test(t)) continue;
-    if (block.refs.some((r) => r.factId === id)) continue;
-    block.refs.push({ factId: id, revision: f.revision });
-  }
+  citeQuotedFacts(block.refs, text, facts, context, block.key, products);
 }
 
 export function repairFaq(
   input: PageInput,
   facts: Fact[],
   context: Context,
+  products: ReadonlyArray<ProductName> = [],
 ): PageInput {
   if ((context.language ?? "en") !== "en") return input;
   const page = structuredClone(input);
@@ -114,10 +80,12 @@ export function repairFaq(
         f.question + " " + f.answer + " " + f.detail,
         facts,
         context,
+        products,
       );
   }
   const failing = new Set(
     validatePage(page, facts, context)
+      .filter((issue) => issue.code !== "FAQ_DUPLICATE_ANSWER")
       .map((i) => /^blocks\.([^.]+)\.faq\.(\d+)$/.exec(i.field))
       .filter((m): m is RegExpExecArray => !!m)
       .map((m) => m[1] + "#" + m[2]),
@@ -133,6 +101,7 @@ export function repairFaq(
         f.question + " " + f.answer + " " + f.detail,
         facts,
         context,
+        products,
       );
   }
   pruned.blocks = pruned.blocks.filter(

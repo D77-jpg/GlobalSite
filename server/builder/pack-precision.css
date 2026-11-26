@@ -2266,3 +2266,76 @@
 .composed-site.pack-precision .brand-wordmark .wordmark-cut {
   fill: var(--pp-copper);
 }
+
+/* ---------------------------------------------------------------------------
+   S36 review fixes (precision pack only).
+   --------------------------------------------------------------------------- */
+/* Product card photos keep one 4:3 frame; the photo never stretches to the
+   height of the copy column (no 0.33 tall crops in rows layout). Explicit
+   portrait/natural/contain block intents keep their own rules. */
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-visual,
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img) .product-visual,
+.composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) .product-visual {
+  align-self: start;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-portrait .product-visual {
+  aspect-ratio: 4 / 5;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-natural .product-visual {
+  aspect-ratio: auto;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section:not(.fit-contain) .product-visual img {
+  object-fit: cover;
+}
+/* Inner-page first-screen headings: one size step smaller, wider measure. */
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero .hero-copy h1 {
+  max-width: 14em;
+  font-size: clamp(2.1rem, 2.6vw + 0.9rem, 3.75rem);
+  line-height: 0.98;
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.hero-long .hero-copy h1 {
+  max-width: 16em;
+  font-size: clamp(1.9rem, 1.9vw + 0.9rem, 3.1rem);
+}
+/* Low-word sections (cta bands, one-paragraph notes) use tighter spacing. */
+.composed-site.b2b-site.pack-precision main > section.section-compact:not(#inquiry):not(.hero) {
+  padding-block: clamp(40px, 4.5vw, 72px);
+}
+.composed-site.b2b-site.pack-precision main > section.section-compact:not(#inquiry) .section-intro {
+  margin-bottom: clamp(20px, 2.5vw, 32px);
+}
+/* Merged purchasing terms: one definition list instead of one band per line. */
+.composed-site.b2b-site.pack-precision main > section.section-terms {
+  padding-block: clamp(48px, 5.5vw, 88px);
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0 clamp(20px, 2.4vw, 36px);
+  margin: clamp(24px, 3vw, 40px) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list > div {
+  min-width: 0;
+  padding: 20px 0 22px;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 96px;
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list dt {
+  margin: 0 0 8px;
+  font-family: var(--pp-head);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list dd {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}

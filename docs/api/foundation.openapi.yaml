@@ -16313,7 +16313,9 @@ x-s4-agents:
       retry/cancel. Quota pauses instead of discarding work.
     - >-
       Product pages require specs/material/application/certifications/oem/moq/samples/packaging blocks; FAQ
-      answers begin with a 40–60 word lead.
+      answers begin with a 30–80 word lead (S36; was 40–60) and must not repeat another answer in the same block
+      (FAQ_DUPLICATE_ANSWER). Model codes contained in product names, the site name or plan titles are identifiers,
+      not numeric claims.
     - >-
       All hard claims require valid same-tenant confirmed fact references. Editing, new plans or withdrawn
       facts invalidate approval.

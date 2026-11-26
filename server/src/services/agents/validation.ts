@@ -3,9 +3,18 @@ import { ensure } from "../../errors";
 import * as v from "../../validators/sites.validator";
 import { resolveAgentPage } from "../section-design.service";
 import { compositionIssues } from "../site-composition.service";
-import { validatePage } from "../page-validation.service";
+import {
+  validatePage,
+  validationIdentifiers,
+} from "../page-validation.service";
 import { repairFaq } from "./faq-repair";
-import { repairBrokenFragments, repairUnsourcedClaims } from "./claim-repair";
+import {
+  repairBrokenFragments,
+  repairSamplesSection,
+  repairUnsourcedClaims,
+  stripAppendedFactValues,
+} from "./claim-repair";
+import { completeFactRefs } from "./ref-completion";
 import type {
   AgentRunDoc,
   AgentStepUnit,
@@ -101,6 +110,39 @@ export function normalizeNullableAxes(input: unknown, depth = 0): unknown {
 }
 
 /**
+ * S36 review fix: names whose model codes ("VB-2G", "VG-83") are identifiers
+ * rather than numeric claims — the frozen site name, product names and plan
+ * node titles of this run.
+ */
+export function snapshotIdentifiers(run: AgentRunDoc): string[] {
+  const s = run.inputSnapshot;
+  return validationIdentifiers(s.site.name, s.products, s.site.plan?.nodes);
+}
+
+type PageContext = Parameters<typeof validatePage>[2];
+
+/**
+ * S36 review fix: the shared deterministic pre-save repair chain for design
+ * pages, whole-site content and refine. Order: drop fact values pasted onto
+ * item ends, complete refs for facts the text already quotes, FAQ repair,
+ * samples section, unsupported-claim removal, cut-out fragment removal. Every
+ * step only cites, rebalances or deletes; none writes new claims.
+ */
+export function repairGeneratedPage(
+  run: AgentRunDoc,
+  page: v.PageInput,
+  context: PageContext,
+): v.PageInput {
+  const facts = run.inputSnapshot.facts;
+  let out = stripAppendedFactValues(page, facts, context);
+  out = completeFactRefs(out, facts, context, run.inputSnapshot.products);
+  out = repairFaq(out, facts, context, run.inputSnapshot.products);
+  out = repairSamplesSection(out, facts, context);
+  out = repairUnsourcedClaims(out, facts, context);
+  return repairBrokenFragments(out, facts, context);
+}
+
+/**
  * S35: deterministic pre-save repair for whole-site generation (content and
  * refine). Same FAQ and unsupported-claim repair as design proposals; it only
  * rebalances, cites literal matching facts, or removes rejected claims.
@@ -122,10 +164,9 @@ export function repairDraftPage(
     brandName: site.name,
     language: site.language,
     allowDemoFacts: !!site.demoMode,
+    identifiers: snapshotIdentifiers(run),
   };
-  const faq = repairFaq(page, run.inputSnapshot.facts, context);
-  const claims = repairUnsourcedClaims(faq, run.inputSnapshot.facts, context);
-  return repairBrokenFragments(claims, run.inputSnapshot.facts, context);
+  return repairGeneratedPage(run, page, context);
 }
 
 export const outputSchemas = {
@@ -461,10 +502,9 @@ export function prepareDesignPage(
     brandName: site.name,
     language: site.language,
     allowDemoFacts: !!site.demoMode,
+    identifiers: snapshotIdentifiers(run),
   };
-  d.page = repairFaq(d.page, run.inputSnapshot.facts, pageContext);
-  d.page = repairUnsourcedClaims(d.page, run.inputSnapshot.facts, pageContext);
-  d.page = repairBrokenFragments(d.page, run.inputSnapshot.facts, pageContext);
+  d.page = repairGeneratedPage(run, d.page, pageContext);
   validateGeneratedComposition(run, d.page, node.type);
   ensure(
     d.page.blocks.every((b) => !!b.design),

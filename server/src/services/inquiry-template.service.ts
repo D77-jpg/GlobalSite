@@ -10,6 +10,15 @@ const e = (v: unknown) =>
       ]!,
   );
 
+/** S36: heading the inquiry section renders for this page (page, home, default). */
+export function inquiryHeadingText(s: Snapshot, p: any): string {
+  const home = s.pages.find((v) => v.type === "home");
+  return (
+    p?.presentation?.inquiryHeading ??
+    home?.presentation?.inquiryHeading ??
+    getStorefrontCopy(s.site.language).inquiryHeading
+  );
+}
 export function renderInquiry(s: Snapshot, p: any) {
   const copy = getStorefrontCopy(s.site.language);
   const c = s.inquiry ?? {},
@@ -22,7 +31,7 @@ export function renderInquiry(s: Snapshot, p: any) {
   const lead = pick("inquiryLead");
   return (
     '<section class="section" id="inquiry"><div class="inquiry"><h2>' +
-    e(pick("inquiryHeading") ?? copy.inquiryHeading) +
+    e(inquiryHeadingText(s, p)) +
     "</h2><p>" +
     e(
       lead ?? (c.enabled ? copy.inquiryEnabledLead : copy.inquiryPreviewLead),

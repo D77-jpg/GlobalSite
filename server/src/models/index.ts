@@ -519,6 +519,7 @@ export const SitePage = entity<any>(
     revision: { type: Number, default: 1 },
     reviewStatus: { type: String, default: "draft" },
     approvedHash: String,
+    contentValidationVersion: String,
     reviewedBy: Schema.Types.ObjectId,
     reviewedAt: Date,
     reviewReason: String,

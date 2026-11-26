@@ -27,19 +27,25 @@ const page = (b: ReturnType<typeof block>[]) => ({
   blocks: b,
 });
 
+// S36: the direct-answer window is 30–80 English words (was 40–60).
 test("long FAQ answers move whole sentences into detail", () => {
-  const answer = w(30) + ". " + w(20) + ". " + w(25) + ".";
+  const answer = w(50) + ". " + w(20) + ". " + w(25) + ".";
   const r = rebalanceFaqAnswer(answer, "Existing detail.");
-  assert.equal(r.answer, w(30) + ". " + w(20) + ".");
+  assert.equal(r.answer, w(50) + ". " + w(20) + ".");
   assert.equal(r.detail, w(25) + ". Existing detail.");
 });
 
 test("short FAQ answers borrow sentences from detail; others stay unchanged", () => {
-  const r = rebalanceFaqAnswer(w(25) + ".", w(20) + ". " + w(30) + ".");
-  assert.equal(r.answer, w(25) + ". " + w(20) + ".");
-  assert.equal(r.detail, w(30) + ".");
+  const r = rebalanceFaqAnswer(w(20) + ".", w(20) + ". " + w(50) + ".");
+  assert.equal(r.answer, w(20) + ". " + w(20) + ".");
+  assert.equal(r.detail, w(50) + ".");
+  // 30–80 words is already a valid lead; a single long sentence stays as-is.
   assert.deepEqual(rebalanceFaqAnswer(w(70), ""), {
     answer: w(70),
+    detail: "",
+  });
+  assert.deepEqual(rebalanceFaqAnswer(w(90), ""), {
+    answer: w(90),
     detail: "",
   });
 });

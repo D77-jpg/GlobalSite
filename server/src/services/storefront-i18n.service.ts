@@ -54,6 +54,8 @@ export interface StorefrontCopy {
   infoOnRequest: string;
   infoOnRequestNote: string;
   detailsHeading: string;
+  /** S36: heading of the merged short purchasing-terms list (precision pack). */
+  purchasingTerms: string;
   specifications: string;
   questions: string;
   discussRequirements: string;
@@ -164,6 +166,7 @@ const en: StorefrontCopy = {
   infoOnRequestNote:
     "Contact our team for confirmed product details before placing an order.",
   detailsHeading: "Details",
+  purchasingTerms: "Purchasing terms",
   specifications: "Specifications",
   questions: "Questions",
   discussRequirements: "Discuss your requirements",
@@ -308,6 +311,7 @@ const es: StorefrontCopy = {
   infoOnRequestNote:
     "Contacte con nuestro equipo para confirmar los detalles antes de realizar un pedido.",
   detailsHeading: "Detalles",
+  purchasingTerms: "Condiciones de compra",
   specifications: "Especificaciones",
   questions: "Preguntas",
   discussRequirements: "Hablemos de sus requisitos",
@@ -449,6 +453,7 @@ const fr: StorefrontCopy = {
   infoOnRequestNote:
     "Contactez notre équipe pour confirmer les détails avant commande.",
   detailsHeading: "Détails",
+  purchasingTerms: "Conditions d'achat",
   specifications: "Spécifications",
   questions: "Questions",
   discussRequirements: "Discutons de votre besoin",
@@ -590,6 +595,7 @@ const de: StorefrontCopy = {
   infoOnRequestNote:
     "Kontaktieren Sie unser Team für verbindliche Details vor der Bestellung.",
   detailsHeading: "Details",
+  purchasingTerms: "Einkaufsbedingungen",
   specifications: "Spezifikationen",
   questions: "Fragen",
   discussRequirements: "Anforderungen besprechen",
@@ -730,6 +736,7 @@ const ja: StorefrontCopy = {
   infoOnRequest: "詳細はお問い合わせください",
   infoOnRequestNote: "ご注文前に担当者まで仕様をご確認ください。",
   detailsHeading: "詳細",
+  purchasingTerms: "購入条件",
   specifications: "仕様",
   questions: "よくある質問",
   discussRequirements: "ご要件をご相談ください",
@@ -869,6 +876,7 @@ const ar: StorefrontCopy = {
   infoOnRequest: "معلومات المنتج عند الطلب",
   infoOnRequestNote: "تواصل مع فريقنا لتأكيد التفاصيل قبل تقديم الطلب.",
   detailsHeading: "التفاصيل",
+  purchasingTerms: "شروط الشراء",
   specifications: "المواصفات",
   questions: "الأسئلة",
   discussRequirements: "ناقش متطلباتك",
@@ -1007,6 +1015,7 @@ const ru: StorefrontCopy = {
   infoOnRequest: "Информация по запросу",
   infoOnRequestNote: "Свяжитесь с нами для подтверждения деталей перед заказом.",
   detailsHeading: "Детали",
+  purchasingTerms: "Условия закупки",
   specifications: "Характеристики",
   questions: "Вопросы",
   discussRequirements: "Обсудить требования",
@@ -1146,6 +1155,7 @@ const zh: StorefrontCopy = {
   infoOnRequest: "按需提供详细资料",
   infoOnRequestNote: "下单前请联系团队获取已确认的正式产品参数与报价。",
   detailsHeading: "详情",
+  purchasingTerms: "采购条款",
   specifications: "规格参数",
   questions: "常见问题",
   discussRequirements: "沟通采购需求",

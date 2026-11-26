@@ -12,6 +12,8 @@ import {
   ctaTarget,
   pageTitles,
   publicTable,
+  pendingDetail,
+  redundantSpecKeys,
 } from "./b2b-template.service";
 import { intactSentences } from "./copy-integrity";
 import { wordmarkSvg } from "./brand-mark.service";
@@ -19,6 +21,7 @@ import {
   renderInquiry,
   renderConsent,
   privacyPath,
+  inquiryHeadingText,
 } from "./inquiry-template.service";
 
 export const e = (v: unknown) =>
@@ -91,38 +94,136 @@ function image(
 }
 
 // S35: first-screen fallback for pages using a rendering pack. Only approved
-// assets already present in the frozen snapshot are used, in this order: the
-// first product page main image, then the first split/gallery/features asset on
-// the page. Pages with their own hero image are unchanged.
+// assets already present in the frozen snapshot are used. Pages with their own
+// hero image are unchanged.
+// S36 review fix: inner pages no longer all reuse the first product photo.
+// Order: an asset already used on this page -> this page's product main image
+// -> main image of a product in this category (child product pages) -> another
+// product's main image that is not the home hero (stable per path) -> the home
+// hero -> the first product page image (former behaviour). AI illustration
+// fill (autoImages) creates the hero image block itself before rendering and
+// skips pages that already have one of the first three sources.
 function heroFallback(s: Snapshot, p: any): { assetId: string; alt: string } | null {
-  const own = (v: any) => {
+  const usable = (id: unknown): id is string =>
+    typeof id === "string" &&
+    !!s.assets[id] &&
+    !s.assets[id].path.endsWith(".pdf") &&
+    s.assets[id].mime !== "application/pdf";
+  const pageImage = (v: any) => {
     const block = v.blocks.find(
-      (b: any) => b.type === "image" && b.assetId && s.assets[b.assetId],
+      (b: any) => b.type === "image" && usable(b.assetId),
     );
-    if (block) return { assetId: block.assetId, alt: block.alt || v.title };
-    const product = s.products?.find((x) => x.id === v.productId);
-    const id = product?.assetIds.filter((a) => s.assets[a]).at(-1);
+    return block ? { assetId: block.assetId, alt: block.alt || v.title } : null;
+  };
+  const mainImage = (productId: unknown) => {
+    const product = s.products?.find((x) => x.id === productId);
+    const id = product?.assetIds.filter(usable).at(-1);
     return id ? { assetId: id, alt: product!.name } : null;
   };
-  const productPage =
-    p.type === "product" ? p : s.pages.find((v) => v.type === "product");
-  const fromProduct = productPage ? own(productPage) : null;
-  if (fromProduct) return fromProduct;
+  // 1. Assets already used on this page (split, gallery, features, cards ...).
   for (const b of p.blocks) {
-    if (b.type === "split" && b.assetId && s.assets[b.assetId])
-      return { assetId: b.assetId, alt: b.alt || b.heading };
-    if (["gallery", "features"].includes(b.type)) {
-      const item = (b.items ?? []).find(
-        (i: any) =>
-          i.assetId &&
-          s.assets[i.assetId] &&
-          !s.assets[i.assetId].path.endsWith(".pdf"),
-      );
-      if (item) return { assetId: item.assetId, alt: item.alt || item.title };
-    }
+    if (["downloads", "certifications"].includes(b.type)) continue;
+    if (b.type !== "image" && usable(b.assetId))
+      return { assetId: b.assetId, alt: b.alt || b.heading || p.title };
+    const item = (b.items ?? []).find((i: any) => usable(i.assetId));
+    if (item) return { assetId: item.assetId, alt: item.alt || item.title || b.heading };
+  }
+  // 2. This page's product.
+  const own = p.productId ? mainImage(p.productId) : null;
+  if (own) return own;
+  // 3. Products in this category: child product pages by path or plan parent.
+  const node = s.site.plan?.nodes?.find((n: any) => n.path === p.path);
+  const prefix = String(p.path ?? "").replace(/\/$/, "") + "/";
+  const products = s.pages.filter((v) => v.type === "product" && v !== p);
+  const children = products.filter(
+    (v) =>
+      (prefix !== "/" && String(v.path).startsWith(prefix)) ||
+      (!!node &&
+        (s.site.plan?.nodes ?? []).some(
+          (n: any) => n.path === v.path && n.parentKey === node.key,
+        )),
+  );
+  for (const v of children) {
+    const hit = mainImage(v.productId) ?? pageImage(v);
+    if (hit) return hit;
+  }
+  // 4. Another product's main image that is not the home hero.
+  const home = s.pages.find((v) => v.path === "/");
+  const homeHero = home && home !== p ? pageImage(home) : null;
+  const others = products
+    .map((v) => mainImage(v.productId) ?? pageImage(v))
+    .filter(
+      (x): x is { assetId: string; alt: string } =>
+        !!x && x.assetId !== homeHero?.assetId,
+    );
+  if (others.length) {
+    let h = 0;
+    for (const c of String(p.path ?? "")) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return others[h % others.length];
+  }
+  // 5. The home hero, then the former first-product fallback.
+  if (homeHero) return homeHero;
+  for (const v of products) {
+    const hit = mainImage(v.productId) ?? pageImage(v);
+    if (hit) return hit;
   }
   return null;
 }
+
+// S36 review fix (rendering pack only): short required product sections are
+// listed together as purchasing terms instead of one tall band per line.
+const TERM_KEYS = new Set([
+  "material",
+  "application",
+  "oem",
+  "packaging",
+  "moq",
+  "samples",
+  "certifications",
+  "lead-time",
+  "leadtime",
+  "delivery",
+]);
+const countWords = (...parts: unknown[]) =>
+  parts
+    .map((x) => String(x ?? ""))
+    .join(" ")
+    .split(/\s+/)
+    .filter(Boolean).length;
+function termBlock(b: any) {
+  return (
+    TERM_KEYS.has(b.key) &&
+    b.type === "text" &&
+    !b.assetId &&
+    !b.table?.rows?.length &&
+    !(b.items ?? []).length &&
+    !b.faq?.length &&
+    !!b.body?.trim() &&
+    !pendingDetail(b.body) &&
+    countWords(b.body) <= 30
+  );
+}
+// Low-word sections get tighter vertical spacing on rendering-pack pages.
+function compactBlock(b: any) {
+  return (
+    !["product-grid", "category-grid", "gallery", "showcase", "comparison", "specs", "downloads", "metrics", "image"].includes(b.type) &&
+    !b.assetId &&
+    !b.table?.rows?.length &&
+    !b.faq?.length &&
+    !(b.items ?? []).some((i: any) => i.assetId) &&
+    countWords(
+      b.heading,
+      b.body,
+      ...(b.items ?? []).flatMap((i: any) => [i.title, i.body]),
+    ) < 40
+  );
+}
+const plainHeading = (x: unknown) =>
+  String(x ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
 
 function section(s: Snapshot, b: any, p?: any) {
   const rich = renderB2BBlock(s, p, b);
@@ -545,9 +646,53 @@ export function renderStaticPage(s: Snapshot, p: any) {
       "</ul></details></section>"
     : "";
   const inquiryHtml = renderInquiry(s, p);
-  const rendered = p.blocks
-    .filter((b: any) => b !== firstImage && !pending(b))
-    .map((b: any) => ({ block: b, html: section(s, b, p) }));
+  // S36 review fix: rendering-pack pages merge short purchasing sections, drop
+  // spec tables repeating the first one and tighten low-word sections.
+  const pack = !!composition?.pack;
+  const redundant = pack ? redundantSpecKeys(s, p) : new Set<string>();
+  const termCandidates =
+    pack && p.type === "product"
+      ? p.blocks.filter(
+          (b: any) => b !== firstImage && !pending(b) && termBlock(b),
+        )
+      : [];
+  const terms = termCandidates.length >= 2 ? termCandidates : [];
+  const rendered: Array<{ block: any; html: string }> = p.blocks
+    .filter((b: any) => b !== firstImage && !pending(b) && !terms.includes(b))
+    .map((b: any) => {
+      if (redundant.has(b.key)) return { block: b, html: "" };
+      const html = section(s, b, p);
+      return {
+        block: b,
+        html:
+          pack && html && compactBlock(b)
+            ? html.replace(/^<section class="/, '<section class="section-compact ')
+            : html,
+      };
+    });
+  if (terms.length) {
+    const termsHtml =
+      '<section class="section section-terms" id="purchasing-terms"><h2>' +
+      e(copy.purchasingTerms) +
+      '</h2><dl class="terms-list">' +
+      terms
+        .map(
+          (b: any) =>
+            '<div id="block-' +
+            e(b.key) +
+            '"><dt>' +
+            e(b.heading || copy.detailsHeading) +
+            "</dt><dd>" +
+            e(b.body).replace(/\n/g, "<br>") +
+            "</dd></div>",
+        )
+        .join("") +
+      "</dl></section>";
+    const at = rendered.findIndex((r) => r.block.type === "cta" && r.html);
+    const entry = { block: { key: "purchasing-terms", type: "terms" }, html: termsHtml };
+    if (at < 0) rendered.push(entry);
+    else rendered.splice(at, 0, entry);
+  }
   // S35 acceptance fix: a closing cta band that leads to the inquiry section
   // directly below it repeats that section; the inquiry section keeps the action.
   const closing = [...rendered].reverse().find((r) => r.html);
@@ -566,6 +711,20 @@ export function renderStaticPage(s: Snapshot, p: any) {
     inquiryAnchor(String(ctaTarget(closing.block)))
   )
     closing.html = "";
+  // S36 review fix (rendering pack): a cta anywhere on the page that leads to
+  // this page's inquiry section under the same heading repeats that section.
+  if (pack && inquiryHtml.includes('id="inquiry"')) {
+    const inquiryTitle = plainHeading(inquiryHeadingText(s, p));
+    for (const r of rendered)
+      if (
+        r.html &&
+        r.block.type === "cta" &&
+        inquiryAnchor(String(ctaTarget(r.block))) &&
+        !!inquiryTitle &&
+        plainHeading(r.block.heading) === inquiryTitle
+      )
+        r.html = "";
+  }
   const blocksHtml = rendered.map((r: { html: string }) => r.html).join("");
   // S35 B2: the selected (uploaded or generated) logo, else a deterministic
   // SVG wordmark of the exact site name instead of the former initial letter.
@@ -588,6 +747,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
     '<section class="hero ' +
     (composition ? "composition-hero-" : "hero-") +
     e(layout) +
+    // S36 review fix: long inner-page titles on rendering-pack pages use a
+    // smaller first-screen heading so they stay within four lines.
+    (composition?.pack && p.type !== "home" && String(heading).length > 40
+      ? " hero-long"
+      : "") +
     (firstImage
       ? " has-visual" + sectionClasses(firstImage.design)
       : fallbackVisual

@@ -325,6 +325,37 @@ export function baselineReport(
   };
 }
 
+// S36 review fix: the header renders the same links in the desktop nav and in
+// the collapsed mobile menu. Older captures listed both copies, which models
+// reported as "navigation repeated twice". Review input lists each link once.
+export type NavigationLink = { label?: unknown; href?: unknown };
+export function uniqueNavigation(links: unknown): NavigationLink[] {
+  if (!Array.isArray(links)) return [];
+  const seen = new Set<string>();
+  const out: NavigationLink[] = [];
+  for (const link of links) {
+    if (!link || typeof link !== "object") continue;
+    const l = link as NavigationLink;
+    const key =
+      String(l.href ?? "").trim() +
+      "\u0000" +
+      String(l.label ?? "").trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ label: l.label, href: l.href });
+  }
+  return out;
+}
+/** Browser metrics as sent to the review model (navigation de-duplicated). */
+export function reviewBrowserMetrics<T extends object>(
+  metrics: ReadonlyArray<T>,
+): T[] {
+  return metrics.map((m) => {
+    const nav = (m as { navigation?: unknown }).navigation;
+    return Array.isArray(nav) ? { ...m, navigation: uniqueNavigation(nav) } : m;
+  });
+}
+
 /** Maps improvements onto existing review finding codes for "refine from review". */
 export function baselineFindings(report: BaselineReport) {
   const code: Record<

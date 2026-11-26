@@ -18,7 +18,11 @@ import { generateImage } from "../image-studio.service";
 import { imageProviderAvailable } from "../ai-provider-resolve";
 import type { AgentResult } from "../site-agent-provider.service";
 import { fenceRun, ownRun } from "./runtime";
-import { normalizeNullableAxes, repairDraftPage } from "./validation";
+import {
+  normalizeNullableAxes,
+  repairDraftPage,
+  snapshotIdentifiers,
+} from "./validation";
 import type { AgentRunDoc, AgentStepUnit, AgentTaskDoc } from "./types";
 
 export type ImageSlot = {
@@ -66,6 +70,12 @@ export function planImageSlots(
     siteName: string;
     max: number;
     productPaths?: Record<string, { name: string; hasImage: boolean }>;
+    /**
+     * S36 review fix: the rendering pack already has a real first-screen image
+     * for this page (own block asset, its product or a product in its
+     * category), so no AI hero is generated for it.
+     */
+    skipHero?: boolean;
   },
 ): ImageSlot[] {
   const slots: ImageSlot[] = [];
@@ -75,7 +85,7 @@ export function planImageSlots(
       560,
     );
   const hasHero = page.blocks.some((b) => b.type === "image" && !!b.assetId);
-  if (!hasHero) {
+  if (!hasHero && !options.skipHero) {
     const empty = page.blocks.find((b) => b.type === "image" && !b.assetId);
     const headline = page.presentation?.headline ?? page.title;
     slots.push({
@@ -202,7 +212,49 @@ function issueCount(
     brandName: site.name,
     language: site.language,
     allowDemoFacts: !!site.demoMode,
+    identifiers: snapshotIdentifiers(run),
   }).filter((i) => IMAGE_ISSUES.has(i.code) === onlyImage).length;
+}
+
+/**
+ * S36 review fix: mirrors the first three sources of the rendering-pack hero
+ * fallback (static-template heroFallback): an image already used on the page,
+ * the page's product main image, or a product image in its category. Only for
+ * pack pages; other pages keep the former AI hero slot.
+ */
+export function packHeroAvailable(
+  run: AgentRunDoc,
+  unit: AgentStepUnit,
+  page: v.PageInput,
+): boolean {
+  const site = run.inputSnapshot.site;
+  const node = unit.node;
+  if (
+    !node ||
+    !(site.designDirection?.composition?.pack ?? page.presentation?.composition?.pack)
+  )
+    return false;
+  if (
+    page.blocks.some(
+      (b) =>
+        !["downloads", "certifications"].includes(b.type) &&
+        (!!b.assetId || (b.items ?? []).some((i) => !!i.assetId)),
+    )
+  )
+    return true;
+  const hasImage = (productId?: string | null) =>
+    !!productId &&
+    !!run.inputSnapshot.products.find((p) => p.id === productId)?.assetIds
+      ?.length;
+  if (hasImage(node.productId)) return true;
+  const prefix = node.path.replace(/\/$/, "") + "/";
+  return (site.plan?.nodes ?? []).some(
+    (n) =>
+      n.type === "product" &&
+      n.key !== node.key &&
+      ((prefix !== "/" && n.path.startsWith(prefix)) || n.parentKey === node.key) &&
+      hasImage(n.productId),
+  );
 }
 
 function event(code: string) {
@@ -251,6 +303,7 @@ export async function fillUnitImages(
     siteName: site.name,
     max: isHome ? caps.home : caps.detail,
     productPaths,
+    skipHero: packHeroAvailable(run, unit, page),
   });
   if (!slots.length) return result;
   // S36: platform image service or the organization's own (see resolver).

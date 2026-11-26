@@ -199,6 +199,9 @@
 - S35 验收修复：数字被抠掉的残缺句（`copy-integrity.ts`）在渲染与草稿修复中整句删除，绝不输出半截词；产品卡参数格跳过占位/采购备注与重复型号行；审查按隔离浏览器实际加载的图片判断可用性，示意图计入有图并单独标注；收尾 cta 紧邻询盘区且同指向 `#inquiry` 时不重复渲染；AI Logo 四周保留 10% 透明安全边距。详见 S35 文档“验收问题修复”。
 - S35 规格表：产品卡参数格只取每行第一个值列；详情页规格表、comparison 与 catalogue 表按 `publicTable()` 去掉采购备注列（标题含 note/remark/guidance/buyer/purchas/planning/how to/tip，或整列都是备注）、备注单元格留空、详情页去掉与本页产品标题重复的 Model/Name 行；无真实值时进入“信息待确认”汇总，不输出空表。对所有站生效，旧站重新构建后 HTML 会变。
 - S35 未知用量（取代 S3/S4/S22/J1 中“未知结果保留预留、暂停、不重复调用”的规定）：调用结果未知（超时、网络、响应过大、缺少或超出用量、解析、保存中断、上次中断）时只记录固定原因码，由平台自动吸收：释放客户预留（不扣客户额度）并在 UsageRecord 标记 `absorbed`/`unknownReason` 供平台按服务商账单核对；任务在三次尝试内用新 operationId 自动重试。每组织每月自动吸收上限 `AI_UNKNOWN_ABSORB_LIMIT`（默认 5），超限才暂停，用户重试时同样吸收。客户不承担未知用量，也不接触 Token：web 前端不显示 Token 字样或数量（API 字段保持不变）。已保存结果（pendingResult）仍按已知用量结算，不重复付费请求。整页任务等待 `AI_FULL_PAGE_TIMEOUT_MS`（默认 240000，120000–600000）。
+- S35 整站审查修复（见 S35 文档"整站审查问题修复"）：产品名、站点名、计划标题中的型号（如 VB-2G、VG-83）经 `validatePage` 的 `identifiers` 视为标识符，不做数字门禁；纯数字、带单位数字和其他代码照旧需要事实，版本门禁用快照内名称。生成修复链 `repairGeneratedPage` 只补引用、删除硬塞值或无依据内容，不写新声明。FAQ 直接回答 30–80 词且同块禁止重复答案（`FAQ_DUPLICATE_ANSWER`）；samples 小节只接受 sample 类事实；审核措辞检查覆盖有 composition 的页面。pack 页合并短采购条款、去掉同名 cta 与重复规格表。`brand-site.md` 当前 14850 字节。
+
+- S35 修复上线前已批准且批准散列仍匹配的页面、旧冻结版本沿用原文案规则。新审批在当前规则下通过后写入校验版本并随构建冻结。旧版仍校验当前事实状态、来源修订和审批散列。仅因重复而报错的 FAQ 保留给 Agent 重写，强证据区块保留字面依据校验。
 
 ## S36 平台统一 AI 服务与套餐额度
 - 见 docs/design/S36-平台统一AI服务与套餐额度.md（含“已决定”与“实施记录”）。正式环境 AI 文本与图片服务由平台提供：完整的 `PLATFORM_AI_*` / `PLATFORM_IMAGE_*` 优先；否则仅非生产或 `ALLOW_ORG_AI_KEYS=true`（默认 false，本期不对客户开放）回退组织加密配置；否则视为未配置。所有调用点必须经 `server/src/services/ai-provider-resolve.ts` 取服务商与密钥，禁止再直接读取 `AgentAiProvider` 发起付费调用。本条取代 S3/S6/S35 中“AI 仅用组织配置模型”“密钥只经组织设置保存”的规定。

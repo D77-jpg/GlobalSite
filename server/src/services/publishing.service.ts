@@ -34,7 +34,7 @@ import {
   savePage,
 } from "./sites.service";
 import { sha } from "./catalog.service";
-import { validatePage } from "./page-validation.service";
+import { validatePage, validationIdentifiers } from "./page-validation.service";
 import { reserve, settle } from "./usage.service";
 import { readAsset, readArtifact, storeArtifact } from "./storage.service";
 import { encrypt, decrypt } from "./credential-crypto";
@@ -62,7 +62,8 @@ const redirectTarget = z
   .refine(
     (v) =>
       !/[\r\n\s]/.test(v) &&
-      ((v.startsWith("/") && !v.includes("..")) || /^https:\/\/[^\s]+$/.test(v)),
+      ((v.startsWith("/") && !v.includes("..")) ||
+        /^https:\/\/[^\s]+$/.test(v)),
   );
 export const seoAnalyticsInput = z
   .object({
@@ -242,7 +243,14 @@ export async function saveSettings(id: string, input: unknown, actor: string) {
       .select("+secret +webhookSecret")
       .session(session);
     ensure((old?.revision ?? 0) === v.revision, 409, "REVISION_CONFLICT");
-    const { token, webhookSecret, seoAnalytics, deployWebhookUrl, revision, ...data } = v;
+    const {
+      token,
+      webhookSecret,
+      seoAnalytics,
+      deployWebhookUrl,
+      revision,
+      ...data
+    } = v;
     if (active) {
       ensure(
         old &&
@@ -399,7 +407,12 @@ async function inspect(id: string, session?: mongoose.ClientSession) {
       continue;
     }
     const p = await pageView(row, site, session);
-    pages.push(p);
+    pages.push({
+      ...p,
+      ...(row.contentValidationVersion
+        ? { contentValidationVersion: row.contentValidationVersion }
+        : {}),
+    });
     if (p.status !== "approved") add("PAGE_NOT_APPROVED", p);
     for (const i of p.issues)
       add(
@@ -704,6 +717,14 @@ export async function validVersion(
         requiredProductSections: s.site.plan?.strategy?.productSections,
         requireComposition: !!s.site.designDirection?.composition,
         paths: s.pages.map((p) => p.path),
+        legacyCopyRules: !p.contentValidationVersion,
+        // S36 review fix: identifiers come from the frozen version snapshot
+        // (product names, site name, plan titles), so the gate is deterministic.
+        identifiers: validationIdentifiers(
+          s.site.name,
+          s.products ?? [],
+          s.site.plan?.nodes,
+        ),
       }).length,
       409,
       "VERSION_FACTS_CHANGED",
@@ -1240,11 +1261,7 @@ export async function previewFile(id: string, raw: string) {
   return { body, mime: cf.mime(key) };
 }
 export const webhookClient = {
-  post: async (
-    url: string,
-    body: string,
-    headers: Record<string, string>,
-  ) => {
+  post: async (url: string, body: string, headers: Record<string, string>) => {
     const resolved = await publicUrl(url);
     const res = await fetch(resolved.href, {
       method: "POST",
@@ -1286,8 +1303,7 @@ export async function triggerVersionWebhook(id: string, actor: string) {
       "deploy-webhook:" + tenantContext()!.organizationId + ":" + v.siteId,
     );
     headers["X-GlobalSite-Signature"] =
-      "sha256=" +
-      createHmac("sha256", secret).update(payload).digest("hex");
+      "sha256=" + createHmac("sha256", secret).update(payload).digest("hex");
   }
   let res: { ok: boolean; status: number };
   try {
@@ -1332,17 +1348,30 @@ export async function domainCheck(id: string, actor: string) {
       : null;
   if (cfg?.domain) {
     try {
-      const cnames = await dns.resolveCname(cfg.domain).catch(() => [] as string[]);
+      const cnames = await dns
+        .resolveCname(cfg.domain)
+        .catch(() => [] as string[]);
       const aRecords = cnames.length
         ? []
         : await dns.resolve4(cfg.domain).catch(() => [] as string[]);
       const target = cfg.projectName ? cfg.projectName + ".pages.dev" : "";
-      if (target && cnames.some((c) => c.toLowerCase().replace(/\.$/, "") === target)) {
-        diagnostics.push({ step: "dns", ok: true, detailCode: "DNS_CNAME_MATCH" });
+      if (
+        target &&
+        cnames.some((c) => c.toLowerCase().replace(/\.$/, "") === target)
+      ) {
+        diagnostics.push({
+          step: "dns",
+          ok: true,
+          detailCode: "DNS_CNAME_MATCH",
+        });
       } else if (cnames.length || aRecords.length) {
         diagnostics.push({ step: "dns", ok: true, detailCode: "DNS_RESOLVED" });
       } else {
-        diagnostics.push({ step: "dns", ok: false, detailCode: "DNS_NOT_FOUND" });
+        diagnostics.push({
+          step: "dns",
+          ok: false,
+          detailCode: "DNS_NOT_FOUND",
+        });
       }
     } catch {
       diagnostics.push({ step: "dns", ok: false, detailCode: "DNS_NOT_FOUND" });

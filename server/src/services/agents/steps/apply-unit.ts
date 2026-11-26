@@ -16,6 +16,7 @@ import {
   prepareDesignPage,
   repairDraftPage,
   reviewOutput,
+  snapshotIdentifiers,
   validateGeneratedComposition,
 } from "../validation";
 import {
@@ -109,6 +110,7 @@ export async function applyUnit(
         requireComposition: !!site.designDirection?.composition,
         paths: (site.plan?.nodes ?? []).map((n: { path: string }) => n.path),
         allowDemoFacts: !!r.inputSnapshot.site.demoMode,
+        identifiers: snapshotIdentifiers(r),
       });
       if (validation.length) {
         reportBody.findings = reportBody.findings.slice(0, 11);
@@ -266,6 +268,7 @@ export async function applyUnit(
                 brandName: site.name,
                 language: site.language,
                 allowDemoFacts: !!r.inputSnapshot.site.demoMode,
+                identifiers: snapshotIdentifiers(r),
               });
               if (problems.length)
                 throw new z.ZodError(
