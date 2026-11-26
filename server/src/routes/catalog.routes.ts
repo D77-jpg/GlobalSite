@@ -297,6 +297,7 @@ router.get(
     return listing(req, res, FactSheet, factDto, {
       ...(q.status ? { status: q.status } : {}),
       ...(q.subjectId ? { subjectId: q.subjectId } : {}),
+      ...(q.source ? { "source.kind": q.source } : {}),
     });
   }),
 );

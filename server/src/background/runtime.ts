@@ -8,6 +8,8 @@ import { WebsiteError } from "../services/website/public-web";
 import { processImport } from "../services/product-import.service";
 import { processWebsite } from "../services/website-read.service";
 import { processExtraction } from "../services/catalog-run.service";
+import { processFactSuggestions } from "../services/fact-suggest.service";
+import { processLogo } from "../services/site-media.service";
 import { authorizeActor } from "../services/catalog-authority";
 import { ProductImport, WebsiteRead, AgentRun } from "../models";
 import { AppError } from "../errors";
@@ -167,6 +169,9 @@ export async function tick(lane?: TaskLane): Promise<boolean> {
           else if (task.kind === "catalog.website") await processWebsite(task);
           else if (task.kind === "catalog.extract")
             await processExtraction(task);
+          else if (task.kind === "catalog.suggest")
+            await processFactSuggestions(task);
+          else if (task.kind === "catalog.logo") await processLogo(task);
           else throw new AppError(400, "UNSUPPORTED_TASK");
         }
         await finishTask(task, "done");

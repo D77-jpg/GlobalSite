@@ -4,6 +4,8 @@ import * as v from "../../validators/sites.validator";
 import { resolveAgentPage } from "../section-design.service";
 import { compositionIssues } from "../site-composition.service";
 import { validatePage } from "../page-validation.service";
+import { repairFaq } from "./faq-repair";
+import { repairUnsourcedClaims } from "./claim-repair";
 import type {
   AgentRunDoc,
   AgentStepUnit,
@@ -36,8 +38,94 @@ export const reviewOutput = z
           .strict(),
       )
       .max(12),
+    // S35 stage D: optional subjective 1-5 scores. They are used only when the
+    // run actually sent screenshots to a vision model (visualInput=true).
+    scores: z
+      .object({
+        firstImpression: z.number().int().min(1).max(5),
+        rhythm: z.number().int().min(1).max(5),
+        density: z.number().int().min(1).max(5),
+        credibility: z.number().int().min(1).max(5),
+        conversion: z.number().int().min(1).max(5),
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict();
+
+const NULLABLE_COMPOSITION_AXES = [
+  "pack",
+  "surface",
+  "headerStyle",
+  "radius",
+] as const;
+const NULLABLE_PRESENTATION_FIELDS = [
+  "inquiryHeading",
+  "inquiryLead",
+  "density",
+  "primaryActionTarget",
+  "composition",
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * S35: strict json_schema decoding widens optional fields to nullable, so a
+ * model may return `composition.pack: null` (or surface/headerStyle/radius).
+ * Normalize those nulls to omitted keys before zod parsing. Only optional
+ * presentation/composition keys are touched; nothing else is rewritten.
+ */
+export function normalizeNullableAxes(input: unknown, depth = 0): unknown {
+  if (depth > 8) return input;
+  if (Array.isArray(input))
+    return input.map((v) => normalizeNullableAxes(v, depth + 1));
+  if (!isRecord(input)) return input;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input))
+    out[k] = normalizeNullableAxes(v, depth + 1);
+  const presentation = out.presentation;
+  if (isRecord(presentation)) {
+    const p: Record<string, unknown> = { ...presentation };
+    for (const k of NULLABLE_PRESENTATION_FIELDS) if (p[k] === null) delete p[k];
+    if (isRecord(p.composition)) {
+      const c: Record<string, unknown> = { ...p.composition };
+      for (const k of NULLABLE_COMPOSITION_AXES) if (c[k] === null) delete c[k];
+      p.composition = c;
+    }
+    out.presentation = p;
+  }
+  return out;
+}
+
+/**
+ * S35: deterministic pre-save repair for whole-site generation (content and
+ * refine). Same FAQ and unsupported-claim repair as design proposals; it only
+ * rebalances, cites literal matching facts, or removes rejected claims.
+ */
+export function repairDraftPage(
+  run: AgentRunDoc,
+  unit: AgentStepUnit,
+  page: v.PageInput,
+): v.PageInput {
+  const site = run.inputSnapshot.site;
+  const node = unit.node;
+  if (!node) return page;
+  const context = {
+    type: node.type,
+    productId: node.productId,
+    productIds: site.productIds,
+    requiredProductSections: site.plan?.strategy?.productSections,
+    paths: (site.plan?.nodes ?? []).map((n) => n.path),
+    brandName: site.name,
+    language: site.language,
+    allowDemoFacts: !!site.demoMode,
+  };
+  const faq = repairFaq(page, run.inputSnapshot.facts, context);
+  return repairUnsourcedClaims(faq, run.inputSnapshot.facts, context);
+}
 
 export const outputSchemas = {
   design: z.toJSONSchema(v.designOutput, { unrepresentable: "any" }),
@@ -234,6 +322,7 @@ export function validationFeedback(error: unknown): AgentValidationFeedback[] {
     "surface",
     "headerStyle",
     "radius",
+    "pack",
     "productLayout",
     "nodes",
     "keywords",
@@ -357,18 +446,12 @@ export function prepareDesignPage(
   unit: AgentStepUnit,
   input: unknown,
 ) {
-  const d = v.designPageOutput.parse(input);
+  const d = v.designPageOutput.parse(normalizeNullableAxes(input));
   const site = run.inputSnapshot.site;
   const node = unit.node;
   ensure(node, 409, "PLAN_INVALID");
   d.page = resolveAgentPage(d.page);
-  validateGeneratedComposition(run, d.page, node.type);
-  ensure(
-    d.page.blocks.every((b) => !!b.design),
-    502,
-    "AI_OUTPUT_INVALID",
-  );
-  const issues = validatePage(d.page, run.inputSnapshot.facts, {
+  const pageContext = {
     type: node.type,
     productId: node.productId,
     productIds: site.productIds,
@@ -376,7 +459,17 @@ export function prepareDesignPage(
     paths: (site.plan?.nodes ?? []).map((n) => n.path),
     brandName: site.name,
     language: site.language,
-  });
+    allowDemoFacts: !!site.demoMode,
+  };
+  d.page = repairFaq(d.page, run.inputSnapshot.facts, pageContext);
+  d.page = repairUnsourcedClaims(d.page, run.inputSnapshot.facts, pageContext);
+  validateGeneratedComposition(run, d.page, node.type);
+  ensure(
+    d.page.blocks.every((b) => !!b.design),
+    502,
+    "AI_OUTPUT_INVALID",
+  );
+  const issues = validatePage(d.page, run.inputSnapshot.facts, pageContext);
   if (issues.length)
     throw new z.ZodError(
       issues.map((i) => ({

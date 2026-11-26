@@ -264,6 +264,21 @@ export const siteMessages = {
   surface: ["页面表面", "Surface rhythm"],
   headerStyle: ["页头风格", "Header style"],
   radius: ["圆角风格", "Corner radius"],
+  pack: ["风格包", "Style pack"],
+  packNone: ["无", "None"],
+  packPrecision: ["precision（设备 / 机械）", "precision (equipment / machinery)"],
+  DEMO_FACTS_UNCONFIRMED: [
+    "含未确认的演示数据：演示内容未经企业确认，不能批准或发布。",
+    "Contains unconfirmed demo data. Demo content is not confirmed by the company and cannot be approved or published.",
+  ],
+  VERSION_FACTS_CHANGED: [
+    "版本引用的事实已变更或含未确认的演示数据。",
+    "Referenced facts changed or include unconfirmed demo data.",
+  ],
+  IMAGE_PROVIDER_MISSING: [
+    "尚未配置 AI 图片服务，请管理员在 AI 图片设置中填写。",
+    "No AI image service is configured. An admin can add it in AI image settings.",
+  ],
   batchApprove: ["批量批准全部合格页", "Batch approve ready pages"],
   batchApproveDone: ["批量批准完成", "Batch approval complete"],
   readyToApproveCount: ["页可批准", "ready to approve"],

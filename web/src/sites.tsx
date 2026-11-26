@@ -43,6 +43,11 @@ import {
 import { SiteForm } from "./sites/SiteForm";
 import { PlanEditor } from "./sites/PlanEditor";
 import { Interview, IssueList } from "./sites/SiteHelpers";
+import {
+  DemoModeBanner,
+  LogoStudio,
+  SiteAiOptions,
+} from "./sites/SiteStudioExtras";
 export { useLoad, useAgentRuns } from "./sites/shared";
 export { PageReview } from "./sites/PageReview";
 
@@ -343,6 +348,7 @@ export function SiteWorkspace({ locale, role }: Props) {
           </div>
         }
       />
+      <DemoModeBanner site={site} locale={locale} />
       <div
         className={
           tab === "runs"
@@ -814,13 +820,29 @@ export function SiteWorkspace({ locale, role }: Props) {
           )}
           {tab === "settings" &&
             (canEdit ? (
-              <SiteForm
-                key={site.revision}
-                site={site}
-                t={t}
-                locale={locale}
-                done={load.set}
-              />
+              <>
+                <SiteForm
+                  key={site.revision}
+                  site={site}
+                  t={t}
+                  locale={locale}
+                  done={load.set}
+                />
+                <SiteAiOptions
+                  site={site}
+                  role={role}
+                  locale={locale}
+                  t={t}
+                  onSaved={load.set}
+                />
+                <LogoStudio
+                  site={site}
+                  role={role}
+                  locale={locale}
+                  t={t}
+                  onChanged={load.reload}
+                />
+              </>
             ) : (
               <p>{t("readOnly")}</p>
             ))}

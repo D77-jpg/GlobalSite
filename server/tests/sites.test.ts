@@ -2328,16 +2328,21 @@ test("business strategy pairs home/detail atomically, isolates previews and bloc
     (b: any) => b.type === "features",
   ).design.frame = "gallery";
   const invalid = structuredClone(data);
+  // FAQ and claim repair remove unsupported sentences from bodies, items and
+  // tables. Headings are never rewritten, so an unsupported number there must
+  // still fail validation and preserve the encrypted candidate.
+  const unsupportedClaim = "Processing capacity of 18 units";
   invalid.directions[0].page.blocks.push({
     ...invalid.directions[0].page.blocks[0],
-    key: "qa",
-    type: "faq",
-    body: "",
+    key: "capacity",
+    type: "text",
+    heading: unsupportedClaim,
+    body: "Ask our team about processing options for your project.",
     items: [],
-    faq: [{ question: "How do I choose?", answer: "Too short.", detail: "" }],
+    faq: [],
     design: {
       purpose: "context",
-      frame: "table",
+      frame: "band",
       ratio: "natural",
       fit: "contain",
       focus: "center",
@@ -2380,18 +2385,18 @@ test("business strategy pairs home/detail atomically, isolates previews and bloc
   const rejected = await tenant(() => m.AgentRun.findById(queued.body.data.id));
   assert.equal(typeof rejected!.steps[0].candidateCipher, "object");
   assert(
-    !JSON.stringify(rejected!.steps[0].candidateCipher).includes("Too short"),
+    !JSON.stringify(rejected!.steps[0].candidateCipher).includes(unsupportedClaim),
   );
   assert(
     !JSON.stringify(
       (await a.client.request("GET", "/agent-runs/" + queued.body.data.id))
         .body,
-    ).includes("Too short"),
+    ).includes(unsupportedClaim),
   );
 
   assert(
     rejected!.steps[0].validationFeedback.some(
-      (f: any) => f.qualityCode === "CONTENT_FAQ_DIRECT_ANSWER_REQUIRED",
+      (f: any) => f.qualityCode === "CONTENT_UNSOURCED_NUMBER",
     ),
   );
 
@@ -2407,7 +2412,7 @@ test("business strategy pairs home/detail atomically, isolates previews and bloc
     if (input.candidateToRepair) {
       const stored = await m.AgentRun.findById(queued.body.data.id);
       assert(!stored!.steps.some((u: any) => u.draftCandidate));
-      assert(!JSON.stringify(stored).includes("Too short"));
+      assert(!JSON.stringify(stored).includes(unsupportedClaim));
     }
     if (input.proposalKey === "primary") primaryCalls++;
     else if (++alternateCalls === 1) throw new AppError(502, "AI_TRANSIENT");

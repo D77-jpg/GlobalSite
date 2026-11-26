@@ -11,7 +11,13 @@ import { Parser } from "htmlparser2";
 import { config } from "../config";
 import { ensure, AppError } from "../errors";
 import { readAsset } from "./storage.service";
-import { renderStaticPage, e, type Snapshot } from "./static-template.service";
+import { faviconSvg } from "./brand-mark.service";
+import {
+  renderStaticPage,
+  pageComposition,
+  e,
+  type Snapshot,
+} from "./static-template.service";
 export type Files = Record<string, Uint8Array>;
 const builder = path.resolve(__dirname, "../../builder");
 const bytes = (s: string) => Buffer.from(s);
@@ -141,6 +147,8 @@ export async function buildStatic(
         path: "/" + key,
         width: data.info.width,
         height: data.info.height,
+        // S35: generated illustrations are labelled on render.
+        ...(a.asset?.generatedConcept ? { concept: true } : {}),
       };
     }
     snapshot = { ...snapshot, assets };
@@ -155,6 +163,11 @@ export async function buildStatic(
     await fs.copyFile(
       path.join(builder, "inquiry.js"),
       path.join(root, "public/assets/inquiry.js"),
+    );
+    // S35 B2: deterministic favicon used when no logo asset is selected.
+    await fs.writeFile(
+      path.join(root, "public/favicon.svg"),
+      faviconSvg(snapshot.site.brandColor),
     );
     await fs.writeFile(path.join(root, "data.json"), JSON.stringify(pages));
     await fs.writeFile(
@@ -174,12 +187,33 @@ export async function buildStatic(
         .replace(/^[ \t]+/gm, "")
         .replace(/\r?\n+/g, "\n")
         .trim();
+    // S35: the scoped precision pack is appended only when a page selects it, so
+    // sites without composition.pack keep a byte-identical stylesheet.
+    const precisionPack = snapshot.pages.some(
+      (p) => pageComposition(snapshot, p)?.pack === "precision",
+    );
     const cssBundle =
       compactCss(await fs.readFile(path.join(builder, "site.css"), "utf8")) +
       "\n" +
       compactCss(
         await fs.readFile(path.join(builder, "composition.css"), "utf8"),
-      );
+      ) +
+      (precisionPack
+        ? "\n" +
+          compactCss(
+            await fs.readFile(
+              path.join(builder, "pack-precision.css"),
+              "utf8",
+            ),
+          )
+        : "") +
+      // S35: scoped "Illustrative" label rules, only when a page shows one.
+      (pages.some((p) => p.html.includes('class="concept-note"'))
+        ? "\n" +
+          compactCss(
+            await fs.readFile(path.join(builder, "concept.css"), "utf8"),
+          )
+        : "");
     await fs.writeFile(path.join(root, "public/assets/site.css"), cssBundle);
     const copy404 = getStorefrontCopy(snapshot.site.language);
     await fs.writeFile(

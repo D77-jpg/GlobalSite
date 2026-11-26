@@ -201,6 +201,9 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
     } else {
       example = shape.page as ExamplePageShape;
     }
+    // Optional S35 axis, deliberately not shown as a value here so models do not copy it
+    // onto every business: composition.pack ("precision") is described in the B2B
+    // instruction below and in brand-site.md ("Precision pack").
     example.presentation.composition = {
       version: "v1",
       typography: "sans",
@@ -336,6 +339,9 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
       unit: f.unit,
       status: f.status,
       revision: f.revision,
+      ...(f.status !== "confirmed" && f.source?.kind === "ai-suggested"
+        ? { demo: true }
+        : {}),
     })),
     siteMap: (site.plan?.nodes ?? []).map((n) => ({
       key: n.key,
@@ -354,6 +360,7 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
             requiredProductSections: site.plan?.strategy?.productSections,
             requireComposition: !!site.designDirection?.composition,
             paths: (site.plan?.nodes ?? []).map((n) => n.path),
+            allowDemoFacts: !!site.demoMode,
           }),
         }
       : {}),
@@ -415,6 +422,7 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
                 productIds: site.productIds,
                 language: site.language,
                 paths: (site.plan?.nodes ?? []).map((n) => n.path),
+                allowDemoFacts: !!site.demoMode,
               }),
               detail: d.detail
                 ? validatePage(d.detail.page, s.facts, {
@@ -425,6 +433,7 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
                     requiredProductSections:
                       site.plan?.strategy?.productSections,
                     paths: (site.plan?.nodes ?? []).map((n) => n.path),
+                    allowDemoFacts: !!site.demoMode,
                   })
                 : [],
             })),
@@ -474,6 +483,7 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
             language: site.language,
             requiredProductSections: site.plan?.strategy?.productSections,
             paths: (site.plan?.nodes ?? []).map((n) => n.path),
+            allowDemoFacts: !!site.demoMode,
           }),
         }
       : {}),
@@ -520,7 +530,10 @@ export function unitPrompt(run: AgentRunDoc, unit: AgentStepUnit) {
       "\n" +
       instruction +
       (site.buyerProfile
-        ? "\nB2B purchase-first composition: follow buyerProfile audiences and node.brief. Use structured category-grid/product-grid/split/features/process/customization/evidence/case-study/downloads/cta/comparison/gallery/metrics/certifications/showcase alongside legacy blocks. Items are {title,body,assetId:null,alt:empty string,href:null,refs:[]}. All optional fields may be omitted. Use distinct recipes for home/category/product; homepage needs product discovery, meaningful context and a procurement CTA, not three introductions saying the same thing. Never publish private design notes. Evidence, metrics, certifications, case-study and customization items require matching confirmed refs. Omit optional sections with no evidence; retain required product placeholders internally. A reference website is layout research, not proof about this company. Use an image block with a selected asset for the hero whenever images exist. Aim for 400-800 useful words across 5-8 purposeful home sections when evidence exists; apply compositionBrief for buying decisions and source gaps. New B2B output MUST contain presentation.composition. A design must vary typography, product presentation or navigation as well as its hero. Shared direction controls typography/palette/navigation/productLayout across all pages; hero composition stays page-specific. Sparse facts require useful neutral selection guidance and targeted interview gaps, never invented capabilities or repeated contact-us filler. product pages need meaningful confirmed specifications and buying context rather than an introduction duplicated across sections. Each page should answer its own buyer questions; do not use giant repeated images to fill space. Choose primaryActionTarget inquiry/catalogue/collection, and concise B2B headings. Use exact siteMap paths for internal links; never guess shortened product URLs. Resolve supplied validationIssues using confirmed evidence or neutral wording, never invented facts. New structured fields are public text and subject to the same fact gate."
+        ? "\nB2B purchase-first composition: follow buyerProfile audiences and node.brief. Use structured category-grid/product-grid/split/features/process/customization/evidence/case-study/downloads/cta/comparison/gallery/metrics/certifications/showcase alongside legacy blocks. Items are {title,body,assetId:null,alt:empty string,href:null,refs:[]}. All optional fields may be omitted. Use distinct recipes for home/category/product; homepage needs product discovery, meaningful context and a procurement CTA, not three introductions saying the same thing. Never publish private design notes. Evidence, metrics, certifications, case-study and customization items require matching confirmed refs. Omit optional sections with no evidence; retain required product placeholders internally. A reference website is layout research, not proof about this company. Use an image block with a selected asset for the hero whenever images exist. Aim for 400-800 useful words across 5-8 purposeful home sections when evidence exists; apply compositionBrief for buying decisions and source gaps. New B2B output MUST contain presentation.composition. composition.pack is the one optional axis to omit by default: set pack precision only for equipment, machinery, hardware or commercial-appliance businesses (with typography technical, palette obsidian or graphite, radius sharp) and keep the same pack on every page of that direction. A design must vary typography, product presentation or navigation as well as its hero. Shared direction controls typography/palette/navigation/productLayout across all pages; hero composition stays page-specific. Sparse facts require useful neutral selection guidance and targeted interview gaps, never invented capabilities or repeated contact-us filler. product pages need meaningful confirmed specifications and buying context rather than an introduction duplicated across sections. Each page should answer its own buyer questions; do not use giant repeated images to fill space. Choose primaryActionTarget inquiry/catalogue/collection, and concise B2B headings. Use exact siteMap paths for internal links; never guess shortened product URLs. Resolve supplied validationIssues using confirmed evidence or neutral wording, never invented facts. New structured fields are public text and subject to the same fact gate."
+        : "") +
+      (site.demoMode
+        ? "\nDemo preview mode: facts marked demo=true are AI-suggested placeholders for a private preview. You may cite them exactly like confirmed facts (same factId/revision refs, value verbatim); never alter, combine or extrapolate their values and never invent other numbers."
         : "") +
       (run.step === "refine"
         ? "\nRefine the full previous page using the supplied review. Keep its purpose and confirmed refs, remove redundant sections, use the structured section recipes, and return a complete page in the content schema. New draft needs human approval."

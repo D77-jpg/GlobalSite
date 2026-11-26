@@ -136,6 +136,40 @@ export const siteInput = z
   .strict()
   .refine((x) => new Set(x.productIds).size === x.productIds.length);
 export const sitePatch = z.object({ revision, data: siteInput }).strict();
+// S35: preview/generation switches. Neither relaxes any approval or publish gate.
+export const siteOptionsInput = z
+  .object({
+    revision,
+    demoMode: z.boolean().optional(),
+    autoImages: z.boolean().optional(),
+  })
+  .strict()
+  .refine((x) => x.demoMode !== undefined || x.autoImages !== undefined);
+// S35 B2: private logo brief (never rendered on the public site).
+export const logoDesign = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    keywords: z.array(z.string().trim().min(1).max(40)).max(6),
+    colors: z
+      .array(z.string().regex(/^#[a-fA-F0-9]{6}$/))
+      .min(1)
+      .max(3),
+    concept: z.string().trim().max(240),
+  })
+  .strict();
+export const logoSelectInput = z
+  .object({ revision, assetId: objectId.nullable() })
+  .strict();
+export const logoGenerateInput = z
+  .object({
+    consent: z.literal(true),
+    logoDesign: logoDesign.optional(),
+    candidates: z.number().int().min(2).max(3).optional(),
+  })
+  .strict();
+export const factSuggestionInput = z
+  .object({ consent: z.literal(true) })
+  .strict();
 export const intent = z.enum(["learn", "compare", "specify", "source", "buy"]);
 const key = z
   .string()
@@ -362,6 +396,9 @@ export const composition = z
     surface: z.enum(["light", "warm", "contrast"]).optional(),
     headerStyle: z.enum(["classic", "editorial", "minimal"]).optional(),
     radius: z.enum(["sharp", "subtle", "rounded"]).optional(),
+    // S35: optional trusted rendering pack (scoped CSS in builder/pack-*.css).
+    // Omitted = legacy composition output, unchanged.
+    pack: z.enum(["precision"]).optional(),
   })
   .strict();
 export const presentation = z

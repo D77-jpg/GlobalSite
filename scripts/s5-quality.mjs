@@ -76,6 +76,17 @@ const compositions = {
     hero: "panorama",
     subject: "Glass collections",
   },
+  // S35 precision rendering pack (scoped pack-precision.css).
+  "composition-precision": {
+    typography: "technical",
+    palette: "obsidian",
+    navigation: "catalogue",
+    productLayout: "cards",
+    radius: "sharp",
+    pack: "precision",
+    hero: "panorama",
+    subject: "Espresso equipment",
+  },
 };
 const businessCases = {
   "business-art": {

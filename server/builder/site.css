@@ -1943,3 +1943,35 @@ footer button {
     line-height: 1.55;
   }
 }
+/* S35 B2: deterministic SVG wordmark (replaces the former initial letter). */
+.brand-wordmark {
+  display: block;
+  height: 2.25rem;
+  width: auto;
+  max-width: min(62vw, 22rem);
+  overflow: visible;
+}
+.brand-wordmark text {
+  fill: currentColor;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.brand-wordmark .wordmark-mark {
+  fill: var(--brand, #49694c);
+}
+.brand-wordmark .wordmark-cut {
+  fill: #fff;
+}
+.footer-logo {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.footer-logo img {
+  max-height: 48px;
+  width: auto;
+}
+.footer-logo .brand-wordmark {
+  height: 2rem;
+}

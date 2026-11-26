@@ -12,10 +12,13 @@ import type { AgentResult } from "../../site-agent-provider.service";
 import { assertSnapshot, fenceRun, ownRun } from "../runtime";
 import {
   allowedInterview,
+  normalizeNullableAxes,
   prepareDesignPage,
+  repairDraftPage,
   reviewOutput,
   validateGeneratedComposition,
 } from "../validation";
+import { baselineFindings, baselineReport } from "../quality-baseline";
 import type { AgentRunDoc, AgentTaskDoc, DesignDirection } from "../types";
 
 export async function applyUnit(
@@ -75,9 +78,20 @@ export async function applyUnit(
       );
       const report = reviewOutput.parse(output);
       const capture = unit.capture!;
-      report.findings = [
-        ...report.findings,
+      const visualReview = !!(result.visualInput ?? unit.visualInput);
+      // S35 stage D: deterministic baseline; model scores only with screenshots.
+      const baseline = baselineReport(
+        unit.draft!,
+        capture.metrics,
+        unit.node?.type ?? "home",
+        { visualInput: visualReview, modelScores: report.scores ?? null },
+      );
+      const { scores: _modelScores, ...reportBody } = report;
+      void _modelScores;
+      reportBody.findings = [
+        ...reportBody.findings,
         ...measuredFindings(capture.metrics),
+        ...baselineFindings(baseline),
       ].slice(0, 11);
       const validation = validatePage(unit.draft!, r.inputSnapshot.facts, {
         productId: unit.node?.productId,
@@ -88,10 +102,11 @@ export async function applyUnit(
         requiredProductSections: site.plan?.strategy?.productSections,
         requireComposition: !!site.designDirection?.composition,
         paths: (site.plan?.nodes ?? []).map((n: { path: string }) => n.path),
+        allowDemoFacts: !!r.inputSnapshot.site.demoMode,
       });
       if (validation.length) {
-        report.findings = report.findings.slice(0, 11);
-        report.findings.push({
+        reportBody.findings = reportBody.findings.slice(0, 11);
+        reportBody.findings.push({
           blockKey: null,
           code: validation.some((i) => i.code === "PAGE_LINK_INVALID")
             ? "navigation"
@@ -102,7 +117,8 @@ export async function applyUnit(
         });
       }
       output = {
-        ...report,
+        ...reportBody,
+        baseline,
         metrics: capture.metrics,
         requiresHumanVisualReview: !(result.visualInput ?? unit.visualInput),
         reviewMode:
@@ -133,6 +149,7 @@ export async function applyUnit(
         );
         output = d;
       } else {
+        output = normalizeNullableAxes(output);
         const single = unit.directionKey
           ? v.directionOutput.parse(output).proposal
           : null;
@@ -242,6 +259,7 @@ export async function applyUnit(
                 ),
                 brandName: site.name,
                 language: site.language,
+                allowDemoFacts: !!r.inputSnapshot.site.demoMode,
               });
               if (problems.length)
                 throw new z.ZodError(
@@ -341,7 +359,10 @@ export async function applyUnit(
           blocks: unit.draft!.blocks.map((x) => (x.key === unit.key ? b : x)),
         };
       } else {
-        const rawOut = output as { page?: unknown } | null | undefined;
+        const rawOut = normalizeNullableAxes(output) as
+          | { page?: unknown }
+          | null
+          | undefined;
         data = v.pageInput.parse(rawOut?.page);
       }
       if (site.designDirection && data.presentation) {
@@ -354,6 +375,9 @@ export async function applyUnit(
             : {}),
         };
       }
+      // S35: same deterministic FAQ / unsupported-claim repair as proposals.
+      if (r.step === "content" || r.step === "refine")
+        data = repairDraftPage(r, unit, data);
       if (r.step !== "rewrite")
         validateGeneratedComposition(r, data, unit.node!.type);
       const page = await writePage(

@@ -187,6 +187,7 @@ export const Asset = entity<AssetRow>(
     fileName: String,
     crmImportKey: String,
     generatedConcept: Boolean,
+    originKey: String,
     kind: { type: String, default: "image" },
     totalBytes: Number,
     variants: Schema.Types.Mixed,
@@ -205,6 +206,13 @@ export const Asset = entity<AssetRow>(
       {
         unique: true,
         partialFilterExpression: { crmImportKey: { $type: "string" } },
+      },
+    ],
+    [
+      { organizationId: 1, originKey: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { originKey: { $type: "string" } },
       },
     ],
   ],
@@ -415,6 +423,8 @@ export const AgentRun = entity<any>(
     actorId: ref,
     status: { type: String, default: "queued" },
     errorCode: String,
+    // S35: private diagnostic for failed AI fact suggestions (never model text).
+    invalidReason: String,
     resultIds: { type: [Schema.Types.ObjectId], default: [] },
     rejectedCount: Number,
     tokens: Number,
@@ -461,6 +471,10 @@ export const Site = entity<any>(
     brandChannels: Schema.Types.Mixed,
     designDirection: Schema.Types.Mixed,
     businessBrief: String,
+    // S35: demo preview mode, AI illustration opt-in and private logo brief.
+    demoMode: { type: Boolean, default: false },
+    autoImages: { type: Boolean, default: false },
+    logoDesign: Schema.Types.Mixed,
     templateId: String,
     targetMarkets: [String],
     language: { type: String, default: "en" },

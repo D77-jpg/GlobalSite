@@ -76,6 +76,8 @@ export type BucketRow = TenantBase & {
 };
 export type AssetRow = TenantBase & {
   generatedConcept?: boolean;
+  /** S35: stable reuse key for generated illustrations/logos. */
+  originKey?: string;
   key: string;
   fileName?: string;
   kind?: string;

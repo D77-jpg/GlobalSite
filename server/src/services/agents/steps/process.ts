@@ -32,10 +32,13 @@ import {
 } from "../runtime";
 import {
   extractFailedBlockKeys,
+  normalizeNullableAxes,
   prepareDesignPage,
+  repairDraftPage,
   validateGeneratedComposition,
   validationFeedback,
 } from "../validation";
+import { fillUnitImages } from "../auto-images";
 import { unitPrompt } from "../prompts";
 import { applyUnit } from "./apply-unit";
 import type {
@@ -94,7 +97,13 @@ export async function processSiteAgent(
         ) as { label: string; rationale: string; page: v.PageInput };
         try {
           const prepared = prepareDesignPage(run, unit, candidate);
-          await applyUnit(run, index, { output: prepared, tokens: 0 }, task);
+          const filled = await fillUnitImages(
+            run,
+            index,
+            { output: prepared, tokens: 0 },
+            task,
+          );
+          await applyUnit(run, index, filled, task);
           continue;
         } catch (error) {
           if (
@@ -346,12 +355,21 @@ export async function processSiteAgent(
         await settle("ai_tokens", operationId!, result.tokens);
       }
 
+      // S35 stage B: optional illustration fill (opt-in, never fails the unit).
+      if (!result.errorCode) {
+        const current = await ownRun(runId);
+        result = await fillUnitImages(current, index, result, task);
+      }
+
       if (run.step === "refine" && !result.errorCode) {
         const fresh = await ownRun(String(run._id));
         let u = fresh.steps[index];
         if (!u.afterCapture) {
-          const outObj = result.output as { page?: unknown } | null | undefined;
-          const page = v.pageInput.parse(outObj?.page);
+          const outObj = normalizeNullableAxes(result.output) as
+            | { page?: unknown }
+            | null
+            | undefined;
+          let page = v.pageInput.parse(outObj?.page);
           if (fresh.inputSnapshot.site.designDirection && page.presentation) {
             const direction = fresh.inputSnapshot.site.designDirection;
             page.presentation = {
@@ -370,6 +388,7 @@ export async function processSiteAgent(
                 : {}),
             };
           }
+          page = repairDraftPage(fresh, u, page);
           validateGeneratedComposition(fresh, page, u.node!.type);
           if (!u.afterCaptureKey) {
             const key = randomUUID();
@@ -479,11 +498,15 @@ export async function processSiteAgent(
                 pendingResult: undefined,
                 ...(fresh.step === "design" &&
                 unit.pageKind &&
-                v.designPageOutput.safeParse(unit.pendingResult?.output).success
+                v.designPageOutput.safeParse(
+                  normalizeNullableAxes(unit.pendingResult?.output),
+                ).success
                   ? {
                       candidateCipher: encrypt(
                         JSON.stringify(
-                          v.designPageOutput.parse(unit.pendingResult!.output),
+                          v.designPageOutput.parse(
+                            normalizeNullableAxes(unit.pendingResult!.output),
+                          ),
                         ),
                         candidatePurpose(fresh, unit),
                       ),

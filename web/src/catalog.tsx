@@ -1800,6 +1800,8 @@ export function FactsPage({ locale, role }: Props) {
     t = catalogText(locale),
     [params] = useSearchParams(),
     [status, setStatus] = useState(params.get("status") ?? ""),
+    // S35: "AI suggestions" filter (source.kind = ai-suggested).
+    [aiOnly, setAiOnly] = useState(params.get("source") === "ai-suggested"),
     pages = useCursor(),
     { cursor } = pages,
     [editing, setEditing] = useState<Item | null | undefined>(),
@@ -1810,6 +1812,7 @@ export function FactsPage({ locale, role }: Props) {
     "/facts?" +
       new URLSearchParams({
         ...(status ? { status } : {}),
+        ...(aiOnly ? { source: "ai-suggested" } : {}),
         ...(cursor ? { cursor } : {}),
       }),
   );
@@ -1905,7 +1908,19 @@ export function FactsPage({ locale, role }: Props) {
                 {t(s || "all")}
               </button>
             ))}
+            <button
+              type="button"
+              aria-pressed={aiOnly}
+              onClick={() => {
+                pages.reset();
+                setSelectedIds([]);
+                setAiOnly((v) => !v);
+              }}
+            >
+              <Sparkles size={12} aria-hidden="true" /> {t("aiSuggestedFilter")}
+            </button>
           </div>
+          {aiOnly && <p className="muted">{t("aiSuggestedHint")}</p>}
           <div className="gs-stack-sm">
             {role !== "viewer" && (
               <button
@@ -2155,6 +2170,9 @@ export function FactsPage({ locale, role }: Props) {
                         )}
                         <td className="gs-facts-type-col">
                           <strong>{f.type}</strong>
+                          {f.source?.kind === "ai-suggested" && (
+                            <span className="gs-chip">{t("ai-suggested")}</span>
+                          )}
                           <small>
                             {t(f.subjectType)} · v{f.revision}
                           </small>

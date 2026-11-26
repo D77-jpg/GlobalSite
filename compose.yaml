@@ -18,6 +18,9 @@ x-app: &app
     SMTP_USER: ${SMTP_USER:-}
     SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     SMTP_FROM: ${SMTP_FROM:-GlobalSite <noreply@example.invalid>}
+    AUTO_IMAGE_HOME_MAX: ${AUTO_IMAGE_HOME_MAX:-6}
+    AUTO_IMAGE_DETAIL_MAX: ${AUTO_IMAGE_DETAIL_MAX:-3}
+    QUALITY_BASELINE_THRESHOLD: ${QUALITY_BASELINE_THRESHOLD:-3.5}
   volumes:
     - storage:/app/storage
   depends_on:

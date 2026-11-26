@@ -398,6 +398,12 @@ export const catalogMessages = {
     "网站不允许自动读取该路径。",
     "The website does not allow automated reading of this path.",
   ],
+  "ai-suggested": ["AI 建议", "AI suggestion"],
+  aiSuggestedFilter: ["AI 建议", "AI suggestions"],
+  aiSuggestedHint: [
+    "AI 建议事实为待确认候选，仅在站点开启演示模式时可用于预览；确认前不能用于批准或发布。",
+    "AI suggestions are unconfirmed candidates. They can only be previewed in demo mode and cannot be approved or published until confirmed.",
+  ],
   SOURCE_NOT_LOCAL: [
     "此来源尚未开放，请使用本地产品、资料或手工依据。",
     "This source is not available yet. Use a local product, file or manual evidence.",

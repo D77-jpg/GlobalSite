@@ -51,8 +51,17 @@ export const revision = z.number().int().min(1);
 export const productPatch = z.object({ revision, data: productInput }).strict();
 export const sourceSchema = z
   .object({
-    kind: z.enum(["manual", "product", "asset", "website", "globalcrm"]),
+    // "ai-suggested" is only accepted when editing an existing S35 AI suggestion.
+    kind: z.enum([
+      "manual",
+      "product",
+      "asset",
+      "website",
+      "globalcrm",
+      "ai-suggested",
+    ]),
     refId: objectId.optional(),
+    runId: objectId.optional(),
     url: z
       .string()
       .url()
@@ -68,6 +77,7 @@ export const sourceSchema = z
     label: z.string().max(200).optional(),
     capturedAt: z.string().datetime().optional(),
     textVerified: z.boolean().optional(),
+    editedAt: z.string().datetime().optional(),
   })
   .strict();
 export const factInput = z
@@ -94,6 +104,7 @@ export const listQuery = z
     category: z.string().max(120).optional(),
     subjectId: objectId.optional(),
     kind: z.string().max(30).optional(),
+    source: z.enum(["ai-suggested"]).optional(),
   })
   .strict();
 export const importMapping = z.partialRecord(

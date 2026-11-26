@@ -176,7 +176,15 @@ export async function assertSnapshot(
     409,
     "SOURCE_CHANGED",
   );
-  const facts = snapshot.facts;
+  // S35 stage C: demo snapshots also freeze ai-suggested candidates. Turning
+  // demo mode on or off, or reviewing such a fact, invalidates the snapshot.
+  ensure(
+    !!site.demoMode === !!snapshot.site.demoMode,
+    409,
+    "SOURCE_CHANGED",
+  );
+  const facts = snapshot.facts.filter((f) => f.status === "confirmed");
+  const demoFacts = snapshot.facts.filter((f) => f.status !== "confirmed");
   const products = snapshot.products;
   if (facts.length)
     ensure(
@@ -184,6 +192,17 @@ export async function assertSnapshot(
         status: "confirmed",
         $or: facts.map((f) => ({ _id: f.id, revision: f.revision })),
       }).session(session ?? null)) === facts.length,
+      409,
+      "SOURCE_CHANGED",
+    );
+  if (demoFacts.length)
+    ensure(
+      !!snapshot.site.demoMode &&
+        (await FactSheet.countDocuments({
+          status: "candidate",
+          "source.kind": "ai-suggested",
+          $or: demoFacts.map((f) => ({ _id: f.id, revision: f.revision })),
+        }).session(session ?? null)) === demoFacts.length,
       409,
       "SOURCE_CHANGED",
     );

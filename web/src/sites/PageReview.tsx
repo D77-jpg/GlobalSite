@@ -1098,6 +1098,29 @@ function PageEditor({
                         ))}
                       </select>
                     </label>
+                    <label>
+                      {t("pack")}
+                      <select
+                        value={data.presentation.composition.pack ?? ""}
+                        onChange={(e) => {
+                          // S35: optional style pack; "none" omits the axis entirely.
+                          const { pack: _previous, ...rest } =
+                            data.presentation.composition;
+                          void _previous;
+                          update({
+                            presentation: {
+                              ...data.presentation,
+                              composition: e.target.value
+                                ? { ...rest, pack: e.target.value }
+                                : rest,
+                            },
+                          });
+                        }}
+                      >
+                        <option value="">{t("packNone")}</option>
+                        <option value="precision">{t("packPrecision")}</option>
+                      </select>
+                    </label>
                   </div>
                 )}
               </fieldset>

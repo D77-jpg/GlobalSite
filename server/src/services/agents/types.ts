@@ -67,6 +67,8 @@ export type AgentSnapshotFact = {
   unit?: string | null;
   status: string;
   revision: number;
+  /** S35 stage C: only `kind` is read (ai-suggested demo candidates). */
+  source?: { kind?: string; refId?: string } | null;
 };
 
 export type AgentSnapshotProduct = {
@@ -119,6 +121,11 @@ export type AgentSnapshotSite = {
   revision: number;
   planRevision: number;
   planConfirmed?: boolean;
+  /** S35 stage C: demo preview mode (ai-suggested candidates citable). */
+  demoMode?: boolean;
+  /** S35 stage B: AI illustration fill for missing images (opt-in). */
+  autoImages?: boolean;
+  logoId?: string | null;
 };
 
 export type AgentInputSnapshot = {
@@ -178,6 +185,10 @@ export type AgentStepUnit = {
     rationale: string;
     page: PageInput;
   };
+  /** S35 stage B: slot key -> generated concept asset id, persisted before use. */
+  generatedImages?: Record<string, string>;
+  /** S35 stage B: fixed event codes for skipped/failed illustration slots. */
+  imageEvents?: string[];
   /** Localized repair hint: when only 1-2 blocks fail validation, track their keys */
   failedBlockKeys?: string[];
   instructions?: string;

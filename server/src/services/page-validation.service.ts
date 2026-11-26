@@ -59,6 +59,11 @@ function group(text: string) {
           ? "lead"
           : "";
 }
+// S35 stage C: AI-suggested candidate facts are citable only while the site
+// is in demo mode. They keep their real candidate status; approval, version and
+// publication gates still require confirmed facts.
+export const isDemoFact = (f: any) =>
+  !!f && f.status === "candidate" && f.source?.kind === "ai-suggested";
 const matchesGroup = (f: any, g: string) =>
   !g ||
   {
@@ -80,10 +85,14 @@ export function validatePage(
     language?: string;
     paths?: string[];
     requireComposition?: boolean;
+    allowDemoFacts?: boolean;
   },
 ): Issue[] {
   const issues: Issue[] = [],
     factMap = new Map(facts.map((f) => [String(f._id ?? f.id), f]));
+  const citable = (f: any) =>
+    !!f &&
+    (f.status === "confirmed" || (!!context.allowDemoFacts && isDemoFact(f)));
   const hasBuyerCopy =
     data.presentation?.inquiryHeading || data.presentation?.inquiryLead;
   const add = (code: string, field: string, key: string | null, token = "") => {
@@ -104,7 +113,7 @@ export function validatePage(
     const candidates: any[] = [];
     for (const ref of refs) {
       const f = factMap.get(ref.factId);
-      if (!f || f.status !== "confirmed" || f.revision !== ref.revision) {
+      if (!f || !citable(f) || f.revision !== ref.revision) {
         add("FACT_REFERENCE_STALE", field, key, ref.factId);
         continue;
       }
@@ -200,7 +209,13 @@ export function validatePage(
       add("UNSOURCED_YEAR", field, key, "year");
     // Pages using the buyer-copy fields opt into the new editorial check.
     if (hasBuyerCopy && (context.language ?? "en") === "en") {
-      const audit = value.match(
+      // The documented safe placeholders for missing product details are exempt.
+      const audit = value
+        .replace(
+          /Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?/gi,
+          "",
+        )
+        .match(
         /\b(?:is|are) (?:confirmed|listed|verified) (?:with|as|at)\b|\bconfirmed (?:labels?|details?|facts?|specifications?)\b|\b(?:ask|contact) (?:our|the) team to confirm\b|\baccording to (?:our|the) records\b|\bconfirmed (?:grinder |machine |product )?(?:moq|lead time)\b/i,
       );
       if (audit) add("COPY_AUDIT_LANGUAGE", field, key, audit[0]);
@@ -251,7 +266,7 @@ export function validatePage(
         .filter(
           (f) =>
             f &&
-            f.status === "confirmed" &&
+            citable(f) &&
             b.refs.some(
               (r) =>
                 r.factId === String(f._id ?? f.id) && r.revision === f.revision,

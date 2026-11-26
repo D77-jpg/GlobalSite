@@ -7,7 +7,9 @@ import {
   productGuide,
   quoteBar,
   brandDock,
+  conceptNote,
 } from "./b2b-template.service";
+import { wordmarkSvg } from "./brand-mark.service";
 import {
   renderInquiry,
   renderConsent,
@@ -36,16 +38,35 @@ export type Snapshot = {
   settings: any;
   assets: Record<
     string,
-    { path: string; width: number; height: number; mime?: string }
+    // concept: S35 generated illustration (labelled "Illustrative" on render).
+    { path: string; width: number; height: number; mime?: string; concept?: boolean }
   >;
   createdAt: string;
   inquiry?: any;
 };
 
 export const templateVersion = "b2b-site-v8";
+
+// S35: same composition resolution as renderStaticPage, exported so the builder and
+// private preview only bundle an optional rendering pack when a page actually uses it.
+export function pageComposition(s: Snapshot, p: any) {
+  const home = s.pages.find((v) => v.path === "/");
+  const parsed = compositionSchema.safeParse(
+    s.site.designDirection?.composition ??
+      home?.presentation?.composition ??
+      p?.presentation?.composition,
+  );
+  return parsed.success ? parsed.data : null;
+}
 const json = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 
-function image(s: Snapshot, id: string, alt: string, hero = false) {
+function image(
+  s: Snapshot,
+  id: string,
+  alt: string,
+  hero = false,
+  note = true,
+) {
   const a = s.assets[id];
   if (!a) return "";
   return (
@@ -59,8 +80,43 @@ function image(s: Snapshot, id: string, alt: string, hero = false) {
     a.height +
     '" ' +
     (hero ? 'fetchpriority="high"' : 'loading="lazy"') +
-    ' decoding="async">'
+    ' decoding="async">' +
+    (note ? conceptNote(s, id) : "")
   );
+}
+
+// S35: first-screen fallback for pages using a rendering pack. Only approved
+// assets already present in the frozen snapshot are used, in this order: the
+// first product page main image, then the first split/gallery/features asset on
+// the page. Pages with their own hero image are unchanged.
+function heroFallback(s: Snapshot, p: any): { assetId: string; alt: string } | null {
+  const own = (v: any) => {
+    const block = v.blocks.find(
+      (b: any) => b.type === "image" && b.assetId && s.assets[b.assetId],
+    );
+    if (block) return { assetId: block.assetId, alt: block.alt || v.title };
+    const product = s.products?.find((x) => x.id === v.productId);
+    const id = product?.assetIds.filter((a) => s.assets[a]).at(-1);
+    return id ? { assetId: id, alt: product!.name } : null;
+  };
+  const productPage =
+    p.type === "product" ? p : s.pages.find((v) => v.type === "product");
+  const fromProduct = productPage ? own(productPage) : null;
+  if (fromProduct) return fromProduct;
+  for (const b of p.blocks) {
+    if (b.type === "split" && b.assetId && s.assets[b.assetId])
+      return { assetId: b.assetId, alt: b.alt || b.heading };
+    if (["gallery", "features"].includes(b.type)) {
+      const item = (b.items ?? []).find(
+        (i: any) =>
+          i.assetId &&
+          s.assets[i.assetId] &&
+          !s.assets[i.assetId].path.endsWith(".pdf"),
+      );
+      if (item) return { assetId: item.assetId, alt: item.alt || item.title };
+    }
+  }
+  return null;
 }
 
 function section(s: Snapshot, b: any, p?: any) {
@@ -202,6 +258,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
     ),
     home = s.pages.find((v) => v.path === "/"),
     presentation = p.presentation ?? {},
+    fallbackVisual =
+      !firstImage && pageComposition(s, p)?.pack ? heroFallback(s, p) : null,
+    logoAsset: Snapshot["assets"][string] | undefined = s.site.logoId
+      ? s.assets[s.site.logoId]
+      : undefined,
     style =
       s.site.designDirection?.visualStyle ??
       presentation.visualStyle ??
@@ -211,7 +272,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
         : s.site.templateId === "machinery"
           ? "industrial"
           : "minimal"),
-    layout = presentation.heroLayout ?? (firstImage ? "split" : "stacked");
+    layout =
+      presentation.heroLayout ??
+      (firstImage || fallbackVisual ? "split" : "stacked");
   const parsedComposition = compositionSchema.safeParse(
     s.site.designDirection?.composition ??
       home?.presentation?.composition ??
@@ -465,23 +528,28 @@ export function renderStaticPage(s: Snapshot, p: any) {
         .join("") +
       "</ul></details></section>"
     : "";
+  // S35 B2: the selected (uploaded or generated) logo, else a deterministic
+  // SVG wordmark of the exact site name instead of the former initial letter.
   const brand =
     '<a class="brand" href="/">' +
-    (s.site.logoId
-      ? image(s, s.site.logoId, s.site.name + " logo")
-      : '<span class="brand-mark" aria-hidden="true">' +
-        e(s.site.name.slice(0, 1)) +
-        "</span>") +
-    "<span>" +
-    e(s.site.name) +
-    "</span></a>";
+    (logoAsset
+      ? image(s, s.site.logoId, s.site.name + " logo", false, false) +
+        "<span>" +
+        e(s.site.name) +
+        "</span>"
+      : wordmarkSvg(s.site.name)) +
+    "</a>";
   const heading = presentation.headline ?? cleanTitle(p);
   const lead = presentation.summary ?? p.metaDescription;
   const hero =
     '<section class="hero ' +
     (composition ? "composition-hero-" : "hero-") +
     e(layout) +
-    (firstImage ? " has-visual" + sectionClasses(firstImage.design) : "") +
+    (firstImage
+      ? " has-visual" + sectionClasses(firstImage.design)
+      : fallbackVisual
+        ? " has-visual"
+        : "") +
     '"><div class="hero-copy">' +
     (composition
       ? '<p class="hero-eyebrow">' +
@@ -531,7 +599,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
       ? '<figure class="hero-visual">' +
         image(s, firstImage.assetId, firstImage.alt, true) +
         "</figure>"
-      : "") +
+      : fallbackVisual
+        ? '<figure class="hero-visual">' +
+          image(s, fallbackVisual.assetId, fallbackVisual.alt, true) +
+          "</figure>"
+        : "") +
     "</section>";
   const brandColor = /^#[0-9a-f]{6}$/i.test(s.site.brandColor)
     ? s.site.brandColor
@@ -547,7 +619,14 @@ export function renderStaticPage(s: Snapshot, p: any) {
     (firstImage
       ? new URL(s.assets[firstImage.assetId].path, s.settings.canonicalBaseUrl)
           .href
-      : null);
+      : fallbackVisual
+        ? new URL(
+            s.assets[fallbackVisual.assetId].path,
+            s.settings.canonicalBaseUrl,
+          ).href
+        : logoAsset
+          ? new URL(logoAsset.path, s.settings.canonicalBaseUrl).href
+          : null);
   const hasGallery = p.blocks.some(
     (b: any) =>
       b.type === "gallery" &&
@@ -595,16 +674,19 @@ export function renderStaticPage(s: Snapshot, p: any) {
       composition.productLayout +
       (composition.surface ? " surface-" + composition.surface : "") +
       (composition.headerStyle ? " header-" + composition.headerStyle : "") +
-      (composition.radius ? " radius-" + composition.radius : "")
+      (composition.radius ? " radius-" + composition.radius : "") +
+      (composition.pack ? " pack-" + composition.pack : "")
     : "";
   const fontPreload = composition
-    ? composition.typography === "luxury" ||
-      composition.typography === "editorial"
-      ? '<link rel="preload" href="/assets/fonts/cormorant-garamond-400.woff2" as="font" type="font/woff2" crossorigin>'
-      : composition.typography === "technical" ||
-          composition.typography === "geometric"
-        ? '<link rel="preload" href="/assets/fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>'
-        : '<link rel="preload" href="/assets/fonts/plus-jakarta-sans-700.woff2" as="font" type="font/woff2" crossorigin>'
+    ? composition.pack === "precision"
+      ? '<link rel="preload" href="/assets/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>'
+      : composition.typography === "luxury" ||
+          composition.typography === "editorial"
+        ? '<link rel="preload" href="/assets/fonts/cormorant-garamond-400.woff2" as="font" type="font/woff2" crossorigin>'
+        : composition.typography === "technical" ||
+            composition.typography === "geometric"
+          ? '<link rel="preload" href="/assets/fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>'
+          : '<link rel="preload" href="/assets/fonts/plus-jakarta-sans-700.woff2" as="font" type="font/woff2" crossorigin>'
     : '<link rel="preload" href="/assets/fonts/varela-round.ttf" as="font" type="font/ttf" crossorigin>';
   return (
     '<!DOCTYPE html><html lang="' +
@@ -641,6 +723,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
         e(seo.bingSiteVerification) +
         '">'
       : "") +
+    (logoAsset
+      ? '<link rel="icon" href="' + e(logoAsset.path) + '">'
+      : '<link rel="icon" href="/favicon.svg" type="image/svg+xml">') +
     fontPreload +
     '<link rel="stylesheet" href="/assets/site.css"><script src="/assets/inquiry.js" defer></script><style>:root{--brand:' +
     brandColor +
@@ -717,7 +802,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
     quoteBar(s, p) +
     brandDock(s) +
     lightbox +
-    '</main><footer><div class="footer-brand"><strong>' +
+    '</main><footer><div class="footer-brand"><span class="footer-logo">' +
+    (logoAsset
+      ? image(s, s.site.logoId, s.site.name + " logo", false, false)
+      : wordmarkSvg(s.site.name, { decorative: true })) +
+    "</span><strong>" +
     e(s.site.name) +
     "</strong><p>" +
     e(footerContact) +

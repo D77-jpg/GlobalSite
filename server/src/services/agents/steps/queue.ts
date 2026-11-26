@@ -11,6 +11,7 @@ import {
 import { ensure } from "../../../errors";
 import * as v from "../../../validators/sites.validator";
 import {
+  demoFactRows,
   ownSite,
   pageData,
   pageView,
@@ -21,6 +22,7 @@ import { factDto, productDto, sha } from "../../catalog.service";
 import { assertSiteEditable } from "../../publication-lock.service";
 import { siteSkillProfile } from "../../site-skill-profile";
 import { validatePage } from "../../page-validation.service";
+import { queueAutoLogo } from "../../site-media.service";
 import {
   agentDto,
   assertSnapshot,
@@ -144,6 +146,9 @@ export async function queueAgent(
       409,
       "SOURCE_CHANGED",
     );
+    // S35 stage C: demo mode freezes ai-suggested candidates as citable input
+    // (their candidate status is kept). Off: confirmed facts only, as before.
+    const demoRows = site.demoMode ? await demoFactRows(site, session) : [];
     if (
       ["design", "content", "rewrite", "review", "refine"].includes(data.step)
     )
@@ -380,7 +385,7 @@ export async function queueAgent(
       skillProfile: siteSkillProfile(),
       site: siteDto(site),
       products: rows.products.map(productDto),
-      facts: rows.facts.map(factDto),
+      facts: [...rows.facts, ...demoRows].map(factDto),
       pendingTypes: pending.map((p) => ({
         type: p.type,
         subjectId: p.subjectId ? String(p.subjectId) : null,
@@ -411,9 +416,10 @@ export async function queueAgent(
               products: rows.products.length,
               confirmedFacts: snapshot.facts.filter(
                 (f) =>
-                  !u.node?.productId ||
-                  f.subjectType === "organization" ||
-                  f.subjectId === u.node.productId,
+                  f.status === "confirmed" &&
+                  (!u.node?.productId ||
+                    f.subjectType === "organization" ||
+                    f.subjectId === u.node.productId),
               ).length,
               inputHash: sha(
                 JSON.stringify({
@@ -456,6 +462,8 @@ export async function queueAgent(
       [{ action: "site.agent.queued", actorId, targetId: String(result._id) }],
       { session },
     );
+    // S35 B2: one automatic logo run for opted-in sites without a logo.
+    if (data.step === "design") await queueAutoLogo(site, actorId, session);
   });
   return agentDto(result);
 }
@@ -547,6 +555,7 @@ export async function acceptQualityReview(id: string, actor: string) {
           requiredProductSections: site.plan?.strategy?.productSections,
           requireComposition: !!site.designDirection?.composition,
           paths: (site.plan?.nodes ?? []).map((n) => n.path),
+          allowDemoFacts: !!site.demoMode,
         }).length,
         409,
         "QUALITY_BLOCKED",

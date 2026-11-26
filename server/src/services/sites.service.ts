@@ -1,6 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { renderStaticPage, type Snapshot } from "./static-template.service";
+import {
+  renderStaticPage,
+  pageComposition,
+  type Snapshot,
+} from "./static-template.service";
 import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import {
@@ -22,6 +26,7 @@ import { pinAssets, productDto, factDto, sha } from "./catalog.service";
 import {
   validatePage,
   renderPage,
+  isDemoFact,
   type Issue,
 } from "./page-validation.service";
 export async function ownSite(id: string, session?: mongoose.ClientSession) {
@@ -37,6 +42,9 @@ export function siteDto(s: any) {
     ...(s.brandChannels ? { brandChannels: s.brandChannels } : {}),
     ...(s.designDirection ? { designDirection: s.designDirection } : {}),
     ...(s.businessBrief ? { businessBrief: s.businessBrief } : {}),
+    // S35: optional flags are omitted when off so existing DTOs/snapshots keep their shape.
+    ...(s.demoMode ? { demoMode: true } : {}),
+    ...(s.autoImages ? { autoImages: true } : {}),
     name: s.name,
     templateId: s.templateId,
     targetMarkets: s.targetMarkets,
@@ -312,6 +320,55 @@ export async function sourceRows(site: any, session?: mongoose.ClientSession) {
   ensure(facts.length <= 200, 409, "AGENT_INPUT_TOO_LARGE");
   return { products, facts };
 }
+// S35 stage C: ai-suggested candidates usable only in demo-mode snapshots.
+export async function demoFactRows(
+  site: any,
+  session?: mongoose.ClientSession,
+) {
+  const facts = await FactSheet.find({
+    status: "candidate",
+    "source.kind": "ai-suggested",
+    $or: [
+      { subjectType: "organization" },
+      { subjectType: "product", subjectId: { $in: site.productIds } },
+    ],
+  })
+    .limit(101)
+    .session(session ?? null);
+  ensure(facts.length <= 100, 409, "AGENT_INPUT_TOO_LARGE");
+  return facts;
+}
+export async function setSiteOptions(id: string, input: unknown, actor: string) {
+  const d = v.siteOptionsInput.parse(input);
+  let result: any;
+  await mongoose.connection.transaction(async (session) => {
+    const site = await ownSite(id, session);
+    await assertSiteEditable(id, session);
+    ensure(site.revision === d.revision, 409, "REVISION_CONFLICT");
+    ensure(
+      !(await AgentRun.exists({ siteId: id, active: true }).session(session)),
+      409,
+      "STEP_BUSY",
+    );
+    result = await Site.findOneAndUpdate(
+      { _id: id, revision: d.revision },
+      {
+        $set: {
+          ...(d.demoMode !== undefined ? { demoMode: d.demoMode } : {}),
+          ...(d.autoImages !== undefined ? { autoImages: d.autoImages } : {}),
+        },
+        $inc: { lockVersion: 1 },
+      },
+      { session, new: true },
+    );
+    ensure(result, 409, "REVISION_CONFLICT");
+    await AuditLog.create(
+      [{ action: "site.options.edited", actorId: actor, targetId: id }],
+      { session },
+    );
+  });
+  return siteDto(result);
+}
 export async function sources(id: string) {
   const site = await ownSite(id),
     data = await sourceRows(site);
@@ -387,6 +444,15 @@ export async function pageView(
       requiredProductSections: site.plan?.strategy?.productSections,
       requireComposition: !!site.designDirection?.composition,
       paths: site.plan?.nodes.map((n: any) => n.path),
+      allowDemoFacts: !!site.demoMode,
+    });
+  // S35 stage C: demo data may be previewed but never approved or published.
+  if (facts.some((f: any) => isDemoFact(f)))
+    issues.push({
+      code: "DEMO_FACTS_UNCONFIRMED",
+      field: "page",
+      blockKey: null,
+      token: "",
     });
   if (
     !node ||
@@ -693,6 +759,11 @@ export async function reviewPage(
     );
     const data = await pageView(page, site, session);
     if (approve) {
+      ensure(
+        !data.issues.some((i: Issue) => i.code === "DEMO_FACTS_UNCONFIRMED"),
+        409,
+        "DEMO_FACTS_UNCONFIRMED",
+      );
       ensure(!data.issues.length, 409, "PAGE_BLOCKED");
       for (const ref of [
         ...data.refs,
@@ -789,7 +860,10 @@ export async function preview(
           hash: sha(JSON.stringify(draft.data)),
           issues: validatePage(
             draft.data,
-            (await sourceRows(site)).facts.map(factDto),
+            [
+              ...(await sourceRows(site)).facts,
+              ...(site.demoMode ? await demoFactRows(site) : []),
+            ].map(factDto),
             {
               productIds: site.productIds.map(String),
               type: draft.node.type,
@@ -799,13 +873,14 @@ export async function preview(
               requiredProductSections: site.plan?.strategy?.productSections,
               requireComposition: !!site.designDirection?.composition,
               paths: site.plan.nodes.map((n: any) => n.path),
+              allowDemoFacts: !!site.demoMode,
             },
           ),
         }
       : await pageView(page, site);
   if (!site.buyerProfile && !draft)
     return {
-      html: renderPage(data, site),
+      html: await withPreviewNotes(renderPage(data, site), site),
       hash: data.hash,
       issues: data.issues,
     };
@@ -876,6 +951,7 @@ export async function preview(
       width: a.width ?? 640,
       height: a.height ?? 480,
       mime: a.mime,
+      ...(a.generatedConcept ? { concept: true } : {}),
     };
   const snapshot: Snapshot = {
     site: siteDto(site),
@@ -899,6 +975,17 @@ export async function preview(
   ).replace(/@font-face\s*\{[^}]+\}/g, "");
   const current = views.find((p: any) => p.id === id);
   ensure(current, 409, "PAGE_PLAN_CHANGED");
+  // S35: optional scoped rendering pack, only for pages that select it.
+  const packCss =
+    pageComposition(snapshot, current)?.pack === "precision"
+      ? "\n" +
+        (
+          await fs.readFile(
+            path.resolve(__dirname, "../../builder/pack-precision.css"),
+            "utf8",
+          )
+        ).replace(/@font-face\s*\{[^}]+\}/g, "")
+      : "";
   const html = renderStaticPage(snapshot, current)
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<link\b[^>]*>/gi, "")
@@ -906,9 +993,35 @@ export async function preview(
       "</head>",
       '<meta name="robots" content="noindex,nofollow"><style>' +
         css +
+        packCss +
         "</style></head>",
     );
-  return { html, hash: data.hash, issues: data.issues };
+  return {
+    html: await withPreviewNotes(html, site),
+    hash: data.hash,
+    issues: data.issues,
+  };
+}
+// S35: private preview only. Demo banner when demo mode is on; the scoped
+// illustration/demo note CSS is inlined only when the page needs it.
+export const DEMO_NOTE =
+  "演示内容，未经企业确认 · Demo content, not confirmed by the company";
+async function withPreviewNotes(html: string, site: any) {
+  const demo = !!site.demoMode;
+  if (!demo && !html.includes('class="concept-note"')) return html;
+  const css = (
+    await fs.readFile(
+      path.resolve(__dirname, "../../builder/concept.css"),
+      "utf8",
+    )
+  ).replace(/@font-face\s*\{[^}]+\}/g, "");
+  let out = html.replace("</head>", "<style>" + css + "</style></head>");
+  if (demo)
+    out = out.replace(
+      "</body>",
+      '<div class="gs-demo-banner" role="note">' + DEMO_NOTE + "</div></body>",
+    );
+  return out;
 }
 export async function readiness(id: string) {
   const site = await ownSite(id),

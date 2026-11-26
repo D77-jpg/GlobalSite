@@ -117,8 +117,12 @@ export const publishingMessages = {
     "Configure Cloudflare first, or export a zip.",
   ],
   VERSION_FACTS_CHANGED: [
-    "该版本引用的事实已变更，请重新审核和构建。",
-    "Referenced facts changed. Review and build a new version.",
+    "该版本引用的事实已变更或含未确认的演示数据，请在事实库确认后重新审核和构建。",
+    "Referenced facts changed or include unconfirmed demo data. Confirm them in the fact library, then review and build a new version.",
+  ],
+  DEMO_FACTS_UNCONFIRMED: [
+    "含未确认的演示数据：演示数据仅供预览，不能公开发布。请在事实库确认或修改 AI 建议事实。",
+    "Contains unconfirmed demo data. Demo data is for preview only and cannot be published. Confirm or edit the AI suggestions in the fact library.",
   ],
   DIRECT_UPLOAD_REQUIRED: [
     "请选择独立的 Direct Upload Pages 项目并核对生产分支。",

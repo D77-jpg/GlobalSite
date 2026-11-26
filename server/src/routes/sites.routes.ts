@@ -16,6 +16,14 @@ import * as v from "../validators/sites.validator";
 import * as sites from "../services/sites.service";
 import { buyerReadiness } from "../services/b2b-planning.service";
 import * as agents from "../services/site-agents.service";
+import { queueFactSuggestions } from "../services/fact-suggest.service";
+import { runDto } from "../services/catalog-run.service";
+import {
+  logoView,
+  queueLogo,
+  selectLogo,
+} from "../services/site-media.service";
+import { standaloneWordmarkSvg } from "../services/brand-mark.service";
 const r = Router(),
   edit = requireRole("admin", "editor"),
   admin = requireRole("admin");
@@ -74,6 +82,75 @@ r.patch(
     await sites.ownSite(id(req));
     const d = v.sitePatch.parse(req.body);
     ok(res, await sites.saveSite(d.data, actor(req), id(req), d.revision));
+  }),
+);
+// S35: demo preview mode / AI illustration switches (admin; gates unchanged).
+r.patch(
+  "/sites/:id/options",
+  admin,
+  wrap(async (req, res) => {
+    await sites.ownSite(id(req));
+    ok(res, await sites.setSiteOptions(id(req), req.body, actor(req)));
+  }),
+);
+// S35 stage C: one billed AI call proposing candidate facts (never confirmed).
+r.post(
+  "/sites/:id/fact-suggestions",
+  edit,
+  wrap(async (req, res) => {
+    await sites.ownSite(id(req));
+    ok(res, await queueFactSuggestions(id(req), req.body, actor(req)), 202);
+  }),
+);
+r.get(
+  "/fact-suggestions/:id",
+  wrap(async (req, res) => {
+    const run = await AgentRun.findOne({ _id: id(req), kind: "facts.suggest" });
+    ensure(run, 404, "NOT_FOUND");
+    ok(res, runDto(run));
+  }),
+);
+// S35 B2: logo brief, AI candidates, selection and the deterministic wordmark.
+r.get(
+  "/sites/:id/logo",
+  wrap(async (req, res) => {
+    await sites.ownSite(id(req));
+    ok(res, await logoView(id(req)));
+  }),
+);
+r.get(
+  "/sites/:id/logo/wordmark.svg",
+  wrap(async (req, res) => {
+    const view = await logoView(id(req));
+    res
+      .set({
+        "Cache-Control": "private, no-store",
+        "Content-Type": "image/svg+xml",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      })
+      .send(
+        standaloneWordmarkSvg(view.logoDesign.name, {
+          mark: view.logoDesign.colors[0],
+          text: view.logoDesign.colors[0],
+        }),
+      );
+  }),
+);
+r.post(
+  "/sites/:id/logo/generate",
+  edit,
+  wrap(async (req, res) => {
+    await sites.ownSite(id(req));
+    ok(res, await queueLogo(id(req), req.body, actor(req)), 202);
+  }),
+);
+r.put(
+  "/sites/:id/logo",
+  edit,
+  wrap(async (req, res) => {
+    await sites.ownSite(id(req));
+    ok(res, await selectLogo(id(req), req.body, actor(req)));
   }),
 );
 r.put(

@@ -186,3 +186,13 @@
 - 见 docs/design/S33-优化说明.md。`server/src/services/agents/**` 与 `agent-json.service.ts` 启用 `@typescript-eslint/no-explicit-any: error`，`site-agents.service.ts` 保留对外聚合导出不变。
 - `AgentAiProvider` 可选 `outputMode`（默认 `json_object`；启用 `json_schema` 经 `toStrictOpenAiJsonSchema()` 转为严格子集，上游 400 自动回退 `json_object` 一次且不重复计费）、`taskModels` 与 `temperatureByTask`（留空不传 `temperature`，兼容推理模型）。`parseAgentJsonDetailed` 与 `agentDto.diagnostics` 只记录枚举/计数诊断，不落盘模型原文或密钥。
 - 新 B2B 首页内容区块硬上限 9 个（建议 5–8 个，避免冗长滚动页），`brand-site.md` 与 `image-studio.service.ts` 对齐 S32 配色/构图/`fit-cover`/暗亮光影规则。`/sites/new` 一键快速规划仅串联既有受限接口并需显式 AI 同意，绝不放松事实确认、地图确认或页面审批门禁。`web/src/sites.tsx` 拆分为 `web/src/sites/**` 子模块，保持现有路由导出与 CSS 精简。
+
+## S35 旗舰风格包
+- 见 docs/design/S35-旗舰风格包接入方案.md。`composition.pack` 为可选白名单轴（当前仅 `precision`），body 追加 `pack-precision`；未设置时 HTML 与 `site.css` 字节不变（构建仅在页面选用时追加 `server/builder/pack-precision.css`）。风格包 CSS 全部限定在 `.pack-precision` 下，尊重区块 `fit-contain`/`focus-*` 意图，字体本地打包（Barlow Condensed / Barlow / Source Serif 4，OFL，来源见 `fonts/SOURCE-precision.json`）。`brand-site.md` 受 17000 字节上限约束，修改前先核对体积。
+- precision 的完整布局依赖 buyerProfile。验收在实际构建产物上检查本地字体和 768–1050px 折叠菜单的键盘操作。合成质量用例通过后，真实站点仍按 S23 流程选用方案、确认试点截图并批准页面。
+- 英文设计 FAQ 修复只重排原句、补充完整匹配的当前确认事实引用，或在版式仍满足门禁时删除无效条目。原任务重试先复检无未结计费操作的已保存候选，再按原有用量和重试规则处理剩余单元。
+- S35 收尾与阶段 B/B2/C/D：演示数据（FactSheet `status: candidate` 且 `source.kind: ai-suggested`）只在站点 `demoMode` 开启时可用于 Agent 快照与预览校验，保留真实候选状态；含演示数据的页面不得批准（`DEMO_FACTS_UNCONFIRMED`）、构建或发布（`SITE_NOT_READY` / `VERSION_FACTS_CHANGED`），任何改动都不能放宽这些门禁。AI 建议事实只能由受计费保护的 `catalog.suggest` 任务写入，值逐字来自模型输出并按 originKey 去重，不建议认证。
+- AI 建议事实沿用受限 JSON 解析并逐条校验，数字只转为字符串。失败诊断只保留 `truncated`、`non_json`、`shape` 枚举，不对外返回或记录模型原文。
+- AI 自动配图默认关闭（站点 `autoImages` + 组织 images 服务），每页上限 `AUTO_IMAGE_HOME_MAX`（默认 6）/ `AUTO_IMAGE_DETAIL_MAX`（默认 3），只填缺图、不覆盖已有图片；在 site.agent 单元内先持久化资产 ID 再使用，按 run+槽位固定计费操作号，未配置/额度不足/失败只记固定事件码不使任务失败。生成图与 AI logo 均为 `generatedConcept`，前台标注示意图，不能作为事实证据；AI logo 必须提示核对拼写，确定性 SVG 字标始终作为兜底。
+- 图片服务 URL 返回只接受公网 HTTPS（`publicUrl`、禁重定向、限时限量），参数不受支持时只允许同一预留降级重试一次。密钥只经组织 AI 图片设置加密保存，禁止写入代码、环境文件、测试或文档。
+- `server/agent-skills/brand-site.md` 上限 17000 字节，当前约 14452 字节；新增规则前先核对体积并保持 ≥ 2000 字节余量，精简时不得删除约束含义或测试依赖短语。质量基线评分只有在视觉模型实际收到截图时才可标注为视觉评分，否则必须标注“结构评分”。

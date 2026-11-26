@@ -16,11 +16,33 @@ export const pendingDetail = (v: string) =>
     v?.trim() ?? "",
   );
 
-function productImage(s: Snapshot, v: any) {
+// S35: localized "Illustrative" label for generated concept images.
+const ILLUSTRATIVE: Record<string, string> = {
+  en: "Illustrative",
+  es: "Ilustrativa",
+  fr: "Illustration",
+  de: "Illustrativ",
+  ja: "イメージ",
+  ar: "صورة توضيحية",
+  ru: "Иллюстрация",
+  zh: "示意图",
+};
+export function conceptNote(s: Snapshot, id?: string | null) {
+  return id && s.assets[id]?.concept
+    ? '<small class="concept-note">' +
+        e(ILLUSTRATIVE[s.site.language] ?? ILLUSTRATIVE.en) +
+        "</small>"
+    : "";
+}
+
+function productImage(s: Snapshot, v: any, fallbackId?: string | null) {
   const source = s.products?.find((x) => x.id === v.productId);
   const id =
     v.blocks.find((b: any) => b.type === "image" && s.assets[b.assetId])
-      ?.assetId ?? source?.assetIds.filter((id) => s.assets[id]).at(-1);
+      ?.assetId ??
+    source?.assetIds.filter((id) => s.assets[id]).at(-1) ??
+    // S35: grid item illustration is used only when the product has no image.
+    (fallbackId && s.assets[fallbackId] ? fallbackId : undefined);
   const a = id ? s.assets[id] : null;
   return a
     ? '<img loading="lazy" src="' +
@@ -31,7 +53,8 @@ function productImage(s: Snapshot, v: any) {
         a.width +
         '" height="' +
         a.height +
-        '">'
+        '">' +
+        conceptNote(s, id)
     : "";
 }
 
@@ -76,6 +99,7 @@ export function productCards(
   body = "",
   design?: unknown,
   selection?: string[],
+  itemAssets?: Record<string, string>,
 ) {
   const copy = getStorefrontCopy(s.site.language);
   const resolvedHeading = heading || copy.exploreRangeHeading;
@@ -148,7 +172,7 @@ export function productCards(
           '"><a class="product-visual" href="' +
           e(v.path) +
           '" tabindex="-1" aria-hidden="true">' +
-          productImage(s, v) +
+          productImage(s, v, itemAssets?.[v.path]) +
           '</a><div class="product-copy"><p class="product-category">' +
           e(
             category?.presentation?.navigationLabel ??
@@ -212,6 +236,11 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
               (href: any) => typeof href === "string" && href.startsWith("/"),
             )
         : undefined,
+      Object.fromEntries(
+        (b.items ?? [])
+          .filter((i: any) => typeof i.href === "string" && i.assetId)
+          .map((i: any) => [i.href, i.assetId]),
+      ),
     );
   const a = b.assetId ? s.assets[b.assetId] : null,
     items = (b.items ?? []).filter((i: any) => !pendingDetail(i.body));
@@ -225,7 +254,8 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         s.assets[id].width +
         '" height="' +
         s.assets[id].height +
-        '">'
+        '">' +
+        conceptNote(s, id)
       : "";
   const heading =
     '<div class="section-intro"><p class="section-kicker">' +
