@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { decrypt } from "./credential-crypto";
-import { AgentAiProvider } from "../models";
-import { tenantContext } from "../models/tenant-context";
+import { requireTextProvider } from "./ai-provider-resolve";
 import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
@@ -40,8 +38,8 @@ export async function extractEvidence(
   operationId: string,
   save: (result: ExtractionResult) => Promise<void>,
 ) {
-  const provider = await AgentAiProvider.findOne({ name: "default" });
-  ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
+  // S36: platform service or (non-production / ALLOW_ORG_AI_KEYS) org provider.
+  const provider = await requireTextProvider();
   const url = await aiBase(provider.baseUrl);
   const budget =
     Buffer.byteLength(text, "utf8") + 8192 + (imageData ? 8192 : 0);
@@ -61,9 +59,7 @@ export async function extractEvidence(
         signal: AbortSignal.timeout(25000),
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-            "Bearer " +
-            decrypt(provider.secret, "ai:" + tenantContext()!.organizationId),
+          Authorization: "Bearer " + provider.apiKey(),
         },
         body: JSON.stringify({
           model:

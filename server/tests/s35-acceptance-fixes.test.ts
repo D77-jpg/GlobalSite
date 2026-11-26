@@ -726,7 +726,18 @@ test("unknown AI outcomes carry a fixed reason code and never model text", async
   assert.equal(providerTokens({ usage: { total_tokens: 42 } }, 100), 42);
 });
 
-test("full-page timeout and the monthly absorption limit are bounded settings", () => {
+test("full-page timeout and the monthly absorption limit are bounded settings", (t) => {
+  // Defaults must not depend on a developer's local .env (dotenv-loaded).
+  const saved = {
+    timeout: process.env.AI_FULL_PAGE_TIMEOUT_MS,
+    absorb: process.env.AI_UNKNOWN_ABSORB_LIMIT,
+  };
+  delete process.env.AI_FULL_PAGE_TIMEOUT_MS;
+  delete process.env.AI_UNKNOWN_ABSORB_LIMIT;
+  t.after(() => {
+    if (saved.timeout !== undefined) process.env.AI_FULL_PAGE_TIMEOUT_MS = saved.timeout;
+    if (saved.absorb !== undefined) process.env.AI_UNKNOWN_ABSORB_LIMIT = saved.absorb;
+  });
   assert.equal(fullPageTimeoutMs(undefined), 240000);
   assert.equal(fullPageTimeoutMs(""), 240000);
   assert.equal(fullPageTimeoutMs("abc"), 240000);

@@ -315,6 +315,18 @@ small,
   color: #275f2e;
   border: 1px solid #cfe6c2;
 }
+/* S36: plan allowance reminder (80% used). */
+.notice.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  flex-wrap: wrap;
+}
+.notice > a:not(.button) {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
 .dev-mail {
   margin-top: 24px;
   padding: 16px;

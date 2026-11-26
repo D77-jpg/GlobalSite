@@ -1,12 +1,17 @@
 // Adapted from GlobalCRM AgentAiProvider/AgentAiSettings and agent/openai-provider.ts @ a94a285.
 // One organization provider, encrypted secret, bounded test call, no CRM tools.
 import { AgentAiProvider } from "../models";
-import { encrypt, decrypt } from "./credential-crypto";
+import { encrypt } from "./credential-crypto";
 import { tenantContext } from "../models/tenant-context";
 import { ensure, AppError } from "../errors";
 import { reserve, settle } from "./usage.service";
 import { aiBase, aiFetch, localAiBase } from "./ai-target";
 import { audit } from "./audit.service";
+import {
+  requireTextProvider,
+  resolveTextProvider,
+  settingsManaged,
+} from "./ai-provider-resolve";
 const TASK_KEYS = [
   "research",
   "interview",
@@ -44,7 +49,21 @@ function normalizeTemperatures(raw: unknown): TemperatureConfig {
   return out;
 }
 
+/**
+ * S36: when the platform provides AI (or organization keys are not allowed in
+ * production), customers only learn that the service is managed and whether it
+ * is available; model names and service URLs are never returned.
+ */
+export async function managedProviderStatus() {
+  const available = !!(await resolveTextProvider());
+  return {
+    managed: true as const,
+    enabled: available,
+    configured: available,
+  };
+}
 export async function getProvider() {
+  if (settingsManaged("text")) return managedProviderStatus();
   const p = await AgentAiProvider.findOne({ name: "default" });
   return p
     ? {
@@ -84,6 +103,7 @@ export async function saveProvider(
   },
   userId: string,
 ) {
+  ensure(!settingsManaged("text"), 409, "PLATFORM_MANAGED");
   const normalizedBase = (await aiBase(input.baseUrl)).href.replace(/\/+$/, "");
   const org = tenantContext()?.organizationId;
   ensure(org);
@@ -120,9 +140,8 @@ export async function saveProvider(
   return getProvider();
 }
 export async function testProvider(operationId: string) {
-  const provider = await AgentAiProvider.findOne({ name: "default" });
-  ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
-  const org = tenantContext()?.organizationId;
+  ensure(!settingsManaged("text"), 409, "PLATFORM_MANAGED");
+  const provider = await requireTextProvider();
   const url = await aiBase(provider.baseUrl);
   ensure(await reserve("ai_tokens", 4096, operationId), 409, "CONFLICT");
   try {
@@ -134,7 +153,7 @@ export async function testProvider(operationId: string) {
         signal: AbortSignal.timeout(20000),
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer " + decrypt(provider.secret, "ai:" + org),
+          Authorization: "Bearer " + provider.apiKey(),
         },
         body: JSON.stringify({
           model: provider.modelName,

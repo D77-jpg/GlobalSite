@@ -86,6 +86,18 @@ export const catalogMessages = {
     "请组织管理员连接生图服务。",
     "Ask an administrator to connect the image provider.",
   ],
+  imageManaged: [
+    "AI 配图由平台提供，按套餐的 AI 图片额度计费。",
+    "AI images are provided by the platform and billed against your plan's image allowance.",
+  ],
+  imageManagedUnavailable: [
+    "平台 AI 配图服务暂时未开通，请联系我们。",
+    "The platform image service is not available yet. Please contact us.",
+  ],
+  PLATFORM_MANAGED: [
+    "AI 配图由平台提供，无需在此设置。",
+    "AI images are provided by the platform; nothing needs to be set up here.",
+  ],
   IMAGE_REQUEST_FAILED: [
     "生图服务未成功返回，请检查额度、权限及模型状态。",
     "Image request failed. Check the balance, permissions and model status.",

@@ -11,7 +11,6 @@ import mongoose from "mongoose";
 import sharp from "sharp";
 import { z } from "zod";
 import {
-  AgentAiProvider,
   AgentRun,
   Asset,
   AuditLog,
@@ -25,6 +24,7 @@ import { fenceTask } from "./product-import.service";
 import { pinAssets } from "./catalog.service";
 import { assertSiteEditable } from "./publication-lock.service";
 import { generateImage } from "./image-studio.service";
+import { imageProviderAvailable } from "./ai-provider-resolve";
 import { readAsset, store } from "./storage.service";
 import { standaloneWordmarkSvg } from "./brand-mark.service";
 
@@ -158,18 +158,13 @@ export async function logoView(siteId: string) {
   const design: LogoDesign = v.logoDesign.safeParse(site.logoDesign).success
     ? site.logoDesign
     : defaultLogoDesign(site);
-  const provider = await AgentAiProvider.findOne({
-    name: "images",
-    enabled: true,
-  })
-    .select("enabled")
-    .lean();
+  const imagesConfigured = await imageProviderAvailable();
   return {
     siteId: String(site._id),
     revision: site.revision,
     logoId: site.logoId ? String(site.logoId) : null,
     logoDesign: design,
-    imagesConfigured: !!provider,
+    imagesConfigured,
     wordmarkSvg: standaloneWordmarkSvg(design.name, {
       mark: design.colors[0],
       text: design.colors[0],
@@ -238,9 +233,7 @@ export async function queueLogo(siteId: string, input: unknown, actorId: string)
     ensure(site.status !== "archived", 409, "SITE_ARCHIVED");
     await assertSiteEditable(siteId, session);
     ensure(
-      await AgentAiProvider.exists({ name: "images", enabled: true }).session(
-        session,
-      ),
+      await imageProviderAvailable(session),
       409,
       "IMAGE_PROVIDER_MISSING",
     );
@@ -276,9 +269,7 @@ export async function queueAutoLogo(
   if (!site.autoImages || site.logoId) return null;
   const siteId = String(site._id);
   if (
-    !(await AgentAiProvider.exists({ name: "images", enabled: true }).session(
-      session,
-    )) ||
+    !(await imageProviderAvailable(session)) ||
     (await AgentRun.exists({ kind: "site.logo", siteId }).session(session))
   )
     return null;

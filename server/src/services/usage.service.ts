@@ -5,10 +5,18 @@ import { Organization, UsageBucket, UsageRecord } from "../models";
 import { runIdentity, tenantContext } from "../models/tenant-context";
 import { plans, type Plan, type Metric } from "../constants/plans";
 import { ensure, AppError } from "../errors";
+import { platformAiConfig } from "../config";
 export const period = (metric: Metric) =>
   metric === "storage_bytes"
     ? "lifetime"
     : new Date().toISOString().slice(0, 7);
+/**
+ * S36: monthly quotas use UTC calendar months (see period()); the next period
+ * starts on the first day of the following UTC month.
+ */
+export function periodResetsAt(now: Date = new Date()): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+}
 export async function limits() {
   const id = tenantContext()?.organizationId;
   const org = await runIdentity(() => Organization.findById(id));
@@ -162,6 +170,9 @@ export async function usage() {
   return {
     limits: cap,
     period: period("ai_tokens"),
+    // S36: customer-facing reset date and optional upgrade entry.
+    resetsAt: periodResetsAt().toISOString(),
+    upgradeUrl: platformAiConfig().upgradeUrl || null,
     items: buckets.map((x) => ({
       metric: x.metric,
       consumed: x.consumed,

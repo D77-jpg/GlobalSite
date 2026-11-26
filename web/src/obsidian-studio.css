@@ -1327,6 +1327,14 @@ dialog::backdrop {
   color: var(--ui-danger);
 }
 
+/* S36: plan allowance reminder (80% used). */
+.notice.warning,
+.product-shell .notice.warning {
+  background: var(--ui-warn-bg);
+  border-color: var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
 /* ==========================================================================
    6. REDESIGNED LAYOUT #1: Agent Studio (/agent) — True 3-Pane AI Workbench
    ========================================================================== */

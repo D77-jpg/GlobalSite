@@ -9,7 +9,6 @@
 import mongoose from "mongoose";
 import { z } from "zod";
 import {
-  AgentAiProvider,
   AgentRun,
   AuditLog,
   FactRevision,
@@ -18,9 +17,8 @@ import {
   Site,
   Task,
 } from "../models";
-import { tenantContext } from "../models/tenant-context";
 import { AppError, ensure } from "../errors";
-import { decrypt } from "./credential-crypto";
+import { requireTextProvider } from "./ai-provider-resolve";
 import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { authorizeActor } from "./catalog-authority";
@@ -217,9 +215,9 @@ export async function suggestFacts(
   operationId: string,
   save: (result: SuggestionResult) => Promise<void>,
 ): Promise<SuggestionResult> {
-  const provider = await AgentAiProvider.findOne({ name: "default" });
-  ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
-  const url = await aiBase(provider.baseUrl ?? "");
+  // S36: platform service or (non-production / ALLOW_ORG_AI_KEYS) org provider.
+  const provider = await requireTextProvider();
+  const url = await aiBase(provider.baseUrl);
   const payload = JSON.stringify(input);
   // Reasoning models spend part of max_tokens before the JSON answer.
   const maxTokens = 8192;
@@ -240,9 +238,7 @@ export async function suggestFacts(
         signal: AbortSignal.timeout(60000),
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-            "Bearer " +
-            decrypt(provider.secret, "ai:" + tenantContext()!.organizationId),
+          Authorization: "Bearer " + provider.apiKey(),
         },
         body: JSON.stringify({
           model: provider.modelName,

@@ -1,12 +1,7 @@
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import {
-  AgentAiProvider,
-  AgentRun,
-  AuditLog,
-  UsageRecord,
-} from "../../../models";
+import { AgentRun, AuditLog, UsageRecord } from "../../../models";
 import { AppError, ensure } from "../../../errors";
 import * as v from "../../../validators/sites.validator";
 import { decrypt, encrypt } from "../../credential-crypto";
@@ -26,6 +21,7 @@ import {
   reviewImages,
 } from "../../site-review.service";
 import { referenceResearch } from "../../site-reference.service";
+import { resolveTextProvider } from "../../ai-provider-resolve";
 import { procurementCoverage } from "../../b2b-planning.service";
 import {
   assertSnapshot,
@@ -224,14 +220,15 @@ export async function processSiteAgent(
             unit.node!.path,
             unit.captureKey,
           );
-          const config = await AgentAiProvider.findOne({ name: "default" });
+          // S36: platform or organization text service (null = unconfigured).
+          const config = await resolveTextProvider();
           await mongoose.connection.transaction(async (session) => {
             await fenceRun(task, session);
             const fresh = await ownRun(String(run._id), session);
             ensure(!fresh.cancelRequested, 409, "AGENT_CANCELLED");
             fresh.steps[index].capture = capture;
             fresh.steps[index].visualInput = !!config?.supportsVision;
-            fresh.steps[index].reviewMode = !config?.enabled
+            fresh.steps[index].reviewMode = !config
               ? "structural"
               : config.supportsVision
                 ? "visual"
@@ -243,7 +240,7 @@ export async function processSiteAgent(
         }
 
         const prompt = unitPrompt(run, unit);
-        const config = await AgentAiProvider.findOne({ name: "default" });
+        const config = await resolveTextProvider();
         const images =
           run.step === "review" && unit.visualInput && unit.capture
             ? await reviewImages(unit.capture.artifactKey)
@@ -261,7 +258,7 @@ export async function processSiteAgent(
 
         const selectedProvider: ProviderCallable =
           run.step === "review" &&
-          (!config?.enabled || !config.secret) &&
+          !config &&
           provider === callSiteAgent
             ? async (_system, _input, _operation, save) => {
                 const findings: Array<{

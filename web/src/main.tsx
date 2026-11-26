@@ -95,6 +95,12 @@ import {
 } from "lucide-react";
 import { api, ApiError } from "./api";
 import { messages, errors, type Locale, type Key } from "./i18n";
+import {
+  formatResetDate,
+  isPlatformManaged,
+  nearPlanLimit,
+  safeUpgradeUrl,
+} from "./ai-service-status";
 import "./style.css";
 import "./workspace.css";
 import "./account-workspace.css";
@@ -140,6 +146,9 @@ function Notice({ error, success }: { error?: unknown; success?: string }) {
     return (
       <div className="notice error" role="alert">
         {errors[code]?.[locale === "zh" ? 0 : 1] ?? t("failed")}
+        {code === "QUOTA_EXCEEDED" && (
+          <Link to="/usage#upgrade">{t("upgradePlan")}</Link>
+        )}
       </div>
     );
   }
@@ -1066,11 +1075,25 @@ function UsagePage() {
         <Loading error={error} retry={reload} />
       ) : (
         <>
+          {nearPlanLimit(data) && (
+            <div className="notice warning" role="status">
+              {t("usageNearLimit")}
+              <a href="#upgrade">{t("upgradePlan")}</a>
+            </div>
+          )}
           <div className="section-heading">
             <h2>
               {t("currentPeriod")} · {data.period}
             </h2>
             <p>{t("quotaNotice")}</p>
+            {formatResetDate(data.resetsAt, locale) && (
+              <p>
+                {t("usageResetsOn").replace(
+                  "{date}",
+                  formatResetDate(data.resetsAt, locale),
+                )}
+              </p>
+            )}
           </div>
           <div className="usage-ledger">
             {(
@@ -1120,6 +1143,24 @@ function UsagePage() {
                   </section>
                 );
               }
+              // S36: AI images are shown as "used N / limit".
+              if (key === "images" && data.limits[key] !== null) {
+                return (
+                  <section className="usage-line" key={key}>
+                    <span className="eyebrow">{t(key)}</span>
+                    <h2>
+                      {fmt(row.consumed + row.reserved, key)} /{" "}
+                      {fmt(data.limits[key], key)}
+                    </h2>
+                    <p>
+                      {t("imagesUsedOf")
+                        .replace("{used}", fmt(row.consumed + row.reserved, key))
+                        .replace("{limit}", fmt(data.limits[key], key))}
+                    </p>
+                    <progress max={100} value={percent} aria-label={t(key)} />
+                  </section>
+                );
+              }
               return (
                 <section className="usage-line" key={key}>
                   <span className="eyebrow">{t(key)}</span>
@@ -1140,6 +1181,22 @@ function UsagePage() {
               );
             })}
           </div>
+          <section className="usage-line usage-upgrade" id="upgrade">
+            <span className="eyebrow">{t("upgradeTitle")}</span>
+            {safeUpgradeUrl(data.upgradeUrl) ? (
+              <a
+                className="button primary"
+                href={safeUpgradeUrl(data.upgradeUrl)!}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("upgradePlan")}
+                <ArrowUpRight size={15} />
+              </a>
+            ) : (
+              <p>{t("upgradeContact")}</p>
+            )}
+          </section>
         </>
       )}
     </div>
@@ -1207,11 +1264,31 @@ function AiPage() {
     <div className="account-page account-provider">
       <PageHeader
         title="ai"
-        sub="aiSub"
-        tag={<span className="badge">{t("optional")}</span>}
+        sub={isPlatformManaged(data) ? "aiManagedSub" : "aiSub"}
+        tag={
+          <span className="badge">
+            {t(isPlatformManaged(data) ? "aiManagedBadge" : "optional")}
+          </span>
+        }
       />
       {me.role !== "admin" ? (
         <Notice error={new ApiError("FORBIDDEN", 403)} />
+      ) : isPlatformManaged(data) ? (
+        // S36: platform-provided AI; no model, service URL or key fields.
+        <SettingsSection className="panel provider-managed">
+          <div className="panel-title">
+            <Sparkles size={20} />
+            <h2>{t("aiManagedTitle")}</h2>
+            <span className={"badge " + (data.enabled ? "active" : "")}>
+              {t("aiManagedBadge")}
+            </span>
+          </div>
+          <p>{t(data.enabled ? "aiManagedNotice" : "aiManagedUnavailable")}</p>
+          <Link to="/usage" className="button secondary">
+            {t("usage")}
+            <ArrowUpRight size={15} />
+          </Link>
+        </SettingsSection>
       ) : !data || !draft ? (
         <Loading error={error} retry={reload} />
       ) : (
@@ -1396,7 +1473,7 @@ function AiPage() {
           </button>
         </SettingsSection>
       )}
-      {me.role === "admin" && (
+      {me.role === "admin" && !isPlatformManaged(data) && (
         <SettingsSection className="panel provider-imagery">
           <div className="panel-title">
             <Sparkles size={20} />

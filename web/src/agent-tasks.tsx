@@ -71,6 +71,7 @@ const copy = {
     notProcessed: "未继续处理",
     ai: "配置 AI 服务",
     usage: "查看用量",
+    upgrade: "升级套餐",
     factsAction: "核对资料",
     workspace: "返回建站向导",
     technicalError: "错误记录",
@@ -142,6 +143,7 @@ const copy = {
     notProcessed: "Not processed",
     ai: "Configure AI provider",
     usage: "View usage",
+    upgrade: "Upgrade plan",
     factsAction: "Check sources",
     workspace: "Back to site guide",
     technicalError: "Recorded error",
@@ -669,9 +671,14 @@ export function RunList({
                   </Link>
                 )}
                 {attention(run) && run.errorCode === "QUOTA_EXCEEDED" && (
-                  <Link className="button secondary" to="/usage">
-                    {c.usage}
-                  </Link>
+                  <>
+                    <Link className="button secondary" to="/usage">
+                      {c.usage}
+                    </Link>
+                    <Link className="button secondary" to="/usage#upgrade">
+                      {c.upgrade}
+                    </Link>
+                  </>
                 )}
                 {attention(run) &&
                   ["SOURCE_CHANGED", "SOURCE_WITHDRAWN"].includes(

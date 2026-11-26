@@ -1092,7 +1092,13 @@ function ImageStudio({
     [asset, setAsset] = useState("");
   return (
     <section className="catalog-panel">
-      {role === "admin" && (
+      {status.data?.managed && (
+        // S36: platform-provided image service; no model, URL or key fields.
+        <p className="muted">
+          {t(status.data.configured ? "imageManaged" : "imageManagedUnavailable")}
+        </p>
+      )}
+      {role === "admin" && !status.data?.managed && (
         <details open={status.data && !status.data.configured}>
           <summary>{t("imageConnection")}</summary>
           {status.data?.configured && (
@@ -1239,7 +1245,8 @@ function ImageStudio({
           </button>
         </form>
       ) : (
-        status.data && <p>{t("IMAGE_PROVIDER_MISSING")}</p>
+        status.data &&
+        !status.data.managed && <p>{t("IMAGE_PROVIDER_MISSING")}</p>
       )}
       {asset && (
         <img

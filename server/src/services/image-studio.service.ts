@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { AgentAiProvider, Asset } from "../models";
 import { tenantContext } from "../models/tenant-context";
-import { encrypt, decrypt } from "./credential-crypto";
+import { encrypt } from "./credential-crypto";
 import { audit } from "./audit.service";
 import { AppError, ensure } from "../errors";
 import { reserve, settle } from "./usage.service";
 import { detectMime, store } from "./storage.service";
 import { aiBase, aiFetch, localAiBase } from "./ai-target";
 import { publicUrl } from "./website/public-web";
+import { resolveImageProvider, settingsManaged } from "./ai-provider-resolve";
 
 const defaultBase = () => localAiBase() ?? "https://api.openai.com/v1";
 const defaultModel = "gpt-image-1";
@@ -72,6 +73,11 @@ export const imageBrief = z
 const purpose = () => "image-provider:" + tenantContext()!.organizationId;
 
 export async function imageStatus() {
+  // S36: platform-managed image service; never expose its model or URL.
+  if (settingsManaged("image")) {
+    const available = !!(await resolveImageProvider());
+    return { managed: true as const, enabled: available, configured: available };
+  }
   const p = await AgentAiProvider.findOne({ name: "images" })
     .select("enabled modelName baseUrl mode")
     .lean();
@@ -90,6 +96,7 @@ export async function configureImages(
   input: z.infer<typeof imageProviderInput>,
   userId: string,
 ) {
+  ensure(!settingsManaged("image"), 409, "PLATFORM_MANAGED");
   if (input.apiKey === "") {
     await AgentAiProvider.deleteOne({ name: "images" });
     await audit("ai.images.configured", userId);
@@ -245,8 +252,10 @@ export async function generateImage(
   key: string,
   options: { originKey?: string; fileLabel?: string } = {},
 ) {
-  const p = await AgentAiProvider.findOne({ name: "images", enabled: true });
-  ensure(p?.secret, 409, "IMAGE_PROVIDER_MISSING");
+  // S36: platform image service or (non-production / ALLOW_ORG_AI_KEYS) the
+  // organization's own; billing below stays on the organization's plan.
+  const p = await resolveImageProvider();
+  ensure(p, 409, "IMAGE_PROVIDER_MISSING");
   const baseUrl = (await aiBase(p.baseUrl || defaultBase())).href.replace(
     /\/+$/,
     "",
@@ -266,9 +275,7 @@ export async function generateImage(
     .filter(Boolean)
     .join(" ");
   const model = imageModel.parse(p.modelName || defaultModel);
-  const mode = imageMode.safeParse(p.mode).success
-    ? (p.mode as z.infer<typeof imageMode>)
-    : "auto";
+  const mode = p.mode;
   const chat = mode === "chat" || (mode === "auto" && /gemini/i.test(model));
   const payload = chat
     ? {
@@ -281,7 +288,7 @@ export async function generateImage(
         n: 1,
         size: input.composition === "campaign" ? "1536x1024" : "1024x1024",
       };
-  const secret = p.secret;
+  const provider = p;
   const send = async (body: unknown) => {
     try {
       return await aiFetch(
@@ -292,7 +299,7 @@ export async function generateImage(
           signal: AbortSignal.timeout(180000),
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Bearer " + decrypt(secret, purpose()),
+            Authorization: "Bearer " + provider.apiKey(),
           },
           body: JSON.stringify(body),
         },

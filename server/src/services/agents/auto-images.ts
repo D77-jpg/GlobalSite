@@ -9,12 +9,13 @@
 // failure skips the slot with a fixed event code; the run never fails because
 // of illustrations. Existing images are never replaced.
 import mongoose from "mongoose";
-import { AgentAiProvider, AgentRun, Asset } from "../../models";
+import { AgentRun, Asset } from "../../models";
 import { AppError } from "../../errors";
 import * as v from "../../validators/sites.validator";
 import { sha } from "../catalog.service";
 import { validatePage } from "../page-validation.service";
 import { generateImage } from "../image-studio.service";
+import { imageProviderAvailable } from "../ai-provider-resolve";
 import type { AgentResult } from "../site-agent-provider.service";
 import { fenceRun, ownRun } from "./runtime";
 import { normalizeNullableAxes, repairDraftPage } from "./validation";
@@ -252,10 +253,8 @@ export async function fillUnitImages(
     productPaths,
   });
   if (!slots.length) return result;
-  const provider = await AgentAiProvider.findOne({ name: "images", enabled: true })
-    .select("enabled")
-    .lean();
-  if (!provider) return result;
+  // S36: platform image service or the organization's own (see resolver).
+  if (!(await imageProviderAvailable())) return result;
 
   const palette = (site.designDirection?.composition?.palette ??
     page.presentation?.composition?.palette) as

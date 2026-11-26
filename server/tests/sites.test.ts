@@ -740,7 +740,14 @@ test("FAQ lead length, product section tables, source changes and stale fences a
     0,
   );
 });
-test("provider uses configured model and meters output; no provider is a paused/manual-capable state", async () => {
+test("provider uses configured model and meters output; no provider is a paused/manual-capable state", async (t) => {
+  // Deadline assertions use the default, not a developer's local .env value.
+  const savedTimeout = process.env.AI_FULL_PAGE_TIMEOUT_MS;
+  delete process.env.AI_FULL_PAGE_TIMEOUT_MS;
+  t.after(() => {
+    if (savedTimeout !== undefined)
+      process.env.AI_FULL_PAGE_TIMEOUT_MS = savedTimeout;
+  });
   const { encrypt } = await import("../src/services/credential-crypto"),
     { callSiteAgent } = await import(
       "../src/services/site-agent-provider.service"
@@ -811,7 +818,8 @@ test("provider uses configured model and meters output; no provider is a paused/
       async () => {},
     ),
   );
-  assert.deepEqual(deadlines, [240000, 240000, 120000]);
+  // design/content/refine and review share AI_FULL_PAGE_TIMEOUT_MS.
+  assert.deepEqual(deadlines, [240000, 240000, 240000]);
   const reservation = await tenant(() =>
     m.UsageRecord.findOne({
       metric: "ai_tokens",

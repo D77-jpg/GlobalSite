@@ -1,8 +1,6 @@
 import { parseAgentJsonDetailed } from "./agent-json.service";
 import { toStrictOpenAiJsonSchema } from "./agents/validation";
-import { AgentAiProvider } from "../models";
-import { tenantContext } from "../models/tenant-context";
-import { decrypt } from "./credential-crypto";
+import { requireTextProvider } from "./ai-provider-resolve";
 import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
@@ -82,8 +80,9 @@ export async function callSiteAgent(
   save: (r: AgentResult) => Promise<void>,
   images: { label: string; data: string }[] = [],
 ): Promise<AgentResult> {
-  const provider = await AgentAiProvider.findOne({ name: "default" });
-  ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
+  // S36: platform service when configured, otherwise the organization's own
+  // provider (non-production or ALLOW_ORG_AI_KEYS). Billing stays on the org.
+  const provider = await requireTextProvider();
   const text = JSON.stringify(input);
   ensure(Buffer.byteLength(text) <= 120000, 409, "AGENT_INPUT_TOO_LARGE");
   const url = await aiBase(provider.baseUrl);
@@ -119,6 +118,9 @@ export async function callSiteAgent(
   }
   const task = (input as { task?: string })?.task;
   const fullPageTask = ["design", "content", "refine"].includes(task ?? "");
+  // S35: quality review also sends a full rendered page plus measurements and
+  // often exceeds 120 s on reasoning models; it shares the long-task deadline.
+  const longTask = fullPageTask || task === "review";
   // Reasoning models share this cap with their complete structured page output.
   const maxTokens = fullPageTask
     ? 32768
@@ -184,9 +186,7 @@ export async function callSiteAgent(
   let known = false;
   let stage: UsageUnknownStage = "request";
   try {
-    const authHeader =
-      "Bearer " +
-      decrypt(provider.secret, "ai:" + tenantContext()!.organizationId);
+    const authHeader = "Bearer " + provider.apiKey();
     const endpoint = url.href.replace(/\/$/, "") + "/chat/completions";
     const send = (schemaMode: boolean) =>
       aiFetch(endpoint, {
@@ -196,7 +196,7 @@ export async function callSiteAgent(
         // Keep a bounded deadline (AI_FULL_PAGE_TIMEOUT_MS, default 240 s)
         // while the Worker renews its fenced lease.
         signal: AbortSignal.timeout(
-          fullPageTask ? fullPageTimeoutMs() : 120000,
+          longTask ? fullPageTimeoutMs() : 120000,
         ),
         headers: {
           "Content-Type": "application/json",
@@ -267,7 +267,8 @@ export async function callSiteAgent(
     const result: AgentResult = {
       output,
       tokens,
-      modelName: selectedModel,
+      // S36: the platform model name is never stored in customer records.
+      ...(provider.managed ? {} : { modelName: selectedModel }),
       ...(repaired ? { repaired: true } : {}),
       visualInput: !!(provider.supportsVision && images.length),
       ...(errorCode ? { errorCode, invalidReason, responseDiagnostics } : {}),

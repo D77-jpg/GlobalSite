@@ -2028,6 +2028,11 @@ paths:
     get:
       operationId: foundation27
       summary: Provider settings with secret omitted
+      description: >-
+        S36: when the platform provides AI (complete PLATFORM_AI_* configuration), or in production without
+        ALLOW_ORG_AI_KEYS=true, the response is ManagedAiService ({ managed: true, enabled, configured }) and never
+        contains a model name, service URL or key. Otherwise the organization's own settings (Provider) are returned
+        unchanged.
       x-roles:
         - admin
       security:
@@ -2045,7 +2050,9 @@ paths:
                     enum:
                       - true
                   data:
-                    $ref: "#/components/schemas/Provider"
+                    anyOf:
+                      - $ref: "#/components/schemas/ManagedAiService"
+                      - $ref: "#/components/schemas/Provider"
                 required:
                   - success
                   - data
@@ -2092,6 +2099,7 @@ paths:
     put:
       operationId: foundation28
       summary: Save independent encrypted organization provider
+      description: 409 PLATFORM_MANAGED while AI is platform-managed (see GET); nothing is stored.
       x-roles:
         - admin
       security:
@@ -2166,6 +2174,7 @@ paths:
     post:
       operationId: foundation29
       summary: Bounded paid test; unknown outcome stays reserved
+      description: 409 PLATFORM_MANAGED while AI is platform-managed; no provider call and no reservation.
       x-roles:
         - admin
       security:
@@ -2255,9 +2264,12 @@ paths:
   /assets/image-provider:
     get:
       summary: Image generation status for the current organization (editor or admin)
+      description: >-
+        S36: while image generation is platform-managed (complete PLATFORM_IMAGE_* configuration, or production
+        without ALLOW_ORG_AI_KEYS=true) data is { managed: true, enabled, configured } without model or URL.
       responses:
         "200":
-          description: "data contains configured (boolean) and model (string)."
+          description: "data contains configured (boolean) and model (string), or the managed status."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ImageProviderResult" }
@@ -2279,6 +2291,7 @@ paths:
     put:
       security: [ { cookieAuth: [], csrfHeader: [] } ]
       summary: Set or disconnect the organization's image provider (admin)
+      description: 409 PLATFORM_MANAGED while image generation is platform-managed; nothing is stored.
       requestBody:
         required: true
         content:
@@ -2320,6 +2333,11 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "403":
           description: "Insufficient role or CSRF rejected"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "PLATFORM_MANAGED: image generation is provided by the platform"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -12857,6 +12875,16 @@ components:
           type: string
           minLength: 1
           maxLength: 7
+        resetsAt:
+          type: string
+          format: date-time
+          description: S36 start of the next monthly period (first day of the next UTC month).
+        upgradeUrl:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+          description: S36 optional PLATFORM_UPGRADE_URL (https or mailto); null shows "contact us to upgrade".
         limits:
           $ref: '#/components/schemas/Limits'
         items:
@@ -13651,14 +13679,27 @@ components:
       properties:
         success: { type: boolean, enum: [ true ] }
         data:
-          type: object
-          required: [ configured, model, baseUrl, mode ]
-          additionalProperties: false
-          properties:
-            configured: { type: boolean }
-            model: { type: string, maxLength: 120 }
-            baseUrl: { type: string, format: uri, maxLength: 500 }
-            mode: { type: string, enum: [ auto, images, chat ] }
+          anyOf:
+            - $ref: "#/components/schemas/ManagedAiService"
+            - type: object
+              required: [ configured, model, baseUrl, mode ]
+              additionalProperties: false
+              properties:
+                configured: { type: boolean }
+                model: { type: string, maxLength: 120 }
+                baseUrl: { type: string, format: uri, maxLength: 500 }
+                mode: { type: string, enum: [ auto, images, chat ] }
+    ManagedAiService:
+      type: object
+      description: >-
+        S36 platform-managed AI status. Billed on the organization's plan allowance; never includes model names,
+        service URLs, keys or raw usage units.
+      required: [ managed, enabled, configured ]
+      additionalProperties: false
+      properties:
+        managed: { type: boolean, enum: [ true ] }
+        enabled: { type: boolean, description: The platform service is available for this deployment. }
+        configured: { type: boolean, description: Same as enabled; kept for older clients. }
     GeneratedImageResult:
       type: object
       required: [ success, data ]
