@@ -265,7 +265,17 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   page.on("response", onReloadResponse);
   try {
     await gotoWorkspace(page, reloadUrl);
-    await page.waitForLoadState("networkidle");
+    try {
+      await expect(
+        page.getByRole("button", { name: "Agent 任务", exact: true }),
+      ).toHaveClass(/is-active/, { timeout: 10000 });
+    } catch (error) {
+      if (!reloadRateHit) throw error;
+      test.setTimeout(test.info().timeout + reloadRateHit + 15000);
+      await page.waitForTimeout(reloadRateHit);
+      reloadRateHit = undefined;
+      await gotoWorkspace(page, reloadUrl);
+    }
     if (reloadRateHit) {
       test.setTimeout(test.info().timeout + reloadRateHit + 15000);
       await page.waitForTimeout(reloadRateHit);
