@@ -18,7 +18,8 @@ import { runIdentity, tenantContext } from "../models/tenant-context";
 import { encrypt, decrypt } from "./credential-crypto";
 import { fenceTask } from "./product-import.service";
 import { callSiteAgent, type AgentResult } from "./site-agent-provider.service";
-import { settle } from "./usage.service";
+import { absorbUnknownUsage, settle } from "./usage.service";
+import { usageUnknownReasonOf } from "./ai-usage-unknown";
 import { decryptInquiry, ownInquiry, inquiryDetail } from "./inquiry.service";
 import { config } from "../config";
 import { ensure, AppError } from "../errors";
@@ -72,12 +73,20 @@ async function classify(task: any, row: any, enabled: boolean) {
     result = JSON.parse(decrypt(row.aiResult, aiPurpose(String(row._id))));
     await settle("ai_tokens", operationId, result!.tokens);
   } else if (enabled) {
-    const previous = await UsageRecord.exists({
+    const previous = await UsageRecord.findOne({
       metric: "ai_tokens",
       operationId,
     });
-    if (previous) classification = "ai_unknown";
-    else
+    if (previous && !["released", "settled"].includes(previous.state)) {
+      // S37 §2.3: absorb interrupted open reservation per S35 rules.
+      const absorption = await mongoose.connection.transaction(async (session) => {
+        await fenceTask(task, session);
+        return absorbUnknownUsage("ai_tokens", operationId, "interrupted", session);
+      });
+      classification = absorption === "absorbed" ? "ai_failed" : "ai_unknown";
+    } else if (previous) {
+      classification = "ai_unknown";
+    } else
       try {
         // No contact fields, original URLs, attachments, IP, exact UA or organization facts go to AI.
         const message = payload.message
@@ -108,16 +117,25 @@ async function classify(task: any, row: any, enabled: boolean) {
           },
         );
       } catch (error) {
-        classification =
-          error instanceof AppError
-            ? error.code === "QUOTA_EXCEEDED"
-              ? "quota_paused"
-              : error.code === "AI_UNCONFIGURED"
-                ? "rules"
-                : error.code === "AI_USAGE_UNKNOWN"
-                  ? "ai_unknown"
+        if (error instanceof AppError && error.code === "AI_USAGE_UNKNOWN") {
+          // S37 §2.3: unknown outcomes in inquiry AI classification are absorbed
+          // by the platform (releasing customer reservation and recording reason).
+          const reason = usageUnknownReasonOf(error) ?? "unrecorded";
+          await mongoose.connection.transaction(async (session) => {
+            await fenceTask(task, session);
+            await absorbUnknownUsage("ai_tokens", operationId, reason, session);
+          });
+          classification = "ai_unknown";
+        } else {
+          classification =
+            error instanceof AppError
+              ? error.code === "QUOTA_EXCEEDED"
+                ? "quota_paused"
+                : error.code === "AI_UNCONFIGURED"
+                  ? "rules"
                   : "ai_failed"
-            : "ai_failed";
+              : "ai_failed";
+        }
       }
   }
   if (result) {

@@ -192,25 +192,92 @@ function group(text: string, legacy: boolean) {
             ? "samples"
             : "";
 }
+function sentenceGroups(text: string, legacy: boolean): string[] {
+  const found: string[] = [];
+  if (/\b(capacity|annual output|production output|produce)\b/i.test(text))
+    found.push("capacity");
+  if (/\b(founded|established|since|founding)\b/i.test(text))
+    found.push("founded");
+  if (/\b(moq|minimum order)\b/i.test(text)) found.push("moq");
+  if (
+    (legacy ? /\b(lead time|delivery|sample)\b/i : /\b(lead time|delivery)\b/i).test(
+      text,
+    )
+  )
+    found.push("lead");
+  if (!legacy && /\bsamples?\b/i.test(text)) found.push("samples");
+  return found;
+}
+/** Tight clause around text[start, end) bounded by punctuation or conjunctions. */
+export function localClause(text: string, start: number, end: number) {
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+  const leftSplit = Math.max(
+    before.lastIndexOf("."),
+    before.lastIndexOf("!"),
+    before.lastIndexOf("?"),
+    before.lastIndexOf(","),
+    before.lastIndexOf(";"),
+    before.lastIndexOf(":"),
+    before.lastIndexOf("\n"),
+  );
+  let left = leftSplit + 1;
+  const conjBefore = [...before.slice(left).matchAll(/\s+(?:and|or|with|plus)\s+/gi)];
+  if (conjBefore.length) {
+    const last = conjBefore[conjBefore.length - 1];
+    left += (last.index ?? 0) + last[0].length;
+  }
+  const rightPunct = after.search(/[.!?,;:\n]/);
+  let right = rightPunct < 0 ? after.length : rightPunct;
+  const conjAfter = after.slice(0, right).search(/\s+(?:and|or|with|plus)\s+/i);
+  if (conjAfter >= 0) right = conjAfter;
+  return text.slice(left, end + right).trim();
+}
+const PHYSICAL_UNIT = /^(?:mm|cm|kg|ml|kw|sqm|%)$/i;
 /** Fact group a figure in this sentence/section must match ("" = any group). */
 export function numberGroup(
   sentence: string,
   blockKey: string | null,
   legacy = false,
+  clause?: string,
+  unit?: string,
 ) {
-  return blockKey === "moq"
-    ? "moq"
-    : blockKey === "samples"
-      ? legacy
-        ? "lead"
-        : "samples"
-      : group(sentence, legacy);
+  if (blockKey === "samples") return legacy ? "lead" : "samples";
+  if (blockKey === "moq") {
+    if (!legacy && clause && group(clause, false) === "lead") return "lead";
+    if (!legacy && group(sentence, false) === "lead" && !/\b(moq|minimum order)\b/i.test(sentence))
+      return "lead";
+    return "moq";
+  }
+  if (!legacy && clause) {
+    const local = group(clause, false);
+    if (local) return local;
+    // Physical measurement units (mm, kg, kw, ...) are never hijacked by
+    // unrelated MOQ/lead-time/capacity words elsewhere in the same sentence.
+    if (unit && PHYSICAL_UNIT.test(unit)) return "";
+    const all = sentenceGroups(sentence, false);
+    if (all.length === 1) return all[0];
+    return "";
+  }
+  return group(sentence, legacy);
 }
-// S35 stage C: AI-suggested candidate facts are citable only while the site
-// is in demo mode. They keep their real candidate status; approval, version and
-// publication gates still require confirmed facts.
-export const isDemoFact = (f: any) =>
-  !!f && f.status === "candidate" && f.source?.kind === "ai-suggested";
+export type ValidationFact = {
+  _id?: unknown;
+  id?: unknown;
+  status?: string;
+  revision?: number;
+  subjectType?: string;
+  subjectId?: unknown;
+  type?: string;
+  value?: unknown;
+  unit?: unknown;
+  source?: { kind?: string } | null;
+};
+// S37 §1.1: in demo mode, any candidate fact (AI-suggested or manually entered)
+// is citable in previews and readiness prompts. Real candidate status is kept;
+// approval, version and publication gates still require confirmed facts.
+export const isDemoFact = (f: ValidationFact | null | undefined) =>
+  !!f && f.status === "candidate";
 const GROUP_TYPES: Record<string, RegExp> = {
   capacity: /capacity|output|production/i,
   founded: /founded|founding|year|establish/i,
@@ -218,7 +285,7 @@ const GROUP_TYPES: Record<string, RegExp> = {
   lead: /lead|delivery|sample/i,
   samples: /sample/i,
 };
-export const matchesGroup = (f: any, g: string) =>
+export const matchesGroup = (f: ValidationFact | null | undefined, g: string) =>
   !g || !!GROUP_TYPES[g]?.test(String(f?.type ?? ""));
 /** S36 review fix: English FAQ direct-answer window (was 40–60 words). */
 export const FAQ_MIN_WORDS = 30,
@@ -227,9 +294,19 @@ const buyerAuditLanguage =
   /\b(?:is|are) (?:confirmed|listed|verified) (?:with|as|at)\b|\bconfirmed (?:labels?|details?|facts?|specifications?)\b|\b(?:ask|contact) (?:our|the) team to confirm\b|\baccording to (?:our|the) records\b|\bconfirmed (?:grinder |machine |product )?(?:moq|lead time)\b/i;
 const internalFactLanguage =
   /\bsupplied (?:facts?|data|evidence|information)\b|\bthe facts? (?:confirms?|shows?|states?|lists?|indicates?|says?)\b|\bno \w+(?: \w+)? facts? (?:is|are|was|were|has been|have been) (?:supplied|provided|available|listed|given)\b|\bconfirmed (?:product |company |supplier |model )?facts?\b|\bfact (?:library|refs?|references?|sheets?|base)\b/i;
+// S37 §4.6-3: internal-fact/audit phrasing checks for non-English storefronts.
+const localizedAuditLanguage: Record<string, RegExp> = {
+  zh: /已确认事实|事实库|根据(?:我们的)?记录|未提供.{0,8}事实|待确认事实/,
+  ja: /確認済みファクト|事実ライブラリ|記録によると|提供された事実/,
+  es: /\b(?:hechos confirmados|biblioteca de hechos|según nuestros registros|datos confirmados en el sistema)\b/i,
+  fr: /\b(?:faits confirmés|bibliothèque de faits|selon nos dossiers|données confirmées dans le système)\b/i,
+  de: /\b(?:bestätigte fakten|faktenbibliothek|laut unseren unterlagen|im system bestätigte daten)\b/i,
+  ru: /(?:подтвержд[её]нные факты|база фактов|согласно нашим записям)/i,
+  ar: /(?:الحقائق المؤكدة|مكتبة الحقائق|وفقاً لسجلاتنا)/,
+};
 export function validatePage(
   data: PageInput,
-  facts: any[],
+  facts: ValidationFact[],
   context: {
     navigationLabels?: string[];
     requiredProductSections?: string[];
@@ -251,7 +328,7 @@ export function validatePage(
     issues: Issue[] = [],
     factMap = new Map(facts.map((f) => [String(f._id ?? f.id), f])),
     identifiers = identifierKeys(legacy ? [] : (context.identifiers ?? []));
-  const citable = (f: any) =>
+  const citable = (f: ValidationFact | null | undefined) =>
     !!f &&
     (f.status === "confirmed" || (!!context.allowDemoFacts && isDemoFact(f)));
   const hasBuyerCopy =
@@ -277,7 +354,7 @@ export function validatePage(
     field: string,
     key: string | null,
   ) {
-    const candidates: any[] = [];
+    const candidates: ValidationFact[] = [];
     for (const ref of refs) {
       const f = factMap.get(ref.factId);
       if (!f || !citable(f) || f.revision !== ref.revision) {
@@ -300,7 +377,7 @@ export function validatePage(
       if (
         !candidates.some(
           (f) =>
-            /^company\.(email|privacyEmail)$/.test(f.type) &&
+            /^company\.(email|privacyEmail)$/.test(String(f.type ?? "")) &&
             String(f.value).toLowerCase().includes(email.toLowerCase()),
         )
       )
@@ -341,7 +418,8 @@ export function validatePage(
         start = Math.max(0, sanitized.lastIndexOf(".", match.index) + 1),
         end = sanitized.indexOf(".", match.index + match[0].length),
         sentence = sanitized.slice(start, end < 0 ? undefined : end),
-        g = numberGroup(sentence, key, legacy);
+        clause = localClause(sanitized, match.index, match.index + match[0].length),
+        g = numberGroup(sentence, key, legacy, clause, unit);
       const supported = candidates.some(
         (f) =>
           matchesGroup(f, g) &&
@@ -367,7 +445,7 @@ export function validatePage(
       if (
         !candidates.some(
           (f) =>
-            /cert|compliance|standard/i.test(f.type) &&
+            /cert|compliance|standard/i.test(String(f.type ?? "")) &&
             normalize(String(f.value)).includes(normalize(m[0])),
         )
       )
@@ -383,21 +461,28 @@ export function validatePage(
     )
       add("UNSOURCED_YEAR", field, key, "year");
     // Pages using the buyer-copy fields (or a design composition) opt into
-    // the editorial check.
-    if (auditCopy && (context.language ?? "en") === "en") {
-      // The documented safe placeholders for missing product details are exempt.
-      const copy = value.replace(
-        /Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?/gi,
-        "",
-      );
-      const audit =
-        copy.match(buyerAuditLanguage) ??
-        (legacy ? null : copy.match(internalFactLanguage));
-      if (audit) add("COPY_AUDIT_LANGUAGE", field, key, audit[0]);
+    // the editorial check. S37 §4.6-3 extends internal-audit checks to all 8 languages.
+    if (auditCopy) {
+      const lang = context.language ?? "en";
+      if (lang === "en") {
+        // The documented safe placeholders for missing product details are exempt.
+        const copy = value.replace(
+          /Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?/gi,
+          "",
+        );
+        const audit =
+          copy.match(buyerAuditLanguage) ??
+          (legacy ? null : copy.match(internalFactLanguage));
+        if (audit) add("COPY_AUDIT_LANGUAGE", field, key, audit[0]);
+      } else if (!legacy) {
+        const localized = localizedAuditLanguage[lang];
+        const hit = localized ? value.match(localized) : null;
+        if (hit) add("COPY_AUDIT_LANGUAGE", field, key, hit[0]);
+      }
     }
     if (
       /\bcertified\b/i.test(value) &&
-      !candidates.some((f) => /cert|compliance|standard/i.test(f.type))
+      !candidates.some((f) => /cert|compliance|standard/i.test(String(f.type ?? "")))
     )
       add("UNSOURCED_CERTIFICATION", field, key, "certified");
     if (
@@ -439,8 +524,8 @@ export function validatePage(
       const known = b.refs
         .map((r) => factMap.get(r.factId))
         .filter(
-          (f) =>
-            f &&
+          (f): f is ValidationFact =>
+            !!f &&
             citable(f) &&
             b.refs.some(
               (r) =>
@@ -476,7 +561,7 @@ export function validatePage(
                       : "sample"
                     : b.key,
               "i",
-            ).test(f.type) &&
+            ).test(String(f.type ?? "")) &&
             normalize(b.body).includes(normalize(String(f.value))),
         )
       )
@@ -601,9 +686,10 @@ export function validatePage(
         "blocks." + b.key + ".faq." + i,
         b.key,
       );
+      const lang = context.language ?? "en";
       const count = f.answer.trim().split(/\s+/).filter(Boolean).length;
       if (
-        (context.language ?? "en") === "en" &&
+        lang === "en" &&
         (count < (legacy ? 40 : FAQ_MIN_WORDS) ||
           count > (legacy ? 60 : FAQ_MAX_WORDS) ||
           /^(in this (article|guide)|let us|let's|it depends)/i.test(f.answer))
@@ -614,6 +700,24 @@ export function validatePage(
           b.key,
           String(count),
         );
+      else if (!legacy && (lang === "zh" || lang === "ja")) {
+        const cjkLen = f.answer.replace(/\s+/g, "").length;
+        if (cjkLen < 40 || cjkLen > 240)
+          add(
+            "FAQ_DIRECT_ANSWER_REQUIRED",
+            "blocks." + b.key + ".faq." + i,
+            b.key,
+            String(cjkLen),
+          );
+      } else if (!legacy && lang !== "en") {
+        if (count < 20 || count > 100)
+          add(
+            "FAQ_DIRECT_ANSWER_REQUIRED",
+            "blocks." + b.key + ".faq." + i,
+            b.key,
+            String(count),
+          );
+      }
     }
     if (b.type === "image" && (!b.assetId || !b.alt.trim()))
       add("IMAGE_ALT_REQUIRED", "blocks." + b.key, b.key);
@@ -639,7 +743,10 @@ export function escapeHtml(value: unknown) {
       ]!,
   );
 }
-export function renderPage(data: PageInput, site: any) {
+export function renderPage(
+  data: PageInput,
+  site: { name: string; brandColor: string; logoId?: string | null },
+) {
   const esc = escapeHtml;
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +

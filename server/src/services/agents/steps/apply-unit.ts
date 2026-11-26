@@ -113,6 +113,27 @@ export async function applyUnit(
         identifiers: snapshotIdentifiers(r),
       });
       if (validation.length) {
+        const details = validation
+          .slice(0, 6)
+          .map(
+            (i) =>
+              i.code +
+              "(" +
+              i.field +
+              (i.token ? ":" + i.token.slice(0, 24) : "") +
+              ")",
+          )
+          .join(", ");
+        const more =
+          validation.length > 6
+            ? " (+" + (validation.length - 6) + " more)"
+            : "";
+        const recommendation = (
+          "Resolve the current fact or link validation issues listed in the page editor before approval: " +
+          details +
+          more +
+          "."
+        ).slice(0, 500);
         reportBody.findings = reportBody.findings.slice(0, 11);
         reportBody.findings.push({
           blockKey: null,
@@ -120,8 +141,7 @@ export async function applyUnit(
             ? "navigation"
             : "procurement",
           severity: "error",
-          recommendation:
-            "Resolve the current fact or link validation issues listed in the page editor before approval.",
+          recommendation,
         });
       }
       output = {

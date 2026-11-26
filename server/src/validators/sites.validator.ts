@@ -396,9 +396,9 @@ export const composition = z
     surface: z.enum(["light", "warm", "contrast"]).optional(),
     headerStyle: z.enum(["classic", "editorial", "minimal"]).optional(),
     radius: z.enum(["sharp", "subtle", "rounded"]).optional(),
-    // S35: optional trusted rendering pack (scoped CSS in builder/pack-*.css).
+    // S35/S37: optional trusted rendering pack (scoped CSS in builder/pack-*.css).
     // Omitted = legacy composition output, unchanged.
-    pack: z.enum(["precision"]).optional(),
+    pack: z.enum(["precision", "atelier", "monolith"]).optional(),
   })
   .strict();
 export const presentation = z

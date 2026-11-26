@@ -280,10 +280,21 @@ test("demo facts are citable only in demo mode and keep their candidate status",
   ]);
   const issues = validatePage(unsupported, [fact], { ...ctx, allowDemoFacts: true });
   assert.ok(issues.some((i) => i.code === "UNSOURCED_CERTIFICATION"));
-  // A manual candidate is never citable, even in demo mode.
+  // S37 §1.1: manual candidates are also citable in demo mode (still blocked
+  // from approval and publishing), and rejected once demo mode is off.
   const manual = { ...fact, source: { kind: "manual" } };
+  assert.deepEqual(
+    validatePage(p, [manual], { ...ctx, allowDemoFacts: true }),
+    [],
+  );
   assert.ok(
-    validatePage(p, [manual], { ...ctx, allowDemoFacts: true }).some(
+    validatePage(p, [manual], ctx).some(
+      (i) => i.code === "FACT_REFERENCE_STALE",
+    ),
+  );
+  const rejected = { ...fact, status: "rejected" };
+  assert.ok(
+    validatePage(p, [rejected], { ...ctx, allowDemoFacts: true }).some(
       (i) => i.code === "FACT_REFERENCE_STALE",
     ),
   );

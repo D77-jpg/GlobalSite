@@ -23,6 +23,8 @@ import { Task } from "../models";
 import { runScheduler, runWithTenant } from "../models/tenant-context";
 import { decrypt } from "../services/credential-crypto";
 import { config } from "../config";
+import { recordTaskMetric } from "../services/metrics.service";
+import { reportWorkerError } from "../services/error-monitor.service";
 const owner = randomUUID();
 export type TaskLane = "fast" | "heavy";
 const FAST_LANE_FILTER = {
@@ -83,11 +85,16 @@ export async function claimTask(now = new Date(), lane?: TaskLane) {
   );
 }
 export async function finishTask(
-  task: any,
+  task: { _id: unknown; owner?: string; fencingToken?: number; attempts: number; kind?: string },
   status: "done" | "pending" | "dead",
   error?: string,
   delayMs?: number,
+  durationMs?: number,
 ) {
+  if (task.kind) {
+    recordTaskMetric(task.kind, status, durationMs ?? 0);
+    if (status === "dead" && error) reportWorkerError(task.kind, error);
+  }
   return Task.updateOne(
     {
       _id: task._id,

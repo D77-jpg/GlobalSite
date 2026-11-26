@@ -39,6 +39,7 @@ import {
   validationFeedback,
 } from "../validation";
 import { fillUnitImages } from "../auto-images";
+import { selectFullReviewKeys } from "../quality-baseline";
 import { unitPrompt } from "../prompts";
 import { applyUnit } from "./apply-unit";
 import type {
@@ -256,9 +257,16 @@ export async function processSiteAgent(
                 )
               : [];
 
+        const fullReviewKeys =
+          run.step === "review" ? selectFullReviewKeys(run.steps) : null;
+        const sampledStructural =
+          run.step === "review" &&
+          provider === callSiteAgent &&
+          !!fullReviewKeys &&
+          !fullReviewKeys.has(unit.key);
         const selectedProvider: ProviderCallable =
           run.step === "review" &&
-          !config &&
+          (!config || sampledStructural) &&
           provider === callSiteAgent
             ? async (_system, _input, _operation, save) => {
                 const findings: Array<{
@@ -289,6 +297,7 @@ export async function processSiteAgent(
                     run.inputSnapshot.site,
                     run.inputSnapshot.products,
                     run.inputSnapshot.facts,
+                    { allowDemoFacts: !!run.inputSnapshot.site.demoMode },
                   ).gaps.length
                 )
                   findings.push({
@@ -300,8 +309,9 @@ export async function processSiteAgent(
                   });
                 const r: AgentResult = {
                   output: {
-                    summary:
-                      "Browser measurements and screenshots are ready. AI is not configured; a human must inspect content, images and purchasing usefulness.",
+                    summary: sampledStructural
+                      ? "Browser measurements, screenshots and structural baseline are ready (sampled sibling page; run a single-page review for full AI critique). A human must inspect screenshots."
+                      : "Browser measurements and screenshots are ready. AI is not configured; a human must inspect content, images and purchasing usefulness.",
                     findings,
                   },
                   tokens: 0,

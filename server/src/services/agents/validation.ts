@@ -9,6 +9,7 @@ import {
 } from "../page-validation.service";
 import { repairFaq } from "./faq-repair";
 import {
+  normalizeRequiredProductSections,
   repairBrokenFragments,
   repairSamplesSection,
   repairUnsourcedClaims,
@@ -22,7 +23,7 @@ import type {
 } from "./types";
 
 export const allowedInterview =
-  /^(company\.(name|email|address|founded|capacity|certifications)|product\.(material|application|specifications|leadTime|moq|samples|packaging|oem))$/;
+  /^(company\.(name|email|address|founded|capacity|certifications|exportCountries|warranty|customers|caseStudy|factoryArea|employees)|product\.(material|application|specifications|leadTime|moq|samples|packaging|oem|warranty|capacity))$/;
 
 export const reviewOutput = z
   .object({
@@ -135,11 +136,15 @@ export function repairGeneratedPage(
 ): v.PageInput {
   const facts = run.inputSnapshot.facts;
   let out = stripAppendedFactValues(page, facts, context);
+  out = normalizeRequiredProductSections(out, facts, context);
   out = completeFactRefs(out, facts, context, run.inputSnapshot.products);
   out = repairFaq(out, facts, context, run.inputSnapshot.products);
   out = repairSamplesSection(out, facts, context);
   out = repairUnsourcedClaims(out, facts, context);
-  return repairBrokenFragments(out, facts, context);
+  out = repairBrokenFragments(out, facts, context);
+  // Second pass: if claim-repair reset a required product section to the safe
+  // placeholder even though citable facts exist for that section, fill verbatim.
+  return normalizeRequiredProductSections(out, facts, context);
 }
 
 /**

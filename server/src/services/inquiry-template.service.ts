@@ -1,4 +1,4 @@
-import type { Snapshot } from "./static-template.service";
+import type { Snapshot, SnapshotPage } from "./static-template.service";
 import { getStorefrontCopy } from "./storefront-i18n.service";
 
 const e = (v: unknown) =>
@@ -11,7 +11,7 @@ const e = (v: unknown) =>
   );
 
 /** S36: heading the inquiry section renders for this page (page, home, default). */
-export function inquiryHeadingText(s: Snapshot, p: any): string {
+export function inquiryHeadingText(s: Snapshot, p?: SnapshotPage | null): string {
   const home = s.pages.find((v) => v.type === "home");
   return (
     p?.presentation?.inquiryHeading ??
@@ -19,7 +19,7 @@ export function inquiryHeadingText(s: Snapshot, p: any): string {
     getStorefrontCopy(s.site.language).inquiryHeading
   );
 }
-export function renderInquiry(s: Snapshot, p: any) {
+export function renderInquiry(s: Snapshot, p: SnapshotPage) {
   const copy = getStorefrontCopy(s.site.language);
   const c = s.inquiry ?? {},
     products = s.pages.filter((v) => v.type === "product" && v.productId),
@@ -126,14 +126,17 @@ export function renderConsent(s?: Snapshot) {
 }
 
 export function privacyPath(s: Snapshot) {
-  return (s as any).inquiry?.privacyPath ?? "/privacy-policy";
+  return s.inquiry?.privacyPath ?? "/privacy-policy";
 }
 
 export function renderPrivacy(s: Snapshot) {
   const copy = getStorefrontCopy(s.site.language);
-  const c = (s as any).inquiry ?? {},
+  const c = s.inquiry ?? {},
     facts = c.policyFacts ?? [],
-    value = (key: string) => facts.find((f: any) => f.type === key)?.value;
+    value = (key: string) => {
+      const val = facts.find((f) => f.type === key)?.value;
+      return val != null ? String(val) : undefined;
+    };
   const name = value("company.name") ?? "the website operator",
     address = value("company.address"),
     email = value("company.privacyEmail") ?? value("company.email"),
@@ -159,7 +162,7 @@ export function renderPrivacy(s: Snapshot) {
     (email
       ? " Privacy contact: " + e(email) + "."
       : " Contact the operator using the published contact information on this website.") +
-    '</p><section class="section"><h2>Inquiries and contact information</h2><p>We collect the name, company, email, country, phone or WhatsApp number, selected products, quantity, message and attachments that you choose to submit. We also record the submitting page, referral and campaign information, device category and a first-visit time supplied by your browser. We use this information to respond to your request and manage procurement communications.</p><p>GlobalSite stores inquiries for the website operator. Our chosen hosting and email providers help deliver this service. Where enabled, an AI provider receives a limited, automatically redacted message for spam assessment. Messages are retained even when marked as suspected spam. If the website operator connects GlobalCRM, submitted inquiries and attachments are transferred to that CRM for follow-up. The operator controls this optional connection.</p></section><section class="section"><h2>Security, retention and your choices</h2><p>We use access controls, encryption and anti-abuse checks to protect submitted information. Processing locations depend on the operator and its chosen providers; contact the operator for details. We retain information as needed to handle your request and meet applicable requirements. Contact us to request access, correction or deletion, withdraw consent or ask about retention and transfers. The operator must review the applicable legal basis and local requirements before enabling inquiries.</p><p>When configured, Cloudflare Turnstile checks whether a submission is legitimate. The operator must disclose relevant service providers and processing regions for its deployment.</p></section><section class="section"><h2>Cookies and local storage</h2><p>Necessary functions and your privacy preference are available without optional tracking. We do not load optional analytics or advertising. If you allow optional storage, we may save a first-visit timestamp in your browser. Rejecting optional storage does not prevent submitting an inquiry. Your choice can be changed using Privacy choices below.</p><button type="button" data-cookie-settings>' +
+    '</p><section class="section"><h2>Inquiries and contact information</h2><p>We collect the name, company, email, country, phone or WhatsApp number, selected products, quantity, message and attachments that you choose to submit. We also record the submitting page, referral and campaign information, device category and a first-visit time supplied by your browser. We use this information to respond to your request and manage procurement communications.</p><p>GlobalSite stores and processes inquiries as a service provider for the website operator (the data controller). Our hosting and email service providers help deliver this service. Where AI spam assessment is enabled by the operator, GlobalSite transmits only a limited, automatically redacted version of the message text (excluding contact fields, URLs, phone numbers and attachments) to its platform-managed AI sub-processor solely to assess suspected spam; messages are retained even when marked as suspected spam. If the website operator connects GlobalCRM, submitted inquiries and attachments are transferred to that CRM for follow-up. The operator controls these optional features.</p></section><section class="section"><h2>Security, retention and your choices</h2><p>We use access controls, encryption and anti-abuse checks to protect submitted information. Processing locations depend on the operator and its chosen providers; contact the operator for details. We retain information as needed to handle your request and meet applicable requirements. Contact us to request access, correction or deletion, withdraw consent or ask about retention and transfers. The operator must review the applicable legal basis and local requirements before enabling inquiries.</p><p>When configured, Cloudflare Turnstile checks whether a submission is legitimate. The operator must disclose relevant service providers and processing regions for its deployment.</p></section><section class="section"><h2>Cookies and local storage</h2><p>Necessary functions and your privacy preference are available without optional tracking. We do not load optional analytics or advertising. If you allow optional storage, we may save a first-visit timestamp in your browser. Rejecting optional storage does not prevent submitting an inquiry. Your choice can be changed using Privacy choices below.</p><button type="button" data-cookie-settings>' +
     e(copy.privacyChoices) +
     "</button></section><p>Policy version: " +
     e(c.privacyVersion ?? "s6-v1") +

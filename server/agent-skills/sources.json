@@ -30,5 +30,5 @@
       "license": "MIT"
     }
   ],
-  "snapshotNote": "Reference Markdown and licenses only; line endings and trailing whitespace normalized. Runtime uses the reviewed brand-site.md adaptation."
+  "snapshotNote": "Reference Markdown and licenses only; line endings and trailing whitespace normalized. Runtime uses the reviewed brand-site.md adaptation plus optional per-pack profiles in packs/<pack>.md loaded by allowlisted composition.pack."
 }

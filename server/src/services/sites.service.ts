@@ -322,14 +322,13 @@ export async function sourceRows(site: any, session?: mongoose.ClientSession) {
   ensure(facts.length <= 200, 409, "AGENT_INPUT_TOO_LARGE");
   return { products, facts };
 }
-// S35 stage C: ai-suggested candidates usable only in demo-mode snapshots.
+// S37 §1.1: all candidate facts (AI-suggested or manual) are usable in demo-mode snapshots.
 export async function demoFactRows(
   site: any,
   session?: mongoose.ClientSession,
 ) {
   const facts = await FactSheet.find({
     status: "candidate",
-    "source.kind": "ai-suggested",
     $or: [
       { subjectType: "organization" },
       { subjectType: "product", subjectId: { $in: site.productIds } },
@@ -476,8 +475,15 @@ export async function pageView(
         site.plan?.nodes,
       ),
     });
-  // S35 stage C: demo data may be previewed but never approved or published.
-  if (facts.some((f: any) => isDemoFact(f)))
+  // S35/S37: demo data (any candidate in demoMode, or ai-suggested candidate)
+  // may be previewed but never approved or published.
+  if (
+    facts.some((f: any) =>
+      site.demoMode
+        ? isDemoFact(f)
+        : isDemoFact(f) && f.source?.kind === "ai-suggested",
+    )
+  )
     issues.push({
       code: "DEMO_FACTS_UNCONFIRMED",
       field: "page",
@@ -1008,13 +1014,14 @@ export async function preview(
   ).replace(/@font-face\s*\{[^}]+\}/g, "");
   const current = views.find((p: any) => p.id === id);
   ensure(current, 409, "PAGE_PLAN_CHANGED");
-  // S35: optional scoped rendering pack, only for pages that select it.
+  // S35/S37: optional scoped rendering pack, only for pages that select it.
+  const activePack = pageComposition(snapshot, current)?.pack;
   const packCss =
-    pageComposition(snapshot, current)?.pack === "precision"
+    activePack && ["precision", "atelier", "monolith"].includes(activePack)
       ? "\n" +
         (
           await fs.readFile(
-            path.resolve(__dirname, "../../builder/pack-precision.css"),
+            path.resolve(__dirname, "../../builder/pack-" + activePack + ".css"),
             "utf8",
           )
         ).replace(/@font-face\s*\{[^}]+\}/g, "")

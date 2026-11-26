@@ -12,6 +12,7 @@ import {
   usageUnknown,
   type UsageUnknownStage,
 } from "./ai-usage-unknown";
+import { recordAiMetric } from "./metrics.service";
 export type AgentResult = {
   output: any;
   tokens: number;
@@ -40,6 +41,124 @@ export function fullPageTimeoutMs(
   if (raw === undefined || !raw.trim() || !Number.isInteger(n))
     return AI_FULL_PAGE_TIMEOUT_DEFAULT_MS;
   return Math.min(600000, Math.max(120000, n));
+}
+
+/** S37 §3.1: SSE streaming for long tasks (enabled by default; disable with "false"). */
+export function streamLongTasksEnabled(
+  raw: string | undefined = process.env.AI_STREAM_LONG_TASKS,
+): boolean {
+  return raw === undefined || raw.trim().toLowerCase() !== "false";
+}
+
+export type SseChatPayload = {
+  choices: Array<{
+    message: { content: string };
+    finish_reason: string | null;
+  }>;
+  usage?: { total_tokens?: number };
+};
+
+/**
+ * S37 §3.1: reads an OpenAI-compatible `text/event-stream` chat completion
+ * response with an activity-based idle timeout (resets whenever data arrives)
+ * plus a hard upper byte limit. Returns the same envelope shape as non-stream
+ * responses so downstream JSON parsing and billing stay identical.
+ */
+export async function readSseChatStream(
+  body: ReadableStream<Uint8Array>,
+  options: {
+    byteLimit?: number;
+    contentLimit?: number;
+    idleTimeoutMs?: number;
+  } = {},
+): Promise<SseChatPayload> {
+  const byteLimit = options.byteLimit ?? 2 * 1024 * 1024;
+  const contentLimit = options.contentLimit ?? 512 * 1024;
+  const idleTimeoutMs = options.idleTimeoutMs ?? 90000;
+  const reader = body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let rawBytes = 0;
+  let buffer = "";
+  let content = "";
+  let finishReason: string | null = null;
+  let usage: { total_tokens?: number } | undefined;
+
+  const readWithIdleTimeout = () =>
+    new Promise<ReadableStreamReadResult<Uint8Array>>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        void reader.cancel().catch(() => undefined);
+        reject(new AiUsageUnknownError("timeout"));
+      }, idleTimeoutMs);
+      reader.read().then(
+        (res) => {
+          clearTimeout(timer);
+          resolve(res);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
+
+  const handleLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return;
+    const data = trimmed.slice(5).trim();
+    if (!data || data === "[DONE]") return;
+    let chunk: {
+      choices?: Array<{
+        delta?: { content?: string | null };
+        message?: { content?: string | null };
+        finish_reason?: string | null;
+      }>;
+      usage?: { total_tokens?: number } | null;
+    };
+    try {
+      chunk = JSON.parse(data);
+    } catch {
+      throw new AiUsageUnknownError("parse");
+    }
+    const choice = chunk.choices?.[0];
+    const piece = choice?.delta?.content ?? choice?.message?.content;
+    if (typeof piece === "string" && piece.length) {
+      content += piece;
+      if (Buffer.byteLength(content, "utf8") > contentLimit)
+        throw new AiUsageUnknownError("body_too_large");
+    }
+    if (choice?.finish_reason) finishReason = choice.finish_reason;
+    if (chunk.usage && typeof chunk.usage === "object") usage = chunk.usage;
+  };
+
+  try {
+    for (;;) {
+      const { done, value } = await readWithIdleTimeout();
+      if (done) break;
+      rawBytes += value.length;
+      if (rawBytes > byteLimit) {
+        await reader.cancel().catch(() => undefined);
+        throw new AiUsageUnknownError("body_too_large");
+      }
+      buffer += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, nl);
+        buffer = buffer.slice(nl + 1);
+        handleLine(line);
+      }
+    }
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      for (const line of buffer.split("\n")) handleLine(line);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return {
+    choices: [{ message: { content }, finish_reason: finishReason }],
+    ...(usage ? { usage } : {}),
+  };
 }
 
 function resolveTaskRouteKey(task?: string): string | undefined {
@@ -86,7 +205,15 @@ export async function callSiteAgent(
   const text = JSON.stringify(input);
   ensure(Buffer.byteLength(text) <= 120000, 409, "AGENT_INPUT_TOO_LARGE");
   const url = await aiBase(provider.baseUrl);
-  const messages: any[] = [
+  const messages: Array<{
+    role: "system" | "user";
+    content:
+      | string
+      | Array<
+          | { type: "text"; text: string }
+          | { type: "image_url"; image_url: { url: string; detail: "low" } }
+        >;
+  }> = [
     { role: "system", content: system },
     {
       role: "user",
@@ -107,16 +234,21 @@ export async function callSiteAgent(
       413,
       "BODY_TOO_LARGE",
     );
-    const original = messages[1].content;
+    const original = String(messages[1].content);
     messages[1].content = [
       { type: "text", text: original },
       ...images.flatMap((i) => [
-        { type: "text", text: i.label },
-        { type: "image_url", image_url: { url: i.data, detail: "low" } },
+        { type: "text" as const, text: i.label },
+        { type: "image_url" as const, image_url: { url: i.data, detail: "low" as const } },
       ]),
     ];
   }
-  const task = (input as { task?: string })?.task;
+  const taskInput = input as {
+    task?: string;
+    site?: { buyerProfile?: unknown };
+    outputSchema?: unknown;
+  };
+  const task = taskInput?.task;
   const fullPageTask = ["design", "content", "refine"].includes(task ?? "");
   // S35: quality review also sends a full rendered page plus measurements and
   // often exceeds 120 s on reasoning models; it shares the long-task deadline.
@@ -129,7 +261,7 @@ export async function callSiteAgent(
       : task === "review"
         ? 16384
         : task === "research"
-          ? (input as any)?.site?.buyerProfile
+          ? taskInput?.site?.buyerProfile
             ? 16384
             : 6144
           : 8192;
@@ -167,10 +299,14 @@ export async function callSiteAgent(
     provider.outputMode === "json_schema" &&
     !!rawOutputSchema &&
     typeof rawOutputSchema === "object";
-  const makeRequestBody = (schemaMode: boolean) => ({
+  const useStream = longTask && streamLongTasksEnabled();
+  const makeRequestBody = (schemaMode: boolean, streaming: boolean) => ({
     model: selectedModel,
     max_tokens: maxTokens,
     ...(temperature !== undefined ? { temperature } : {}),
+    ...(streaming
+      ? { stream: true, stream_options: { include_usage: true } }
+      : {}),
     response_format: schemaMode
       ? {
           type: "json_schema",
@@ -188,28 +324,36 @@ export async function callSiteAgent(
   try {
     const authHeader = "Bearer " + provider.apiKey();
     const endpoint = url.href.replace(/\/$/, "") + "/chat/completions";
-    const send = (schemaMode: boolean) =>
+    const send = (schemaMode: boolean, streaming: boolean) =>
       aiFetch(endpoint, {
         method: "POST",
         redirect: "error",
-        // Full-page JSON generation shares the model's reasoning/output cap.
-        // Keep a bounded deadline (AI_FULL_PAGE_TIMEOUT_MS, default 240 s)
-        // while the Worker renews its fenced lease.
-        signal: AbortSignal.timeout(
-          longTask ? fullPageTimeoutMs() : 120000,
-        ),
+        // Full-page JSON generation & review share AI_FULL_PAGE_TIMEOUT_MS
+        // (default 240 s, up to 600 s); streamed calls also enforce an idle timeout.
+        signal: AbortSignal.timeout(longTask ? fullPageTimeoutMs() : 120000),
         headers: {
           "Content-Type": "application/json",
+          ...(streaming ? { Accept: "text/event-stream, application/json" } : {}),
           Authorization: authHeader,
         },
-        body: JSON.stringify(makeRequestBody(schemaMode)),
+        body: JSON.stringify(makeRequestBody(schemaMode, streaming)),
       });
-    let response = await send(useStrictSchema);
-    if (useStrictSchema && response.status === 400) {
+    let activeSchema = useStrictSchema;
+    let activeStream = useStream;
+    let response = await send(activeSchema, activeStream);
+    if (activeSchema && response.status === 400) {
       // Upstream rejected strict json_schema (HTTP 400); fall back once to json_object
       // within the same reserved operationId so the tenant is never double-billed.
       await response.body?.cancel().catch(() => undefined);
-      response = await send(false);
+      activeSchema = false;
+      response = await send(false, activeStream);
+    }
+    if (activeStream && response.status === 400) {
+      // Upstream rejected stream / stream_options (HTTP 400); fall back once to
+      // non-streaming JSON within the same reservation.
+      await response.body?.cancel().catch(() => undefined);
+      activeStream = false;
+      response = await send(activeSchema, false);
     }
     if (!response.ok) {
       stage = "persist";
@@ -226,13 +370,22 @@ export async function callSiteAgent(
     }
     // S35 acceptance fix: every unknown outcome keeps a fixed reason code.
     if (!response.body) throw new AiUsageUnknownError("usage_missing");
-    const body = parseProviderJson(
-        await readCappedBody(response.body, 512 * 1024),
-      ) as any,
-      tokens = providerTokens(body, budget);
+    const contentType = String(
+      response.headers.get("content-type") ?? "",
+    ).toLowerCase();
+    const isSse = contentType.includes("text/event-stream");
+    const body = (
+      isSse
+        ? await readSseChatStream(response.body, {
+            idleTimeoutMs: Math.min(fullPageTimeoutMs(), 120000),
+          })
+        : parseProviderJson(await readCappedBody(response.body, 512 * 1024))
+    ) as SseChatPayload;
+    const tokens = providerTokens(body, budget);
     const responseText = String(
       body.choices?.[0]?.message?.content ?? "",
     ).trim();
+    const finishRaw = body.choices?.[0]?.finish_reason ?? "";
     const responseDiagnostics = {
       characters: responseText.length,
       kind: (!responseText
@@ -242,8 +395,8 @@ export async function callSiteAgent(
           : responseText.startsWith("```")
             ? "fence"
             : "text") as "empty" | "object" | "fence" | "text",
-      finish: (["stop", "length"].includes(body.choices?.[0]?.finish_reason)
-        ? body.choices[0].finish_reason
+      finish: (finishRaw === "stop" || finishRaw === "length"
+        ? finishRaw
         : "other") as "stop" | "length" | "other",
     };
     let output: unknown, errorCode: string | undefined;
@@ -277,9 +430,22 @@ export async function callSiteAgent(
     await save(result);
     await settle("ai_tokens", operationId, tokens);
     known = true;
+    recordAiMetric(task ?? "other", errorCode ? "invalid" : "ok");
     return result;
   } catch (e) {
-    if (known) throw e;
+    if (known) {
+      const c = e instanceof AppError ? e.code : "AI_REQUEST_FAILED";
+      recordAiMetric(
+        task ?? "other",
+        c === "AI_RATE_LIMIT"
+          ? "rate_limit"
+          : c === "AI_TRANSIENT"
+            ? "transient"
+            : "failed",
+      );
+      throw e;
+    }
+    recordAiMetric(task ?? "other", "unknown");
     throw usageUnknown(e, stage);
   }
 }

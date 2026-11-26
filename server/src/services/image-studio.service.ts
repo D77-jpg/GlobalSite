@@ -270,7 +270,7 @@ export async function generateImage(
     input.subject,
     input.composition === "logo"
       ? "Original logo concept. No photorealistic people, no watermark, badges or certification marks; no text other than the exact brand name given."
-      : "Original illustrative brand imagery. No text, logo, watermark, badges or certification marks.",
+      : "Original illustrative brand imagery. Strictly zero text, zero letters, zero digits, zero labels, zero brand logos, zero screen readouts or engraved markings on machines or packaging; clean unbranded surfaces only.",
   ]
     .filter(Boolean)
     .join(" ");

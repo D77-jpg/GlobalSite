@@ -4,6 +4,7 @@
 // actually sent screenshots to a vision model (visualInput=true); otherwise the
 // report is labelled "structural" and must not be presented as a visual review.
 import type { PageInput } from "../../validators/sites.validator";
+import { pendingDetail } from "../b2b-template.service";
 
 export const BASELINE_DIMENSIONS = [
   "firstImpression",
@@ -118,17 +119,41 @@ const UNAVAILABLE_IMAGE =
   /\b(?:unavailable|not available|broken|fail(?:s|ed)? to load|(?:does|did) not load|not loading|unknown (?:asset|image)s?|not (?:in|part of|found in|listed in|included in|among) (?:the |an? )?(?:selected |supplied |approved )?(?:product )?(?:asset|image|media|photo)s?(?: list| inventory| library)?|missing from (?:the |an? )?(?:selected |supplied )?(?:product )?(?:asset|image|media)s?(?: list| inventory| library)?|not (?:a |an )?(?:selected|supplied|approved) (?:product )?(?:asset|image|photo)s?)/i;
 
 /**
- * Drops model "imagery" findings that claim images are unavailable when the
- * isolated browser loaded every image. Other imagery critique is kept.
+ * S37 §4.7-4: Drops model "imagery" findings claiming images failed to load or
+ * are missing from asset lists using structural browser section measurements
+ * (matched by blockKey when present, or page-wide only when every rendered
+ * image loaded). Critique about cropping, lighting or relevance is always kept.
  */
 export function reconcileImageFindings<
-  T extends { code: string; recommendation: string },
+  T extends { blockKey?: string | null; code: string; recommendation: string },
 >(findings: T[], metrics: ReadonlyArray<BaselineMetric>): T[] {
   const images = imageAvailability(metrics);
-  if (!images || images.broken > 0 || images.rendered === 0) return findings;
-  return findings.filter(
-    (f) => !(f.code === "imagery" && UNAVAILABLE_IMAGE.test(f.recommendation)),
-  );
+  if (!images || images.rendered === 0) return findings;
+  const desktop =
+    metrics.find((m) => m.width === 1440 && Array.isArray(m.sections)) ??
+    metrics.find((m) => Array.isArray(m.sections));
+  const sectionByKey = new Map<
+    string,
+    NonNullable<BaselineMetric["sections"]>[number]
+  >();
+  for (const sec of desktop?.sections ?? []) {
+    if (!sec.id) continue;
+    const key = sec.id.replace(/^block-/, "");
+    sectionByKey.set(key, sec);
+  }
+  return findings.filter((f) => {
+    if (f.code !== "imagery" || !UNAVAILABLE_IMAGE.test(f.recommendation))
+      return true;
+    if (f.blockKey) {
+      const sec = sectionByKey.get(f.blockKey);
+      if (sec) {
+        // Keep the finding if this specific section actually has broken or zero images.
+        if ((sec.broken ?? 0) > 0 || (sec.images ?? 0) === 0) return true;
+        return false;
+      }
+    }
+    return images.broken > 0;
+  });
 }
 
 export function structuralBaseline(
@@ -200,9 +225,85 @@ export function structuralBaseline(
     density -= 1;
   if ((desktop?.blankSections ?? 0) > 0) density -= 1;
 
+  // S37 §1.5: credibility rules are page-type aware so product, category,
+  // customization, FAQ and contact pages are scored on the evidence relevant
+  // to their buyer decision rather than penalised for lacking home-only bands.
   let credibility = 1;
-  if (metricsBlock) credibility += 2;
-  if (proofBlock) credibility += 2;
+  if (pageType === "product") {
+    const hasSpecs = blocks.some(
+      (b) => b.type === "specs" && !!b.table?.rows?.length && hasRefs(b),
+    );
+    const hasTerms = blocks.some(
+      (b) =>
+        ["moq", "material", "application", "samples", "packaging"].includes(
+          b.key,
+        ) &&
+        hasRefs(b) &&
+        !pendingDetail(b.body),
+    );
+    const hasOemOrProof =
+      blocks.some(
+        (b) =>
+          ["customization", "evidence", "certifications", "case-study"].includes(
+            b.type,
+          ) && hasRefs(b),
+      ) || blocks.some((b) => b.key === "oem" && hasRefs(b));
+    if (hasSpecs) credibility += 2;
+    if (hasTerms) credibility += 1;
+    if (hasOemOrProof || metricsBlock || proofBlock) credibility += 1;
+  } else if (pageType === "category") {
+    const hasComparisonOrSourced = blocks.some(
+      (b) =>
+        ["comparison", "features", "split", "specs"].includes(b.type) &&
+        hasRefs(b),
+    );
+    if (hasComparisonOrSourced) credibility += 2;
+    if (
+      metricsBlock ||
+      proofBlock ||
+      blocks.some(
+        (b) => ["process", "customization"].includes(b.type) && hasRefs(b),
+      )
+    )
+      credibility += 2;
+  } else if (pageType === "customization") {
+    const hasCustomSourced = blocks.some(
+      (b) => b.type === "customization" && hasRefs(b),
+    );
+    const hasProcess = blocks.some(
+      (b) => b.type === "process" && (b.items?.length ?? 0) > 0,
+    );
+    if (hasCustomSourced) credibility += 2;
+    if (hasProcess || proofBlock || metricsBlock) credibility += 2;
+  } else if (pageType === "faq") {
+    const hasFaq = blocks.some((b) => b.type === "faq" && b.faq.length > 0);
+    const hasSourcedFaq = blocks.some(
+      (b) => b.type === "faq" && b.faq.length > 0 && hasRefs(b),
+    );
+    const hasComparison = blocks.some(
+      (b) => ["comparison", "specs", "split"].includes(b.type) && hasRefs(b),
+    );
+    if (hasSourcedFaq) credibility += 3;
+    else if (hasFaq) credibility += 2;
+    if (hasComparison || proofBlock) credibility += 1;
+  } else if (pageType === "contact") {
+    const hasGuidance =
+      !!page.presentation?.inquiryHeading ||
+      blocks.some(
+        (b) =>
+          ["process", "text", "faq"].includes(b.type) &&
+          (b.body.trim().length > 0 ||
+            (b.items?.length ?? 0) > 0 ||
+            b.faq.length > 0),
+      );
+    const hasRefsAny =
+      page.refs.length > 0 || blocks.some((b) => hasRefs(b));
+    if (hasGuidance) credibility += 3;
+    if (hasRefsAny || proofBlock) credibility += 1;
+  } else {
+    if (metricsBlock) credibility += 2;
+    if (proofBlock) credibility += 2;
+  }
 
   let conversion = 1;
   if (page.presentation?.primaryActionLabel) conversion += 1;
@@ -374,4 +475,38 @@ export function baselineFindings(report: BaselineReport) {
     severity: "warning" as const,
     recommendation: i.recommendation,
   }));
+}
+
+/**
+ * S37 §3.1: REVIEW_SAMPLE_THRESHOLD (default 4; 0 disables sampling).
+ * When a whole-site review exceeds the threshold, full AI review runs on the
+ * homepage plus the first representative page of each distinct page type;
+ * sibling pages still receive full browser screenshots, metrics, structural
+ * baseline scoring and fact/link validation gates.
+ */
+export function reviewSampleThreshold(
+  raw: string | undefined = process.env.REVIEW_SAMPLE_THRESHOLD,
+): number {
+  const n = Number(raw);
+  if (raw === undefined || !raw.trim() || !Number.isInteger(n)) return 4;
+  return Math.min(50, Math.max(0, n));
+}
+
+export function selectFullReviewKeys(
+  units: ReadonlyArray<{ key: string; node?: { type?: string } | null }>,
+  threshold = reviewSampleThreshold(),
+): Set<string> {
+  if (threshold === 0 || units.length <= threshold) {
+    return new Set(units.map((u) => u.key));
+  }
+  const selected = new Set<string>();
+  const seenTypes = new Set<string>();
+  for (const u of units) {
+    const type = u.node?.type ?? "other";
+    if (type === "home" || !seenTypes.has(type)) {
+      selected.add(u.key);
+      seenTypes.add(type);
+    }
+  }
+  return selected;
 }

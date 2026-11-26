@@ -542,7 +542,7 @@ test("durable step result resumes without repeating AI or data writes; transient
     1,
   );
 });
-test("quota pauses the job and resumes with its frozen input; unknown paid outcomes are never automatically repeated", async () => {
+test("quota pauses the job and resumes with its frozen input; interrupted open reservations report AI_USAGE_UNKNOWN", async () => {
   const site = await planSite(await newSite()),
     r = await queue(site),
     id = r.body.data.id,

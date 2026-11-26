@@ -93,13 +93,13 @@ export const inquiryMessages = {
     "I have reviewed the privacy policy template and confirmed that the company information, purposes and provider disclosures fit this site.",
   ],
   privacyHint: [
-    "每次构建自动包含隐私政策页；公司信息引用已确认事实。启用前请在预览中审阅。",
-    "Each build includes a privacy page using confirmed company facts. Review it in preview before enabling inquiries.",
+    "每次构建自动包含隐私政策页；公司信息引用已确认事实，并说明平台托管的询盘处理与可选 AI 垃圾评估方式。启用前请在预览中审阅。",
+    "Each build includes a privacy page using confirmed company facts and discloses platform-managed inquiry processing and optional AI spam assessment. Review it in preview before enabling inquiries.",
   ],
   ai: ["启用 AI 垃圾评分", "Enable AI spam assessment"],
   aiHint: [
-    "仅发送经过基础脱敏的留言，不发送联系字段和附件；仍可能包含个人信息。额度不足或服务不可用时继续保留询盘并使用规则评分。",
-    "Only basic-redacted message text is sent, excluding contact fields and attachments; it may still contain personal information. Rules remain available when AI is unavailable or quota is exhausted.",
+    "由平台托管 AI 服务处理，仅发送经过基础脱敏的留言文本，不发送联系字段、链接和附件；正文仍可能包含访客自填的个人信息。额度不足或服务不可用时继续保留询盘并使用规则评分。",
+    "Processed by the platform-managed AI service using only basic-redacted message text, excluding contact fields, links and attachments; the message body may still contain visitor-supplied personal details. Rules remain active when AI is unavailable or quota is exhausted.",
   ],
   recipients: ["通知接收成员", "Notification recipients"],
   ownerDefault: [

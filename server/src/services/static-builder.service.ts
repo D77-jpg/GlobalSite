@@ -104,13 +104,13 @@ export async function buildStatic(
         ...(snapshot.products ?? []).flatMap((p) => p.assetIds.slice(0, 2)),
         ...snapshot.pages.flatMap((p) => [
           ...p.blocks
-            .filter((b: any) => !!b.assetId)
-            .map((b: any) => b.assetId),
-          ...p.blocks.flatMap((b: any) =>
-            (b.items ?? []).map((i: any) => i.assetId),
+            .filter((b) => !!b.assetId)
+            .map((b) => b.assetId),
+          ...p.blocks.flatMap((b) =>
+            (b.items ?? []).map((i) => i.assetId),
           ),
         ]),
-      ].filter(Boolean),
+      ].filter((id): id is string => typeof id === "string" && !!id),
     );
     const assets: Snapshot["assets"] = {};
     for (const id of images) {
@@ -187,26 +187,30 @@ export async function buildStatic(
         .replace(/^[ \t]+/gm, "")
         .replace(/\r?\n+/g, "\n")
         .trim();
-    // S35: the scoped precision pack is appended only when a page selects it, so
-    // sites without composition.pack keep a byte-identical stylesheet.
-    const precisionPack = snapshot.pages.some(
-      (p) => pageComposition(snapshot, p)?.pack === "precision",
+    // S35/S37: scoped rendering packs are appended only when a page selects them,
+    // so sites without composition.pack keep a byte-identical stylesheet.
+    const ALLOWED_PACK_FILES = ["precision", "atelier", "monolith"] as const;
+    const activePacks = ALLOWED_PACK_FILES.filter((packName) =>
+      snapshot.pages.some((p) => pageComposition(snapshot, p)?.pack === packName),
     );
+    let packCss = "";
+    for (const packName of activePacks) {
+      packCss +=
+        "\n" +
+        compactCss(
+          await fs.readFile(
+            path.join(builder, "pack-" + packName + ".css"),
+            "utf8",
+          ),
+        );
+    }
     const cssBundle =
       compactCss(await fs.readFile(path.join(builder, "site.css"), "utf8")) +
       "\n" +
       compactCss(
         await fs.readFile(path.join(builder, "composition.css"), "utf8"),
       ) +
-      (precisionPack
-        ? "\n" +
-          compactCss(
-            await fs.readFile(
-              path.join(builder, "pack-precision.css"),
-              "utf8",
-            ),
-          )
-        : "") +
+      packCss +
       // S35: scoped "Illustrative" label rules, only when a page shows one.
       (pages.some((p) => p.html.includes('class="concept-note"'))
         ? "\n" +
@@ -279,7 +283,7 @@ export async function buildStatic(
               "](" +
               urls[i] +
               "): " +
-              p.metaDescription.replace(/[\r\n]/g, " "),
+              (p.metaDescription ?? "").replace(/[\r\n]/g, " "),
           )
           .join("\n"),
     );
@@ -291,14 +295,14 @@ export async function buildStatic(
     if (Array.isArray(redirects) && redirects.length) {
       const lines = redirects
         .filter(
-          (r: any) =>
+          (r) =>
             typeof r?.from === "string" &&
             typeof r?.to === "string" &&
             (r.status === 301 || r.status === 302) &&
             !/[\r\n\s]/.test(r.from) &&
             !/[\r\n\s]/.test(r.to),
         )
-        .map((r: any) => `${r.from} ${r.to} ${r.status}`);
+        .map((r) => `${r.from} ${r.to} ${r.status}`);
       if (lines.length)
         await fs.writeFile(
           path.join(root, "public/_redirects"),

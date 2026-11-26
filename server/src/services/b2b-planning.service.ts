@@ -1,4 +1,4 @@
-import { ownSite, sourceRows } from "./sites.service";
+import { demoFactRows, ownSite, sourceRows } from "./sites.service";
 export const sectionRecipes: Record<string, string[]> = {
   home: [
     "category-grid",
@@ -104,8 +104,33 @@ const questions: Record<string, string[]> = {
   faq: ["What must I provide for a quotation?"],
   contact: ["How do I submit a useful purchasing brief?"],
 };
-export function pageBriefs(site: any) {
-  return (site.plan?.nodes ?? []).map((n: any) => ({
+export type CoverageNode = {
+  key: string;
+  type: string;
+  brief?: { buyerQuestions?: string[]; sections?: string[] };
+};
+export type CoverageSite = {
+  buyerProfile?: unknown;
+  demoMode?: boolean;
+  plan?: {
+    nodes?: CoverageNode[];
+    strategy?: { productSections?: string[] };
+  } | null;
+};
+export type CoverageProduct = {
+  _id?: unknown;
+  id?: string;
+  assetIds?: unknown[];
+};
+export type CoverageFact = {
+  status?: string;
+  subjectType?: string;
+  subjectId?: unknown;
+  type: string;
+};
+
+export function pageBriefs(site: CoverageSite) {
+  return (site.plan?.nodes ?? []).map((n) => ({
     nodeKey: n.key,
     type: n.type,
     questions: n.brief?.buyerQuestions ?? questions[n.type] ?? questions.home,
@@ -113,28 +138,46 @@ export function pageBriefs(site: any) {
       n.brief?.sections ?? sectionRecipes[n.type] ?? sectionRecipes.home,
   }));
 }
-export function procurementCoverage(site: any, products: any[], facts: any[]) {
+export function procurementCoverage(
+  site: CoverageSite,
+  products: CoverageProduct[],
+  facts: CoverageFact[],
+  options: { allowDemoFacts?: boolean } = {},
+) {
   const gaps: {
     subjectId: string | null;
     type: string;
     severity: "required" | "recommended";
   }[] = [];
-  const has = (id: string | null, pattern: RegExp) =>
+  const confirmedGaps: {
+    subjectId: string | null;
+    type: string;
+    severity: "required" | "recommended";
+  }[] = [];
+  const has = (
+    id: string | null,
+    pattern: RegExp,
+    includeCandidates: boolean,
+  ) =>
     facts.some(
       (f) =>
-        f.status === "confirmed" &&
+        (f.status === "confirmed" ||
+          (includeCandidates && f.status === "candidate")) &&
         (id
           ? f.subjectType === "product" && String(f.subjectId) === id
           : f.subjectType === "organization") &&
         pattern.test(f.type),
     );
+  const allowDemo = !!options.allowDemoFacts;
   const need = (
     id: string | null,
     type: string,
     pattern: RegExp,
     severity: "required" | "recommended" = "required",
   ) => {
-    if (!has(id, pattern)) gaps.push({ subjectId: id, type, severity });
+    if (!has(id, pattern, allowDemo)) gaps.push({ subjectId: id, type, severity });
+    if (!has(id, pattern, false))
+      confirmedGaps.push({ subjectId: id, type, severity });
   };
   need(null, "company.name", /^company\.name$/);
   need(null, "company.email", /^company\.(email|privacyEmail)$/);
@@ -157,26 +200,77 @@ export function procurementCoverage(site: any, products: any[], facts: any[]) {
     total += applicable.length + 1;
     for (const [, type, pattern, severity] of applicable)
       need(id, type, pattern, severity);
-    if (!p.assetIds?.length)
+    if (!p.assetIds?.length) {
       gaps.push({
         subjectId: id,
         type: "product.images",
         severity: "required",
       });
+      confirmedGaps.push({
+        subjectId: id,
+        type: "product.images",
+        severity: "required",
+      });
+    }
   }
-  if (!products.length)
+  if (!products.length) {
     gaps.push({ subjectId: null, type: "products", severity: "required" });
+    confirmedGaps.push({
+      subjectId: null,
+      type: "products",
+      severity: "required",
+    });
+  }
+
+  // S37 §4.6-2: enrichment checklist for metrics, credibility and proof sections
+  // (informational only; never blocks canPublish or alters required coverage).
+  const enrichmentGaps: {
+    subjectId: string | null;
+    type: string;
+    severity: "recommended";
+  }[] = [];
+  const orgEnrich: Array<[string, RegExp]> = [
+    ["company.founded", /^company\.founded/i],
+    ["company.capacity", /^company\.capacity/i],
+    ["company.exportCountries", /^company\.exportCountries/i],
+    ["company.warranty", /^company\.warranty/i],
+    ["company.customers", /^company\.customers/i],
+    ["company.caseStudy", /^company\.caseStudy/i],
+    ["company.factoryArea", /^company\.factoryArea/i],
+    ["company.employees", /^company\.employees/i],
+    ["company.certifications", /^company\.certifications/i],
+  ];
+  for (const [type, pattern] of orgEnrich) {
+    if (!has(null, pattern, allowDemo))
+      enrichmentGaps.push({ subjectId: null, type, severity: "recommended" });
+  }
+  for (const p of products) {
+    const id = String(p._id ?? p.id);
+    if (!has(id, /warranty/i, allowDemo))
+      enrichmentGaps.push({
+        subjectId: id,
+        type: "product.warranty",
+        severity: "recommended",
+      });
+  }
 
   return {
     configured: !!site.buyerProfile,
-    canPublish: !gaps.some((g) => g.severity === "required"),
+    // Commercial publication always requires confirmed facts, never demo candidates.
+    canPublish: !confirmedGaps.some((g) => g.severity === "required"),
     coverage: Math.max(0, Math.round(((total - gaps.length) / total) * 100)),
     gaps,
+    enrichmentGaps,
     pageBriefs: pageBriefs(site),
   };
 }
 export async function buyerReadiness(id: string) {
   const site = await ownSite(id),
     rows = await sourceRows(site);
-  return procurementCoverage(site, rows.products, rows.facts);
+  const facts = site.demoMode
+    ? [...rows.facts, ...(await demoFactRows(site))]
+    : rows.facts;
+  return procurementCoverage(site, rows.products, facts, {
+    allowDemoFacts: !!site.demoMode,
+  });
 }

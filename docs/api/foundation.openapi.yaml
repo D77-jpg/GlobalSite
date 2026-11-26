@@ -14953,10 +14953,11 @@ components:
           enum: [sharp, subtle, rounded]
         pack:
           description: >-
-            Optional S35 trusted rendering pack. "precision" adds the body class pack-precision and the
-            scoped builder stylesheet for equipment, machinery and hardware storefronts. Omit for the
+            Optional S35/S37 trusted rendering pack. "precision" (equipment/machinery),
+            "atelier" (lifestyle/design goods) or "monolith" (architectural materials)
+            adds the scoped body class pack-<name> and bundles pack-<name>.css. Omit for the
             unchanged composition renderer. No generated code is accepted.
-          enum: [precision]
+          enum: [precision, atelier, monolith]
     SitePresentation:
       type: object
       description: >-
@@ -16011,6 +16012,28 @@ components:
               severity:
                 enum:
                   - required
+                  - recommended
+            required:
+              - subjectId
+              - type
+              - severity
+            additionalProperties: false
+          maxItems: 500
+        enrichmentGaps:
+          type: array
+          description: Optional S37 §4.6-2 enrichment facts that strengthen metrics, proof and credibility sections without blocking publication.
+          items:
+            type: object
+            properties:
+              subjectId:
+                type:
+                  - string
+                  - "null"
+              type:
+                type: string
+                maxLength: 80
+              severity:
+                enum:
                   - recommended
             required:
               - subjectId

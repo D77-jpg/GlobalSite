@@ -13,6 +13,7 @@ import {
   NUMBER_UNIT,
   identifierKeys,
   isDemoFact,
+  localClause,
   matchesGroup,
   numberGroup,
   validatePage,
@@ -116,7 +117,13 @@ function quoteIndex(t: string, f: FactLike, blockKey: string | null) {
     for (const w of wanted) {
       if (w.figure !== figure) continue;
       if (w.unit && u === w.unit) return m.index;
-      const g = numberGroup(sentenceAt(t, m.index), blockKey);
+      const g = numberGroup(
+        sentenceAt(t, m.index),
+        blockKey,
+        false,
+        localClause(t, m.index, m.index + m[0].length),
+        u || undefined,
+      );
       if (!u && g && matchesGroup(f, g)) return m.index;
     }
   }

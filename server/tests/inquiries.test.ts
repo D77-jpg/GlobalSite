@@ -1085,3 +1085,35 @@ test("uncertain SMTP outcomes never resend or unlock automatically; invalid JSON
     config.smtpHost = saved;
   }
 });
+
+test("§2.3: inquiry AI unknown usage is absorbed by platform without stranding customer reservation", async () => {
+  const f = await readySite(false, { aiSpamEnabled: true }),
+    worker = await import("../src/services/inquiry-worker.service"),
+    { reserve } = await import("../src/services/usage.service"),
+    { AiUsageUnknownError } = await import("../src/services/ai-usage-unknown");
+  mock.method(
+    worker.inquiryAi,
+    "call",
+    async (_system: string, _input: unknown, operationId: string) => {
+      await reserve("ai_tokens", 2048, operationId);
+      throw new AiUsageUnknownError("timeout");
+    },
+  );
+  const r = await publicPost(f, inquiry(f)),
+    row = await rowFor(r.body.data.receiptId);
+  await processing(String(row._id));
+  const d = (await a.client.request("GET", "/inquiries/" + row._id)).body.data;
+  assert.equal(d.classification, "ai_unknown");
+  assert.equal(d.status, "new");
+  assert.equal(d.notificationStatus, "pending");
+  const rec = await tenant(() =>
+    m.UsageRecord.findOne({
+      metric: "ai_tokens",
+      operationId: "inquiry-ai:" + row._id,
+    }),
+  );
+  assert.equal(rec?.state, "released");
+  assert.equal(rec?.actual, 0);
+  assert.equal(rec?.absorbed, true);
+  assert.equal(rec?.unknownReason, "timeout");
+});

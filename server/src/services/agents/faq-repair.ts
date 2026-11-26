@@ -90,7 +90,13 @@ export function repairFaq(
       .filter((m): m is RegExpExecArray => !!m)
       .map((m) => m[1] + "#" + m[2]),
   );
-  if (!failing.size) return page;
+  const required = new Set(context.requiredProductSections ?? []);
+  const shouldDropEmptyFaq = (b: PageInput["blocks"][number]) =>
+    b.type === "faq" &&
+    !b.faq.length &&
+    !(context.type === "product" && required.has(b.key));
+  const hasEmptyFaq = page.blocks.some(shouldDropEmptyFaq);
+  if (!failing.size && !hasEmptyFaq) return page;
   const pruned = structuredClone(page);
   for (const [index, b] of pruned.blocks.entries()) {
     b.faq = b.faq.filter((_, i) => !failing.has(b.key + "#" + i));
@@ -104,9 +110,9 @@ export function repairFaq(
         products,
       );
   }
-  pruned.blocks = pruned.blocks.filter(
-    (b) => !(b.type === "faq" && !b.faq.length && !b.body.trim()),
-  );
+  // S37 §1.3: drop any non-required FAQ block whose items are all empty/pruned
+  // (section() does not render block.body for faq blocks, so 0 items = empty).
+  pruned.blocks = pruned.blocks.filter((b) => !shouldDropEmptyFaq(b));
   // Removing unsupported claims is always allowed; breaking page depth is not.
   return compositionIssues(pruned, context.type).length >
     compositionIssues(page, context.type).length

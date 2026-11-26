@@ -33,31 +33,150 @@ export const e = (v: unknown) =>
       ]!,
   );
 
+export type SnapshotBlockItem = {
+  title: string;
+  body: string;
+  assetId?: string | null;
+  alt?: string;
+  href?: string | null;
+  refs?: Array<{ factId: string; revision: number }>;
+};
+
+export type SnapshotBlock = {
+  key: string;
+  type: string;
+  heading?: string;
+  body?: string;
+  table?: { columns: string[]; rows: string[][] } | null;
+  faq?: Array<{ question: string; answer: string; detail?: string }>;
+  assetId?: string | null;
+  alt?: string;
+  refs?: Array<{ factId: string; revision: number }>;
+  items?: SnapshotBlockItem[];
+  design?: Record<string, unknown>;
+  layout?: string;
+  tone?: string;
+};
+
+export type SnapshotPage = {
+  id?: string;
+  nodeKey?: string;
+  path: string;
+  type: string;
+  productId?: string | null;
+  title: string;
+  metaDescription?: string;
+  revision?: number;
+  hash?: string;
+  contentValidationVersion?: string | null;
+  refs?: Array<{ factId: string; revision: number }>;
+  presentation?: {
+    navigationLabel?: string;
+    headline?: string;
+    summary?: string;
+    primaryActionLabel?: string;
+    primaryActionTarget?: string;
+    inquiryHeading?: string;
+    inquiryLead?: string;
+    visualStyle?: string;
+    heroLayout?: string;
+    density?: string;
+    composition?: Record<string, unknown>;
+  };
+  blocks: SnapshotBlock[];
+};
+
+export type SnapshotFact = {
+  id?: string;
+  _id?: unknown;
+  subjectType?: string;
+  subjectId?: unknown;
+  type: string;
+  value?: unknown;
+  unit?: unknown;
+  status?: string;
+  revision?: number;
+};
+
+export type SnapshotSite = {
+  id?: string;
+  revision?: number;
+  name: string;
+  templateId?: string;
+  language?: string;
+  brandColor?: string;
+  logoId?: string | null;
+  productIds?: string[];
+  buyerProfile?: Record<string, unknown> | null;
+  brandChannels?: {
+    whatsapp?: string;
+    phone?: string;
+    email?: string;
+    wechat?: string;
+    linkedin?: string;
+    youtube?: string;
+  } | null;
+  designDirection?: {
+    visualStyle?: string;
+    density?: string;
+    composition?: Record<string, unknown>;
+  } | null;
+  plan?: {
+    nodes?: Array<{ key: string; path: string; parentKey?: string | null; type?: string; title?: string }>;
+    strategy?: {
+      navigation?: Array<{ label: string; nodeKeys: string[] }>;
+      productSections?: string[];
+    };
+  } | null;
+};
+
+export type SnapshotSettings = {
+  canonicalBaseUrl: string;
+  seoAnalytics?: {
+    ogImageAssetId?: string | null;
+    googleSiteVerification?: string | null;
+    bingSiteVerification?: string | null;
+    ga4MeasurementId?: string | null;
+    gtmContainerId?: string | null;
+    metaPixelId?: string | null;
+    redirects?: Array<{ from: string; to: string; status?: number }>;
+  };
+};
+
+export type SnapshotInquiry = {
+  enabled?: boolean;
+  publicId?: string;
+  gatewayUrl?: string;
+  privacyPath?: string;
+  privacyVersion?: string;
+  policyFacts?: SnapshotFact[];
+};
+
 export type Snapshot = {
-  site: any;
-  pages: any[];
+  site: SnapshotSite;
+  pages: SnapshotPage[];
   products?: Array<{
     id: string;
     name: string;
     category: string | null;
     assetIds: string[];
   }>;
-  facts: any[];
-  settings: any;
+  facts: SnapshotFact[];
+  settings: SnapshotSettings;
   assets: Record<
     string,
     // concept: S35 generated illustration (labelled "Illustrative" on render).
     { path: string; width: number; height: number; mime?: string; concept?: boolean }
   >;
   createdAt: string;
-  inquiry?: any;
+  inquiry?: SnapshotInquiry;
 };
 
 export const templateVersion = "b2b-site-v8";
 
 // S35: same composition resolution as renderStaticPage, exported so the builder and
 // private preview only bundle an optional rendering pack when a page actually uses it.
-export function pageComposition(s: Snapshot, p: any) {
+export function pageComposition(s: Snapshot, p?: SnapshotPage | null) {
   const home = s.pages.find((v) => v.path === "/");
   const parsed = compositionSchema.safeParse(
     s.site.designDirection?.composition ??
@@ -103,17 +222,19 @@ function image(
 // hero -> the first product page image (former behaviour). AI illustration
 // fill (autoImages) creates the hero image block itself before rendering and
 // skips pages that already have one of the first three sources.
-function heroFallback(s: Snapshot, p: any): { assetId: string; alt: string } | null {
+function heroFallback(s: Snapshot, p: SnapshotPage): { assetId: string; alt: string } | null {
   const usable = (id: unknown): id is string =>
     typeof id === "string" &&
     !!s.assets[id] &&
     !s.assets[id].path.endsWith(".pdf") &&
     s.assets[id].mime !== "application/pdf";
-  const pageImage = (v: any) => {
+  const pageImage = (v: SnapshotPage) => {
     const block = v.blocks.find(
-      (b: any) => b.type === "image" && usable(b.assetId),
+      (b) => b.type === "image" && usable(b.assetId),
     );
-    return block ? { assetId: block.assetId, alt: block.alt || v.title } : null;
+    return block && block.assetId
+      ? { assetId: block.assetId, alt: block.alt || v.title }
+      : null;
   };
   const mainImage = (productId: unknown) => {
     const product = s.products?.find((x) => x.id === productId);
@@ -125,14 +246,15 @@ function heroFallback(s: Snapshot, p: any): { assetId: string; alt: string } | n
     if (["downloads", "certifications"].includes(b.type)) continue;
     if (b.type !== "image" && usable(b.assetId))
       return { assetId: b.assetId, alt: b.alt || b.heading || p.title };
-    const item = (b.items ?? []).find((i: any) => usable(i.assetId));
-    if (item) return { assetId: item.assetId, alt: item.alt || item.title || b.heading };
+    const item = (b.items ?? []).find((i) => usable(i.assetId));
+    if (item && item.assetId)
+      return { assetId: item.assetId, alt: item.alt || item.title || b.heading || p.title };
   }
   // 2. This page's product.
   const own = p.productId ? mainImage(p.productId) : null;
   if (own) return own;
   // 3. Products in this category: child product pages by path or plan parent.
-  const node = s.site.plan?.nodes?.find((n: any) => n.path === p.path);
+  const node = s.site.plan?.nodes?.find((n) => n.path === p.path);
   const prefix = String(p.path ?? "").replace(/\/$/, "") + "/";
   const products = s.pages.filter((v) => v.type === "product" && v !== p);
   const children = products.filter(
@@ -140,7 +262,7 @@ function heroFallback(s: Snapshot, p: any): { assetId: string; alt: string } | n
       (prefix !== "/" && String(v.path).startsWith(prefix)) ||
       (!!node &&
         (s.site.plan?.nodes ?? []).some(
-          (n: any) => n.path === v.path && n.parentKey === node.key,
+          (n) => n.path === v.path && n.parentKey === node.key,
         )),
   );
   for (const v of children) {
@@ -190,7 +312,7 @@ const countWords = (...parts: unknown[]) =>
     .join(" ")
     .split(/\s+/)
     .filter(Boolean).length;
-function termBlock(b: any) {
+function termBlock(b: SnapshotBlock) {
   return (
     TERM_KEYS.has(b.key) &&
     b.type === "text" &&
@@ -204,17 +326,17 @@ function termBlock(b: any) {
   );
 }
 // Low-word sections get tighter vertical spacing on rendering-pack pages.
-function compactBlock(b: any) {
+function compactBlock(b: SnapshotBlock) {
   return (
     !["product-grid", "category-grid", "gallery", "showcase", "comparison", "specs", "downloads", "metrics", "image"].includes(b.type) &&
     !b.assetId &&
     !b.table?.rows?.length &&
     !b.faq?.length &&
-    !(b.items ?? []).some((i: any) => i.assetId) &&
+    !(b.items ?? []).some((i) => i.assetId) &&
     countWords(
       b.heading,
       b.body,
-      ...(b.items ?? []).flatMap((i: any) => [i.title, i.body]),
+      ...(b.items ?? []).flatMap((i) => [i.title, i.body]),
     ) < 40
   );
 }
@@ -225,12 +347,12 @@ const plainHeading = (x: unknown) =>
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 
-function section(s: Snapshot, b: any, p?: any) {
+function section(s: Snapshot, b: SnapshotBlock, p?: SnapshotPage) {
   const rich = renderB2BBlock(s, p, b);
   if (rich !== null) return rich;
   const copy = getStorefrontCopy(s.site.language);
   let html = "";
-  if (b.type === "image") html = image(s, b.assetId, b.alt);
+  if (b.type === "image" && b.assetId) html = image(s, b.assetId, b.alt ?? "");
   else if (b.type === "specs" && b.table) {
     // S35 acceptance fix: buying-note columns/cells and Model/Name rows that
     // repeat this page's product title are not part of the public table.
@@ -251,10 +373,12 @@ function section(s: Snapshot, b: any, p?: any) {
         )
         .join("") +
       "</tbody></table></div>";
-  } else if (b.type === "faq")
+  } else if (b.type === "faq") {
+    // S37 §1.3: skip empty FAQ blocks so no heading-only section is rendered.
+    if (!(b.faq ?? []).length) return "";
     html = (b.faq ?? [])
       .map(
-        (f: any) =>
+        (f) =>
           "<details><summary>" +
           e(f.question) +
           "</summary><p>" +
@@ -264,7 +388,7 @@ function section(s: Snapshot, b: any, p?: any) {
           "</details>",
       )
       .join("");
-  else html = "<p>" + e(b.body).replace(/\n/g, "<br>") + "</p>";
+  } else html = "<p>" + e(b.body).replace(/\n/g, "<br>") + "</p>";
   return (
     '<section class="section section-' +
     e(b.key) +
@@ -280,22 +404,23 @@ function section(s: Snapshot, b: any, p?: any) {
 }
 
 function fact(s: Snapshot, type: string) {
-  return s.facts.find(
+  const val = s.facts.find(
     (f) =>
       f.subjectType === "organization" &&
       (f.type === type ||
         f.type === "company." + type ||
         (type === "foundedYear" && f.type === "company.founded")),
   )?.value;
+  return val != null ? String(val) : undefined;
 }
 
-export function renderStaticPage(s: Snapshot, p: any) {
+export function renderStaticPage(s: Snapshot, p: SnapshotPage) {
   const copy = getStorefrontCopy(s.site.language);
   const canonical = new URL(
     p.path.endsWith("/") ? p.path : p.path + "/",
     s.settings.canonicalBaseUrl,
   ).href;
-  const org: any = {
+  const org: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Organization",
     url: s.settings.canonicalBaseUrl,
@@ -308,7 +433,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
   if (founded && /^\d{4}$/.test(founded)) org.foundingDate = founded;
   const address = fact(s, "address");
   if (address) org.address = address;
-  const schema: any[] = [
+  const schema: Array<Record<string, unknown>> = [
     org,
     {
       "@context": "https://schema.org",
@@ -334,13 +459,13 @@ export function renderStaticPage(s: Snapshot, p: any) {
     },
   ];
   const faqs = p.blocks
-    .filter((b: any) => b.type === "faq")
-    .flatMap((b: any) => b.faq ?? []);
+    .filter((b) => b.type === "faq")
+    .flatMap((b) => b.faq ?? []);
   if (faqs.length)
     schema.push({
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: faqs.map((f: any) => ({
+      mainEntity: faqs.map((f) => ({
         "@type": "Question",
         name: f.question,
         acceptedAnswer: {
@@ -357,14 +482,14 @@ export function renderStaticPage(s: Snapshot, p: any) {
       description: p.metaDescription,
       url: canonical,
       image: p.blocks
-        .filter((b: any) => b.type === "image" && s.assets[b.assetId])
+        .filter((b) => b.type === "image" && b.assetId && s.assets[b.assetId])
         .map(
-          (b: any) =>
-            new URL(s.assets[b.assetId].path, s.settings.canonicalBaseUrl).href,
+          (b) =>
+            new URL(s.assets[b.assetId!].path, s.settings.canonicalBaseUrl).href,
         ),
     });
   const firstImage = p.blocks.find(
-      (b: any) => b.type === "image" && s.assets[b.assetId],
+      (b) => b.type === "image" && b.assetId && s.assets[b.assetId],
     ),
     home = s.pages.find((v) => v.path === "/"),
     presentation = p.presentation ?? {},
@@ -391,8 +516,8 @@ export function renderStaticPage(s: Snapshot, p: any) {
       presentation.composition,
   );
   const composition = parsedComposition.success ? parsedComposition.data : null;
-  const cleanTitle = (v: any) => String(v.title).split(/[|—–]/)[0].trim();
-  const label = (v: any) =>
+  const cleanTitle = (v: SnapshotPage) => String(v.title).split(/[|—–]/)[0].trim();
+  const label = (v: SnapshotPage) =>
     v.presentation?.navigationLabel ??
     copy.navDefaults[v.type] ??
     cleanTitle(v);
@@ -407,7 +532,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     "faq",
   ]
     .map((type) => s.pages.find((v) => v.type === type))
-    .filter(Boolean);
+    .filter((v): v is SnapshotPage => !!v);
   const contact = s.pages.find((v) => v.type === "contact");
   const link = (path: string, text: string, visual = "") =>
     '<a href="' +
@@ -425,12 +550,12 @@ export function renderStaticPage(s: Snapshot, p: any) {
     .slice(0, 6)
     .map((v) => {
       const artwork = v.blocks.find(
-        (block: any) => block.type === "image" && s.assets[block.assetId],
+        (block) => block.type === "image" && block.assetId && s.assets[block.assetId],
       );
       return link(
         v.path,
         label(v),
-        artwork
+        artwork && artwork.assetId
           ? '<span aria-hidden="true">' +
               image(s, artwork.assetId, artwork.alt || label(v)) +
               "</span>"
@@ -455,7 +580,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     ["faq", copy.buyerFaqs],
   ]) {
     const block = home?.blocks.find(
-      (v: any) =>
+      (v) =>
         v.type === type && (type === "faq" ? v.faq?.length : v.items?.length),
     );
     if (block && !buyingPages.some((v) => v.type === type)) {
@@ -464,13 +589,13 @@ export function renderStaticPage(s: Snapshot, p: any) {
   }
   const legacyLinks = ["category", "about", "faq", "contact"]
     .map((type) => s.pages.find((v) => v.type === type))
-    .filter(Boolean)
+    .filter((v): v is SnapshotPage => !!v)
     .map((v) => link(v.path, label(v)))
     .join("");
   const destinations =
     buyingLinks.slice(0, contact ? 3 : 4).join("") +
     (contact ? link(contact.path, label(contact)) : "");
-  const group = (title: string, rows: any[], extra = "") => {
+  const group = (title: string, rows: SnapshotPage[], extra = "") => {
     if (!rows.length) return "";
     if (rows.length === 1 && !extra) return link(rows[0].path, label(rows[0]));
     return (
@@ -509,13 +634,13 @@ export function renderStaticPage(s: Snapshot, p: any) {
       ].join("")
     : "";
   const strategyNav = s.site.plan?.strategy?.navigation
-    ?.map((g: any) => {
+    ?.map((g) => {
       const rows = g.nodeKeys
-        .map((key: string) => {
-          const node = s.site.plan.nodes.find((n: any) => n.key === key);
+        .map((key) => {
+          const node = s.site.plan?.nodes?.find((n) => n.key === key);
           return node ? s.pages.find((v) => v.path === node.path) : undefined;
         })
-        .filter(Boolean);
+        .filter((v): v is SnapshotPage => !!v);
       return rows.length === 1
         ? link(rows[0].path, g.label)
         : group(g.label, rows);
@@ -539,8 +664,8 @@ export function renderStaticPage(s: Snapshot, p: any) {
 
   const catalog = s.pages.find((v) => v.type === "category");
   const collectionHref =
-    p.path === "/" && p.blocks.some((b: any) => b.type === "category-grid")
-      ? "#block-" + p.blocks.find((b: any) => b.type === "category-grid").key
+    p.path === "/" && p.blocks.some((b) => b.type === "category-grid")
+      ? "#block-" + p.blocks.find((b) => b.type === "category-grid")!.key
       : p.path === "/" && products.length
         ? "#collection"
         : (catalog?.path ?? "/");
@@ -549,7 +674,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     ["/", catalog?.path].includes(p.path) &&
     products.length &&
     !p.blocks.some(
-      (b: any) =>
+      (b) =>
         b.type === "product-grid" ||
         ((composition || s.site.plan?.strategy) && b.type === "category-grid"),
     )
@@ -577,12 +702,12 @@ export function renderStaticPage(s: Snapshot, p: any) {
                 .filter((id) => s.assets[id])
                 .at(-1);
               const b = v.blocks.find(
-                (b: any) => b.type === "image" && s.assets[b.assetId],
+                (b) => b.type === "image" && b.assetId && s.assets[b.assetId],
               );
               const visual = assetId
                 ? image(s, assetId, cleanTitle(v) + " collection image")
-                : b
-                  ? image(s, b.assetId, b.alt)
+                : b && b.assetId
+                  ? image(s, b.assetId, b.alt ?? "")
                   : "";
               return (
                 '<article class="product-card">' +
@@ -613,11 +738,11 @@ export function renderStaticPage(s: Snapshot, p: any) {
   // notes, placeholders or a repeated model row) joins the "information on
   // request" summary instead of rendering an empty table.
   const titles = pageTitles(s, p);
-  const emptySpecs = (b: any) =>
+  const emptySpecs = (b: SnapshotBlock) =>
     b.type === "specs" &&
     !!b.table &&
     !publicTable(b.table, titles).rows.length;
-  const pending = (b: any) =>
+  const pending = (b: SnapshotBlock) =>
     emptySpecs(b) ||
     (/^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
       b.body?.trim() ?? "",
@@ -635,7 +760,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
       "</p><ul>" +
       pendingBlocks
         .map(
-          (b: any) =>
+          (b) =>
             '<li id="block-' +
             e(b.key) +
             '">' +
@@ -653,13 +778,13 @@ export function renderStaticPage(s: Snapshot, p: any) {
   const termCandidates =
     pack && p.type === "product"
       ? p.blocks.filter(
-          (b: any) => b !== firstImage && !pending(b) && termBlock(b),
+          (b) => b !== firstImage && !pending(b) && termBlock(b),
         )
       : [];
   const terms = termCandidates.length >= 2 ? termCandidates : [];
-  const rendered: Array<{ block: any; html: string }> = p.blocks
-    .filter((b: any) => b !== firstImage && !pending(b) && !terms.includes(b))
-    .map((b: any) => {
+  const rendered: Array<{ block: SnapshotBlock; html: string }> = p.blocks
+    .filter((b) => b !== firstImage && !pending(b) && !terms.includes(b))
+    .map((b) => {
       if (redundant.has(b.key)) return { block: b, html: "" };
       const html = section(s, b, p);
       return {
@@ -677,7 +802,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
       '</h2><dl class="terms-list">' +
       terms
         .map(
-          (b: any) =>
+          (b) =>
             '<div id="block-' +
             e(b.key) +
             '"><dt>' +
@@ -730,7 +855,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
   // SVG wordmark of the exact site name instead of the former initial letter.
   const brand =
     '<a class="brand" href="/">' +
-    (logoAsset
+    (logoAsset && s.site.logoId
       ? image(s, s.site.logoId, s.site.name + " logo", false, false) +
         "<span>" +
         e(s.site.name) +
@@ -802,9 +927,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
           "</a>"
         : "") +
     "</div></div>" +
-    (firstImage
+    (firstImage && firstImage.assetId
       ? '<figure class="hero-visual">' +
-        image(s, firstImage.assetId, firstImage.alt, true) +
+        image(s, firstImage.assetId, firstImage.alt ?? "", true) +
         "</figure>"
       : fallbackVisual
         ? '<figure class="hero-visual">' +
@@ -812,9 +937,10 @@ export function renderStaticPage(s: Snapshot, p: any) {
           "</figure>"
         : "") +
     "</section>";
-  const brandColor = /^#[0-9a-f]{6}$/i.test(s.site.brandColor)
-    ? s.site.brandColor
-    : "#49694c";
+  const brandColor =
+    s.site.brandColor && /^#[0-9a-f]{6}$/i.test(s.site.brandColor)
+      ? s.site.brandColor
+      : "#49694c";
   const seo = s.settings?.seoAnalytics ?? {};
   const customOg =
     seo.ogImageAssetId && s.assets[seo.ogImageAssetId]
@@ -823,7 +949,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
       : null;
   const ogImage =
     customOg ??
-    (firstImage
+    (firstImage && firstImage.assetId
       ? new URL(s.assets[firstImage.assetId].path, s.settings.canonicalBaseUrl)
           .href
       : fallbackVisual
@@ -835,9 +961,9 @@ export function renderStaticPage(s: Snapshot, p: any) {
           ? new URL(logoAsset.path, s.settings.canonicalBaseUrl).href
           : null);
   const hasGallery = p.blocks.some(
-    (b: any) =>
+    (b) =>
       b.type === "gallery" &&
-      (b.items ?? []).some((i: any) => i.assetId && s.assets[i.assetId]),
+      (b.items ?? []).some((i) => i.assetId && s.assets[i.assetId]),
   );
   const lightbox = hasGallery
     ? '<dialog class="gs-lightbox" data-lightbox aria-label="' +
@@ -887,13 +1013,17 @@ export function renderStaticPage(s: Snapshot, p: any) {
   const fontPreload = composition
     ? composition.pack === "precision"
       ? '<link rel="preload" href="/assets/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>'
-      : composition.typography === "luxury" ||
-          composition.typography === "editorial"
-        ? '<link rel="preload" href="/assets/fonts/cormorant-garamond-400.woff2" as="font" type="font/woff2" crossorigin>'
-        : composition.typography === "technical" ||
-            composition.typography === "geometric"
+      : composition.pack === "atelier"
+        ? '<link rel="preload" href="/assets/fonts/plus-jakarta-sans-700.woff2" as="font" type="font/woff2" crossorigin>'
+        : composition.pack === "monolith"
           ? '<link rel="preload" href="/assets/fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>'
-          : '<link rel="preload" href="/assets/fonts/plus-jakarta-sans-700.woff2" as="font" type="font/woff2" crossorigin>'
+          : composition.typography === "luxury" ||
+              composition.typography === "editorial"
+            ? '<link rel="preload" href="/assets/fonts/cormorant-garamond-400.woff2" as="font" type="font/woff2" crossorigin>'
+            : composition.typography === "technical" ||
+                composition.typography === "geometric"
+              ? '<link rel="preload" href="/assets/fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>'
+              : '<link rel="preload" href="/assets/fonts/plus-jakarta-sans-700.woff2" as="font" type="font/woff2" crossorigin>'
     : '<link rel="preload" href="/assets/fonts/varela-round.ttf" as="font" type="font/ttf" crossorigin>';
   return (
     '<!DOCTYPE html><html lang="' +
@@ -1007,7 +1137,7 @@ export function renderStaticPage(s: Snapshot, p: any) {
     brandDock(s) +
     lightbox +
     '</main><footer><div class="footer-brand"><span class="footer-logo">' +
-    (logoAsset
+    (logoAsset && s.site.logoId
       ? image(s, s.site.logoId, s.site.name + " logo", false, false)
       : wordmarkSvg(s.site.name, { decorative: true })) +
     "</span><strong>" +

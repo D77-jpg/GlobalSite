@@ -21,19 +21,23 @@ const clean = (name: string) =>
     .trim()
     .slice(0, 60) || "Brand";
 
-/** Approximate advance width of the name at font-size 22 (condensed sans). */
+/** Approximate advance width of the name at font-size 22 (condensed sans + CJK/Arabic/Cyrillic). */
 export function wordmarkTextWidth(name: string) {
   let w = 0;
   for (const ch of clean(name))
     w += /[\u2E80-\u9FFF\uAC00-\uD7AF\u3040-\u30FF]/.test(ch)
       ? 22
-      : /[MWmw@]/.test(ch)
-        ? 17
-        : /[ilIj.,'!|:;]/.test(ch)
-          ? 6
-          : ch === " "
-            ? 6
-            : 12.5;
+      : /[\u0600-\u06FF\u0750-\u077F]/.test(ch)
+        ? 14
+        : /[\u0400-\u04FF]/.test(ch)
+          ? 14
+          : /[MWmw@]/.test(ch)
+            ? 17
+            : /[ilIj.,'!|:;]/.test(ch)
+              ? 6
+              : ch === " "
+                ? 6
+                : 12.5;
   return Math.max(24, Math.round(w));
 }
 
@@ -91,7 +95,7 @@ export function standaloneWordmarkSvg(
     mark +
     '"/><path d="M8 29 16 11 24 29Z" fill="#ffffff"/><text x="42" y="28" textLength="' +
     text +
-    '" lengthAdjust="spacingAndGlyphs" font-family="\'Barlow Condensed\',\'Arial Narrow\',Arial,sans-serif" font-weight="700" font-size="22" fill="' +
+    '" lengthAdjust="spacingAndGlyphs" font-family="\'Barlow Condensed\',\'Noto Sans SC\',\'PingFang SC\',\'Hiragino Sans\',\'Noto Sans Arabic\',\'Arial Narrow\',Arial,sans-serif" font-weight="700" font-size="22" fill="' +
     safeColor(colors.text, "#1f2a2e") +
     '">' +
     esc(label) +

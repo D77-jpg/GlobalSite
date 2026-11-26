@@ -23,6 +23,7 @@ import {
   repairDraftPage,
   snapshotIdentifiers,
 } from "./validation";
+import { runBounded } from "./outline";
 import type { AgentRunDoc, AgentStepUnit, AgentTaskDoc } from "./types";
 
 export type ImageSlot = {
@@ -49,10 +50,19 @@ export function autoImageCaps() {
   };
 }
 
+/** Bounded parallel image fills per unit (AUTO_IMAGE_CONCURRENCY, default 2, 1-4). */
+export function autoImageConcurrency(
+  raw: string | undefined = process.env.AUTO_IMAGE_CONCURRENCY,
+): number {
+  const n = Number(raw);
+  if (raw === undefined || !raw.trim() || !Number.isInteger(n)) return 2;
+  return Math.min(4, Math.max(1, n));
+}
+
 const IMAGE_ISSUES = new Set(["CONTENT_IMAGE_REQUIRED", "IMAGE_ALT_REQUIRED"]);
 const clip = (s: string, n: number) => s.replace(/\s+/g, " ").trim().slice(0, n);
 const RULES =
-  "Commercial B2B illustration. No people, no human faces or hands, no readable text, letters, numbers, labels or logos.";
+  "Commercial B2B illustration. No people, no human faces or hands, no readable text, letters, numbers, labels, LCD digits, dial markings, watermarks or logos anywhere on the product or scene.";
 
 const heroDesign: NonNullable<v.PageInput["blocks"][number]["design"]> = {
   purpose: "context",
@@ -326,12 +336,29 @@ export async function fillUnitImages(
   const assets: Record<string, string> = { ...(unit.generatedImages ?? {}) };
   const events: string[] = [...(unit.imageEvents ?? [])];
   let stop = false;
+  const persistAssets = async () => {
+    await mongoose.connection.transaction(async (session) => {
+      await fenceRun(task, session);
+      const fresh = await ownRun(String(run._id), session);
+      if (fresh.cancelRequested) throw new AppError(409, "AGENT_CANCELLED");
+      await AgentRun.updateOne(
+        { _id: fresh._id },
+        {
+          $set: {
+            ["steps." + index + ".generatedImages"]: { ...assets },
+            ["steps." + index + ".imageEvents"]: events.slice(-20),
+          },
+        },
+        { session },
+      );
+    });
+  };
+  // 1. Resolve already-persisted or originKey-reusable assets first without calling provider.
+  const pendingSlots: Array<{ slot: ImageSlot; originKey: string }> = [];
+  let reusedAny = false;
   for (const slot of slots) {
-    if (stop) break;
     if (assets[slot.key]) {
-      if (
-        await Asset.exists({ _id: assets[slot.key], status: "ready" })
-      )
+      if (await Asset.exists({ _id: assets[slot.key], status: "ready" }))
         continue;
       delete assets[slot.key];
     }
@@ -353,44 +380,49 @@ export async function fillUnitImages(
     })
       .select("_id")
       .lean();
-    let assetId = reused ? String(reused._id) : "";
-    if (!assetId) {
-      try {
-        const generated = await generate(
-          {
-            subject: slot.subject,
-            composition: slot.composition,
-            ...(palette ? { palette } : {}),
-          },
-          "auto:" + String(run._id) + ":" + originKey.slice(11, 43),
-          { originKey },
-        );
-        assetId = generated.id;
-      } catch (error) {
-        const code = error instanceof AppError ? error.code : "IMAGE_FAILED";
-        events.push(event(code));
-        if (["IMAGE_PROVIDER_MISSING", "QUOTA_EXCEEDED"].includes(code))
-          stop = true;
-        continue;
-      }
+    if (reused) {
+      assets[slot.key] = String(reused._id);
+      reusedAny = true;
+    } else {
+      pendingSlots.push({ slot, originKey });
     }
-    assets[slot.key] = assetId;
-    // Persist before use so a resumed unit reuses the paid image.
-    await mongoose.connection.transaction(async (session) => {
-      await fenceRun(task, session);
-      const fresh = await ownRun(String(run._id), session);
-      if (fresh.cancelRequested) throw new AppError(409, "AGENT_CANCELLED");
-      await AgentRun.updateOne(
-        { _id: fresh._id },
-        {
-          $set: {
-            ["steps." + index + ".generatedImages"]: assets,
-            ["steps." + index + ".imageEvents"]: events.slice(-20),
-          },
-        },
-        { session },
-      );
-    });
+  }
+  if (reusedAny) await persistAssets();
+
+  // 2. S37 §4.7-2: generate missing slots in bounded parallel batches, persisting
+  // after each completed batch so resumed units reuse already-paid images.
+  const concurrency = autoImageConcurrency();
+  for (let offset = 0; offset < pendingSlots.length && !stop; offset += concurrency) {
+    const batch = pendingSlots.slice(offset, offset + concurrency);
+    let batchChanged = false;
+    await runBounded(
+      batch,
+      concurrency,
+      async ({ slot, originKey }) => {
+        if (stop) return;
+        try {
+          const generated = await generate(
+            {
+              subject: slot.subject,
+              composition: slot.composition,
+              ...(palette ? { palette } : {}),
+            },
+            "auto:" + String(run._id) + ":" + originKey.slice(11, 43),
+            { originKey },
+          );
+          assets[slot.key] = generated.id;
+          batchChanged = true;
+        } catch (error) {
+          const code = error instanceof AppError ? error.code : "IMAGE_FAILED";
+          events.push(event(code));
+          batchChanged = true;
+          if (["IMAGE_PROVIDER_MISSING", "QUOTA_EXCEEDED"].includes(code))
+            stop = true;
+        }
+      },
+      () => stop,
+    );
+    if (batchChanged) await persistAssets();
   }
   const filled = applyImageSlots(page, slots, assets);
   // Never let illustrations make validation worse.

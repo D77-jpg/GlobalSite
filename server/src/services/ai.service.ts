@@ -1,12 +1,18 @@
 // Adapted from GlobalCRM AgentAiProvider/AgentAiSettings and agent/openai-provider.ts @ a94a285.
 // One organization provider, encrypted secret, bounded test call, no CRM tools.
+import mongoose from "mongoose";
 import { AgentAiProvider } from "../models";
 import { encrypt } from "./credential-crypto";
 import { tenantContext } from "../models/tenant-context";
 import { ensure, AppError } from "../errors";
-import { reserve, settle } from "./usage.service";
+import { absorbUnknownUsage, reserve, settle } from "./usage.service";
 import { aiBase, aiFetch, localAiBase } from "./ai-target";
 import { audit } from "./audit.service";
+import {
+  AiUsageUnknownError,
+  usageUnknown,
+  usageUnknownReasonOf,
+} from "./ai-usage-unknown";
 import {
   requireTextProvider,
   resolveTextProvider,
@@ -170,16 +176,18 @@ export async function testProvider(operationId: string) {
     ensure(raw.length < 65536, 502, "AI_REQUEST_FAILED");
     const body = JSON.parse(raw);
     const tokens = body.usage?.total_tokens;
-    ensure(
-      Number.isSafeInteger(tokens) && tokens >= 0 && tokens <= 4096,
-      502,
-      "AI_USAGE_UNKNOWN",
-    );
+    if (!Number.isSafeInteger(tokens) || tokens < 0)
+      throw new AiUsageUnknownError("usage_missing");
+    if (tokens > 4096) throw new AiUsageUnknownError("usage_over_budget");
     await settle("ai_tokens", operationId, tokens);
     return { ok: true, tokens };
   } catch (e) {
     if (e instanceof AppError && e.code === "AI_REQUEST_FAILED") throw e;
-    // Unknown provider outcome stays reserved for reconciliation, preventing free retries.
-    throw new AppError(502, "AI_USAGE_UNKNOWN");
+    const unknownErr = usageUnknown(e, "request");
+    const reason = usageUnknownReasonOf(unknownErr) ?? "unrecorded";
+    await mongoose.connection.transaction(async (session) => {
+      await absorbUnknownUsage("ai_tokens", operationId, reason, session);
+    });
+    throw unknownErr;
   }
 }

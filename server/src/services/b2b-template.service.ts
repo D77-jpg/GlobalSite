@@ -1,7 +1,12 @@
 import { sectionClasses } from "./section-design.service";
 import { getStorefrontCopy } from "./storefront-i18n.service";
 import { intactSentences } from "./copy-integrity";
-import type { Snapshot } from "./static-template.service";
+import type {
+  Snapshot,
+  SnapshotBlock,
+  SnapshotBlockItem,
+  SnapshotPage,
+} from "./static-template.service";
 
 const e = (v: unknown) =>
   String(v ?? "").replace(
@@ -20,7 +25,7 @@ export const pendingDetail = (v: string) =>
 // S35 acceptance fix: product-card copy never shows a sentence whose figures
 // were cut out ("Specify the VG- for …"). Intact summaries are returned as-is;
 // otherwise only intact sentences, then the intact SEO description, else "".
-export function cardSummary(v: any): string {
+export function cardSummary(v: SnapshotPage | null | undefined): string {
   const summary = v?.presentation?.summary;
   if (typeof summary !== "string" || !summary) return "";
   const kept = intactSentences(summary);
@@ -129,7 +134,7 @@ function valueColumns(heads: string[], rows: string[][]): number[] {
   return kept.length ? kept : content;
 }
 /** Titles a Model/Name row may repeat on this page (card, headline, product). */
-export function pageTitles(s: Snapshot, p: any): string[] {
+export function pageTitles(s: Snapshot, p?: SnapshotPage | null): string[] {
   return [
     p?.presentation?.navigationLabel,
     p?.presentation?.headline,
@@ -184,9 +189,13 @@ export function publicTable(
     ),
   };
 }
-export function cardSpecs(v: any, titles: string[], preferFigures = false) {
+export function cardSpecs(
+  v: SnapshotPage,
+  titles: string[],
+  preferFigures = false,
+) {
   const table = v.blocks.find(
-    (b: any) => b.type === "specs" && b.table?.rows?.length,
+    (b) => b.type === "specs" && b.table?.rows?.length,
   )?.table;
   const rows = cellRows(table?.rows);
   const heads: string[] = Array.isArray(table?.columns)
@@ -207,13 +216,12 @@ export function cardSpecs(v: any, titles: string[], preferFigures = false) {
     specs.sort((a, b) => Number(/\d/.test(b.value)) - Number(/\d/.test(a.value)));
   return specs.slice(0, 2);
 }
-const packOf = (s: Snapshot, p: any): string | undefined => {
+const packOf = (s: Snapshot, p?: SnapshotPage | null): string | undefined => {
   const home = s.pages.find((v) => v.path === "/");
-  return (
-    s.site.designDirection?.composition ??
+  const comp = (s.site.designDirection?.composition ??
     home?.presentation?.composition ??
-    p?.presentation?.composition
-  )?.pack;
+    p?.presentation?.composition) as { pack?: string } | undefined;
+  return comp?.pack;
 };
 
 /**
@@ -222,11 +230,14 @@ const packOf = (s: Snapshot, p: any): string | undefined => {
  * linked from the product guide). Every value cell must already appear in the
  * first table; labels may differ ("Specification" vs "Burr size").
  */
-export function redundantSpecKeys(s: Snapshot, p: any): Set<string> {
+export function redundantSpecKeys(
+  s: Snapshot,
+  p?: SnapshotPage | null,
+): Set<string> {
   const out = new Set<string>();
   if (!packOf(s, p) || !Array.isArray(p?.blocks)) return out;
   const titles = pageTitles(s, p);
-  const specs = (p.blocks as any[])
+  const specs = p.blocks
     .filter((b) => b.type === "specs" && b.table)
     .map((b) => ({ key: String(b.key), rows: publicTable(b.table, titles).rows }))
     .filter((x) => x.rows.length);
@@ -247,9 +258,9 @@ export function redundantSpecKeys(s: Snapshot, p: any): Set<string> {
 }
 
 // S35 acceptance fix: href of the action a cta block renders (same rule as below).
-export function ctaTarget(b: any): string {
+export function ctaTarget(b: SnapshotBlock): string {
   return (
-    (b.items ?? []).filter((i: any) => !pendingDetail(i.body))[0]?.href ??
+    (b.items ?? []).filter((i) => !pendingDetail(i.body))[0]?.href ??
     "#inquiry"
   );
 }
@@ -268,15 +279,15 @@ const ILLUSTRATIVE: Record<string, string> = {
 export function conceptNote(s: Snapshot, id?: string | null) {
   return id && s.assets[id]?.concept
     ? '<small class="concept-note">' +
-        e(ILLUSTRATIVE[s.site.language] ?? ILLUSTRATIVE.en) +
+        e(ILLUSTRATIVE[s.site.language ?? "en"] ?? ILLUSTRATIVE.en) +
         "</small>"
     : "";
 }
 
-function productImage(s: Snapshot, v: any, fallbackId?: string | null) {
+function productImage(s: Snapshot, v: SnapshotPage, fallbackId?: string | null) {
   const source = s.products?.find((x) => x.id === v.productId);
   const id =
-    v.blocks.find((b: any) => b.type === "image" && s.assets[b.assetId])
+    v.blocks.find((b) => b.type === "image" && b.assetId && s.assets[b.assetId])
       ?.assetId ??
     source?.assetIds.filter((id) => s.assets[id]).at(-1) ??
     // S35: grid item illustration is used only when the product has no image.
@@ -296,18 +307,19 @@ function productImage(s: Snapshot, v: any, fallbackId?: string | null) {
     : "";
 }
 
-export function productGuide(s: Snapshot, p: any) {
+export function productGuide(s: Snapshot, p: SnapshotPage) {
   const copy = getStorefrontCopy(s.site.language);
   const redundant = redundantSpecKeys(s, p);
   const links = p.blocks.filter(
-    (b: any) =>
+    (b) =>
       (b.type === "specs" &&
         !redundant.has(b.key) &&
         publicTable(b.table, pageTitles(s, p)).rows.length > 0) ||
       (b.type === "faq" && b.faq?.length) ||
-      (b.type === "gallery" && b.items?.some((i: any) => i.assetId && s.assets[i.assetId])) ||
+      (b.type === "gallery" &&
+        b.items?.some((i) => i.assetId && s.assets[i.assetId])) ||
       (b.type === "downloads" &&
-        b.items?.some((i: any) => s.assets[i.assetId]?.path.endsWith(".pdf"))),
+        b.items?.some((i) => i.assetId && s.assets[i.assetId]?.path.endsWith(".pdf"))),
   );
   if (!links.length) return "";
   return (
@@ -316,7 +328,7 @@ export function productGuide(s: Snapshot, p: any) {
     '">' +
     links
       .map(
-        (b: any) =>
+        (b) =>
           '<a href="#block-' +
           e(b.key) +
           '">' +
@@ -335,7 +347,7 @@ export function productGuide(s: Snapshot, p: any) {
 
 export function productCards(
   s: Snapshot,
-  p: any,
+  p: SnapshotPage,
   heading?: string,
   body = "",
   design?: unknown,
@@ -356,14 +368,14 @@ export function productCards(
   const rows = selection?.length
     ? selection
         .map((path) => available.find((v) => v.path === path))
-        .filter(Boolean)
+        .filter((v): v is SnapshotPage => !!v)
     : available;
   if (!rows.length) return "";
   const lineSheet =
     p.type === "home" &&
     !s.site.designDirection?.composition &&
     !p.presentation?.composition &&
-    p.blocks.some((b: any) => b.type === "category-grid");
+    p.blocks.some((b) => b.type === "category-grid");
   return (
     '<section class="b2b-section catalog-section' +
     (lineSheet ? " line-sheet" : "") +
@@ -466,31 +478,41 @@ export function productCards(
   );
 }
 
-export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
+export function renderB2BBlock(
+  s: Snapshot,
+  p: SnapshotPage | undefined,
+  b: SnapshotBlock,
+): string | null {
   if (["text", "image", "specs", "faq"].includes(b.type)) return null;
   const copy = getStorefrontCopy(s.site.language);
   if (b.type === "product-grid")
-    return productCards(
-      s,
-      p,
-      b.heading,
-      b.body,
-      b.design,
-      b.design
-        ? b.items
-            ?.map((i: any) => i.href)
-            .filter(
-              (href: any) => typeof href === "string" && href.startsWith("/"),
-            )
-        : undefined,
-      Object.fromEntries(
-        (b.items ?? [])
-          .filter((i: any) => typeof i.href === "string" && i.assetId)
-          .map((i: any) => [i.href, i.assetId]),
-      ),
-    );
+    return p
+      ? productCards(
+          s,
+          p,
+          b.heading,
+          b.body,
+          b.design,
+          b.design
+            ? (b.items ?? [])
+                .map((i) => i.href)
+                .filter(
+                  (href): href is string =>
+                    typeof href === "string" && href.startsWith("/"),
+                )
+            : undefined,
+          Object.fromEntries(
+            (b.items ?? [])
+              .filter(
+                (i): i is SnapshotBlockItem & { href: string; assetId: string } =>
+                  typeof i.href === "string" && typeof i.assetId === "string",
+              )
+              .map((i) => [i.href, i.assetId]),
+          ),
+        )
+      : "";
   const a = b.assetId ? s.assets[b.assetId] : null,
-    items = (b.items ?? []).filter((i: any) => !pendingDetail(i.body));
+    items = (b.items ?? []).filter((i) => !pendingDetail(i.body));
   const picture = (id: string, alt: string) =>
     s.assets[id]
       ? '<img loading="lazy" src="' +
@@ -519,12 +541,12 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
     const available =
       categories.length < 2 && products.length ? products : categories;
     const listed = (b.items ?? [])
-      .filter((i: any) => i.href)
-      .map((i: any) => available.find((v) => v.path === i.href))
-      .filter(Boolean);
-    const destinations =
+      .filter((i) => i.href)
+      .map((i) => available.find((v) => v.path === i.href))
+      .filter((v): v is SnapshotPage => !!v);
+    const destinations: SnapshotPage[] =
       b.design && listed.length
-        ? ([...new Map(listed.map((p: any) => [p.path, p])).values()] as any[])
+        ? [...new Map(listed.map((pg) => [pg.path, pg])).values()]
         : available;
     if (!destinations.length) return "";
     content =
@@ -534,11 +556,9 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
           const child = products.find((product) =>
             product.path.startsWith(v.path.replace(/\/$/, "") + "/"),
           );
-          const card = (b.items ?? []).find(
-            (item: any) => item.href === v.path,
-          );
+          const card = (b.items ?? []).find((item) => item.href === v.path);
           const visual =
-            (card?.assetId ? picture(card.assetId, card.alt) : "") ||
+            (card?.assetId ? picture(card.assetId, card.alt ?? "") : "") ||
             productImage(s, v) ||
             (child ? productImage(s, child) : "");
           const title =
@@ -565,7 +585,10 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       "</div>";
   } else if (b.type === "gallery") {
     const photos = items.filter(
-      (i: any) => i.assetId && s.assets[i.assetId] && !s.assets[i.assetId].path.endsWith(".pdf"),
+      (i): i is SnapshotBlockItem & { assetId: string } =>
+        !!i.assetId &&
+        !!s.assets[i.assetId] &&
+        !s.assets[i.assetId].path.endsWith(".pdf"),
     );
     if (!photos.length) return "";
     content =
@@ -573,9 +596,9 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       e(b.key) +
       '">' +
       photos
-        .map((i: any, idx: number) => {
+        .map((i, idx) => {
           const asset = s.assets[i.assetId];
-          const alt = i.alt || i.title || b.heading;
+          const alt = i.alt || i.title || b.heading || "";
           const caption = [i.title, i.body].filter(Boolean).join(" — ");
           return (
             '<figure class="gallery-item"><button type="button" class="gallery-trigger" data-lightbox-trigger data-lightbox-group="' +
@@ -605,13 +628,13 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         .join("") +
       "</div>";
   } else if (b.type === "metrics") {
-    const verified = items.filter((i: any) => i.refs?.length || b.refs?.length);
+    const verified = items.filter((i) => i.refs?.length || b.refs?.length);
     if (!verified.length) return "";
     content =
       '<dl class="metrics-strip">' +
       verified
         .map(
-          (i: any) =>
+          (i) =>
             '<div class="metric-card"><dt>' +
             e(i.title) +
             "</dt><dd>" +
@@ -621,19 +644,19 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         .join("") +
       "</dl>";
   } else if (b.type === "certifications") {
-    const verified = items.filter((i: any) => i.refs?.length || b.refs?.length);
+    const verified = items.filter((i) => i.refs?.length || b.refs?.length);
     if (!verified.length) return "";
     content =
       '<div class="cert-wall">' +
       verified
-        .map((i: any) => {
+        .map((i) => {
           const asset = i.assetId ? s.assets[i.assetId] : null;
           const isPdf =
             asset &&
             (asset.path.endsWith(".pdf") || asset.mime === "application/pdf");
           return (
             '<article class="cert-card">' +
-            (asset && !isPdf
+            (asset && !isPdf && i.assetId
               ? '<div class="cert-media">' +
                 picture(i.assetId, i.alt || i.title) +
                 "</div>"
@@ -669,7 +692,7 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '<div class="showcase-grid">' +
       items
         .map(
-          (i: any, idx: number) =>
+          (i, idx) =>
             '<article class="showcase-card' +
             (idx === 0 ? " showcase-lead" : "") +
             '">' +
@@ -696,11 +719,11 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       "</div>";
   } else if (b.type === "split")
     content =
-      (a ? "<figure>" + picture(b.assetId, b.alt) + "</figure>" : "") +
+      (a && b.assetId ? "<figure>" + picture(b.assetId, b.alt ?? "") + "</figure>" : "") +
       '<div class="split-copy">' +
       heading +
       items
-        .map((i: any) => "<h3>" + e(i.title) + "</h3><p>" + e(i.body) + "</p>")
+        .map((i) => "<h3>" + e(i.title) + "</h3><p>" + e(i.body) + "</p>")
         .join("") +
       "</div>";
   else if (b.type === "cta")
@@ -736,13 +759,13 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '<div class="resource-grid">' +
       items
         .filter(
-          (i: any) =>
-            i.assetId &&
-            (s.assets[i.assetId]?.path.endsWith(".pdf") ||
+          (i): i is SnapshotBlockItem & { assetId: string } =>
+            !!i.assetId &&
+            (!!s.assets[i.assetId]?.path.endsWith(".pdf") ||
               s.assets[i.assetId]?.mime === "application/pdf"),
         )
         .map(
-          (i: any) =>
+          (i) =>
             '<article><span class="resource-type">' +
             e(copy.pdfDocument) +
             "</span><h3>" +
@@ -774,17 +797,17 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '">' +
       items
         .filter(
-          (i: any) =>
+          (i) =>
             !["evidence", "case-study", "customization"].includes(b.type) ||
             i.refs?.length ||
             b.refs?.length,
         )
         .map(
-          (i: any) =>
+          (i) =>
             "<" +
             (b.type === "process" ? "li" : "article") +
             ">" +
-            (i.assetId ? picture(i.assetId, i.alt) : "") +
+            (i.assetId ? picture(i.assetId, i.alt ?? "") : "") +
             "<h3>" +
             e(i.title) +
             "</h3><p>" +
@@ -814,7 +837,7 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       "metrics",
       "certifications",
     ].includes(b.type) &&
-      !items.some((i: any) => i.refs?.length || b.refs?.length))
+      !items.some((i) => i.refs?.length || b.refs?.length))
   )
     return "";
   return (
@@ -922,9 +945,9 @@ export function catalogueHtml(s: Snapshot) {
           ) +
           "</p>" +
           p.blocks
-            .filter((b: any) => b.type === "specs" && b.table?.rows.length)
+            .filter((b) => b.type === "specs" && b.table?.rows.length)
             .map(
-              (b: any): PublicTable => publicTable(b.table, pageTitles(s, p)),
+              (b): PublicTable => publicTable(b.table, pageTitles(s, p)),
             )
             .filter((table: PublicTable) => table.rows.length > 0)
             .map(
@@ -950,7 +973,7 @@ export function catalogueHtml(s: Snapshot) {
   );
 }
 
-export function quoteBar(s: Snapshot, p: any) {
+export function quoteBar(s: Snapshot, p: SnapshotPage) {
   if (!s.site.buyerProfile) return "";
   const copy = getStorefrontCopy(s.site.language);
   return (

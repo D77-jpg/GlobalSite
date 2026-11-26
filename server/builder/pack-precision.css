@@ -77,10 +77,13 @@
   --pp-line-d: rgba(254, 247, 241, 0.14);
   --pp-line-l: rgba(19, 17, 16, 0.14);
   --pp-head: "Barlow Condensed", "Arial Narrow", "Roboto Condensed",
+    "PingFang SC", "Noto Sans SC", "Hiragino Sans", "Noto Sans Arabic",
     "Helvetica Neue", Arial, sans-serif;
-  --pp-ui: "Barlow", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --pp-serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman",
-    serif;
+  --pp-ui: "Barlow", "PingFang SC", "Noto Sans SC", "Hiragino Sans",
+    "Noto Sans Arabic", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --pp-serif: "Source Serif 4", "Source Serif Pro", "Noto Serif SC",
+    "Songti SC", "Hiragino Mincho ProN", "Noto Sans Arabic", Georgia,
+    "Times New Roman", serif;
   --pp-wrap: 1320px;
   --pp-gut: clamp(20px, 4vw, 56px);
   --pp-pad: max(var(--pp-gut), calc((100vw - var(--pp-wrap)) / 2 + var(--pp-gut)));
@@ -2170,6 +2173,7 @@
 
 @media (max-width: 640px) {
   .composed-site.pack-precision {
+    --pp-sec: clamp(44px, 7.5vw, 72px);
     font-size: 17px;
   }
   .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid,
@@ -2177,12 +2181,22 @@
   .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid:has(> .product-card:nth-child(4):last-child) {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* S37 §4.6-5: horizontal scroll-snap tracks keep mobile 375px pages compact without page overflow. */
   .composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid,
   .composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid:has(> article:nth-child(6)) {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
   }
   .composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article {
-    min-height: 360px;
+    flex: 0 0 82%;
+    min-width: 0;
+    min-height: 300px;
+    scroll-snap-align: start;
   }
   .composed-site.b2b-site.pack-precision .site-header .brand {
     font-size: 17px;
@@ -2190,7 +2204,18 @@
   }
   .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery,
   .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery:has(> .gallery-item:nth-child(2):last-child) {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery > .gallery-item {
+    flex: 0 0 82%;
+    min-width: 0;
+    scroll-snap-align: start;
   }
   .composed-site.b2b-site.pack-precision main > section.block-gallery:not(.directed-section) .gallery-trigger img {
     aspect-ratio: 4 / 3;
@@ -2251,6 +2276,26 @@
   .composed-site.b2b-site.pack-precision main > section.block-features .feature-grid > article:hover > img {
     transform: none;
   }
+}
+/* S37 §4.9-1 & §4.7-1: non-Latin script typography, RTL alignment, and non-b2b fallback. */
+html:is([lang^="zh"], [lang^="ja"], [lang^="ar"]) .composed-site.pack-precision :is(h1, h2, h3, h4, .desktop-nav a, .desktop-nav summary, .cta, .header-action, .section-kicker, .hero-eyebrow, .brand-wordmark text) {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.18;
+}
+html[dir="rtl"] .composed-site.pack-precision main > section.hero .hero-copy,
+html[dir="rtl"] .composed-site.pack-precision main > section {
+  text-align: start;
+}
+.composed-site:not(.b2b-site).pack-precision main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.composed-site:not(.b2b-site).pack-precision main > section {
+  max-width: none;
+  margin: 0;
+  padding: var(--pp-sec) var(--pp-pad);
 }
 /* S35 B2: wordmark in the precision pack typeface. */
 .composed-site.pack-precision .brand-wordmark text {

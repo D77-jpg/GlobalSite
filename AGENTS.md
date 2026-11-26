@@ -212,3 +212,11 @@
 - 平台密钥只通过环境变量或密钥管理注入，不入库、不进日志、错误、代码、测试、文档与聊天；配置问题只记录变量名。托管时 AI 设置读取接口只返回 `{ managed, enabled, configured }`，保存/测试返回 `409 PLATFORM_MANAGED`；平台模型名不写入 Agent 记录。
 - 客户界面不暴露模型名、服务商、地址、密钥和 Token：AI 额度显示百分比，图片显示“已用 N / 上限”，并提供重置日期、80% 提醒与“升级套餐”入口（`PLATFORM_UPGRADE_URL` 仅 https/mailto）。
 - 跨组织运营统计只能走 `npm run ops:usage`（`server/src/scripts/ops-usage.ts`）：组织列表用既有 identity 上下文，其余逐个组织在 `runWithTenant` 中只读查询，不新增绕过、不写入、不执行迁移；不得为此新增跨租户 Web 后台或业务接口。
+
+## S37 交付与维护约束
+- 见 `docs/design/S37-未完成开发交接.md` 第 7 节与 `docs/design/S37-风格与标杆参照库.md`。
+- 演示模式（`site.demoMode === true`）下所有 `status === "candidate"` 事实（手动录入与 AI 建议）均可引用并满足 readiness 演示缺口，但审批仍被 `409 DEMO_FACTS_UNCONFIRMED` 拦截，`canPublish` 与发布门禁始终只认 `confirmed`（`allowDemoFacts: false`）。
+- 风格包规则模块化存放于 `server/agent-skills/packs/{precision,atelier,monolith}.md`，按 `composition.pack` 白名单经 `site-skill-profile.ts` 加载，保持 `brand-site.md` 远低于 15000 字节测试上限；新增风格包须同步覆盖非拉丁字体回退、RTL、375px 移动端零溢出与 `test:quality`。
+- 询盘垃圾识别与测试连接路径统一接入 S35 `absorbUnknownUsage`，隐私模板须保留平台托管 AI 脱敏处理说明（zh/en）；长任务流式读取（`AI_STREAM_LONG_TASKS`）、审查抽样（`REVIEW_SAMPLE_THRESHOLD`）与自动配图受限并发（`AUTO_IMAGE_CONCURRENCY`）必须保留原 `operationId`、租约围栏与 `reserve/settle` 语义。
+- 非英文页面（全部 8 种语言）与英文页面共用内部审核措辞、FAQ 直接回答与截断型号保护；`BuyerReadiness.enrichmentGaps` 仅作为资料补全引导，不改变发布门禁。
+- 运维基础：Worker 异常须经 `error-monitor.service.ts` 脱敏上报（仅事件码/任务类型/原因码，严禁敏感数据），任务与 AI 指标经 `metrics.service.ts` 记录；MongoDB 与持久卷备份/演练使用 `scripts/ops/backup.mjs` 与 `scripts/ops/restore.mjs`（首次启动 `db.ts` 登记 `s35-s36-v1` 迁移账本）。

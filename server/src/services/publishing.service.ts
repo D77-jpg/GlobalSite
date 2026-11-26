@@ -704,15 +704,15 @@ export async function validVersion(
   );
   for (const p of s.pages)
     ensure(
-      !validatePage(p, facts, {
+      !validatePage(p as unknown as Parameters<typeof validatePage>[0], facts, {
         productId: p.productId,
-        productIds: s.site.productIds,
+        productIds: s.site.productIds ?? [],
         type: p.type,
         brandName: s.site.name,
         language: s.site.language,
         navigationLabels:
           p.type === "home"
-            ? s.site.plan?.strategy?.navigation?.map((g: any) => g.label)
+            ? s.site.plan?.strategy?.navigation?.map((g) => g.label)
             : [],
         requiredProductSections: s.site.plan?.strategy?.productSections,
         requireComposition: !!s.site.designDirection?.composition,
@@ -743,7 +743,8 @@ export async function validVersion(
       ],
     }).session(session ?? null);
     ensure(
-      procurementCoverage(site, products, allFacts).canPublish,
+      procurementCoverage(site, products, allFacts, { allowDemoFacts: false })
+        .canPublish,
       409,
       "PROCUREMENT_INCOMPLETE",
     );
