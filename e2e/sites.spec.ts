@@ -203,8 +203,43 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   await expect(
     page.getByText("请先由管理员配置 AI 服务商，再恢复任务", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "取消任务", exact: true }).click();
-  await expect(page.getByText("已取消", { exact: true }).first()).toBeVisible();
+  let cancelRateHit: number | undefined;
+  const onCancelResponse = (r: {
+    url: () => string;
+    status: () => number;
+    headers: () => Record<string, string>;
+  }) => {
+    if (
+      r.status() === 429 &&
+      new URL(r.url()).pathname.startsWith("/api/v1/")
+    ) {
+      cancelRateHit = Number(r.headers()["retry-after"] ?? 60) * 1000;
+    }
+  };
+  page.on("response", onCancelResponse);
+  try {
+    await page.getByRole("button", { name: "取消任务", exact: true }).click();
+    try {
+      await expect(
+        page.getByText("已取消", { exact: true }).first(),
+      ).toBeVisible({ timeout: 8000 });
+    } catch (error) {
+      if (!cancelRateHit) throw error;
+      test.setTimeout(test.info().timeout + cancelRateHit + 15000);
+      await page.waitForTimeout(cancelRateHit);
+      cancelRateHit = undefined;
+      const cancelBtn = page.getByRole("button", {
+        name: "取消任务",
+        exact: true,
+      });
+      if (await cancelBtn.isVisible()) await cancelBtn.click();
+      await expect(
+        page.getByText("已取消", { exact: true }).first(),
+      ).toBeVisible({ timeout: 10000 });
+    }
+  } finally {
+    page.off("response", onCancelResponse);
+  }
   await page.getByRole("button", { name: "切换语言", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Agent jobs", exact: true }),
