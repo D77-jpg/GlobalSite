@@ -5,8 +5,6 @@ import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import { crmMessages } from "./crm-i18n";
 import type { Locale } from "./i18n";
-import "./crm.css";
-import "./operations.css";
 type Row = Record<string, any>;
 const translate = (locale: Locale) => (key: string) =>
   crmMessages[key as keyof typeof crmMessages]?.[locale === "zh" ? 0 : 1] ??

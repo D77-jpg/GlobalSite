@@ -10,7 +10,7 @@ import {
   AuditLog,
   WebsiteRead,
 } from "../models";
-import { ensure } from "../errors";
+import { ensure, AppError } from "../errors";
 import { productInput, factInput } from "../validators/catalog.validator";
 const auditTx = (
   action: string,
@@ -218,11 +218,37 @@ export async function saveFact(
   const data = factInput.parse(input);
   let result: any;
   await mongoose.connection.transaction(async (session) => {
-    const source = await validateSource(
-      { ...data.source },
-      data.subjectId,
-      session,
-    );
+    // S35: an AI suggestion keeps its origin when edited; it can never be
+    // created through this endpoint and stays a candidate until confirmed.
+    let source: any;
+    if (data.source.kind === "ai-suggested") {
+      ensure(id, 400, "SOURCE_NOT_LOCAL");
+      const existing = await FactSheet.findOne({ _id: id, revision }).session(
+        session,
+      );
+      ensure(existing, 409, "REVISION_CONFLICT");
+      ensure(existing.source?.kind === "ai-suggested", 400, "SOURCE_NOT_LOCAL");
+      if (data.subjectId)
+        ensure(
+          await Product.exists({
+            _id: data.subjectId,
+            status: { $ne: "archived" },
+          }).session(session),
+          404,
+          "NOT_FOUND",
+        );
+      source = {
+        ...existing.source,
+        quote: data.source.quote,
+        ...(data.source.label ? { label: data.source.label } : {}),
+        editedAt: new Date().toISOString(),
+      };
+    } else
+      source = await validateSource(
+        { ...data.source },
+        data.subjectId,
+        session,
+      );
     if (id) {
       const current = await FactSheet.findOne({ _id: id, revision }).session(
         session,
@@ -311,7 +337,18 @@ export async function transitionFact(
           current.subjectId ? String(current.subjectId) : undefined,
           session,
         );
-      else if (current.source.kind === "website") {
+      else if (current.source.kind === "ai-suggested") {
+        // S35: human confirmation turns a suggestion into a confirmed fact.
+        if (current.subjectId)
+          ensure(
+            await Product.exists({
+              _id: current.subjectId,
+              status: { $ne: "archived" },
+            }).session(session),
+            404,
+            "NOT_FOUND",
+          );
+      } else if (current.source.kind === "website") {
         const { WebsiteRead } = await import("../models");
         ensure(
           await WebsiteRead.exists({
@@ -354,6 +391,28 @@ export async function transitionFact(
     await auditTx("fact." + status, actor, id, session);
   });
   return factDto(result);
+}
+export async function batchConfirmFacts(
+  items: Array<{ id: string; revision: number }>,
+  actor: string,
+  reason?: string,
+) {
+  const confirmed: string[] = [];
+  const skipped: Array<{ id: string; code: string }> = [];
+  for (const item of items) {
+    try {
+      const exists = await FactSheet.exists({ _id: item.id });
+      ensure(exists, 404, "NOT_FOUND");
+      await transitionFact(item.id, item.revision, "confirmed", actor, reason);
+      confirmed.push(item.id);
+    } catch (err) {
+      skipped.push({
+        id: item.id,
+        code: err instanceof AppError ? err.code : "CONFIRM_FAILED",
+      });
+    }
+  }
+  return { confirmed, skipped };
 }
 export const sha = (text: string) =>
   createHash("sha256").update(text).digest("hex");

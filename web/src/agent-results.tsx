@@ -5,6 +5,106 @@ import { api } from "./api";
 import { st, siteMessages } from "./sites-i18n";
 import type { Locale } from "./i18n";
 type Row = Record<string, any>;
+// S35 stage D: quality-baseline scores. "structural" means deterministic page
+// and browser rules only; it never claims a model looked at the screenshots.
+const baselineLabels: Record<string, [string, string]> = {
+  firstImpression: ["首屏冲击", "First impression"],
+  rhythm: ["区块节奏", "Section rhythm"],
+  density: ["信息密度", "Information density"],
+  credibility: ["可信度元素", "Credibility"],
+  conversion: ["转化路径", "Conversion path"],
+};
+const baselineAdviceZh: Record<string, string> = {
+  BASELINE_FIRST_IMPRESSION:
+    "强化首屏：使用已批准的首屏图片，主标题不超过 8 个词，桌面端不超过三行。",
+  BASELINE_RHYTHM: "交替区块形态与底色：避免相邻区块使用相同类型、框架或底色。",
+  BASELINE_DENSITY: "平衡信息密度：首页保留 5–8 个有用区块，删除信息量少却很高的区块。",
+  BASELINE_CREDIBILITY:
+    "补充有确认事实支持的可信度元素：数据带，以及客户案例、实证或认证区块。",
+  BASELINE_CONVERSION: "理清转化路径：产品浏览、主要行动按钮与引导到询盘表单的收尾行动。",
+};
+function BaselinePanel({ baseline, locale }: { baseline: Row; locale: Locale }) {
+  const zh = locale === "zh";
+  const pick = (pair: [string, string]) => (zh ? pair[0] : pair[1]);
+  return (
+    <section className="result-comparison">
+      <h4>
+        {zh ? "质量基线评分" : "Quality baseline"} · {baseline.total} / 5
+      </h4>
+      <p className="muted">
+        {baseline.method === "structural+visual"
+          ? zh
+            ? "结构规则 + 视觉模型截图评分"
+            : "Structural rules plus vision-model screenshot scores"
+          : zh
+            ? "结构评分：仅基于页面结构与浏览器测量，模型未查看截图。"
+            : "Structural score: page structure and browser measurements only; no model viewed the screenshots."}
+      </p>
+      {baseline.signals?.images && (
+        <p className="muted">
+          {zh
+            ? "截图中实际显示 " +
+              baseline.signals.images.rendered +
+              " 张图片" +
+              (baseline.signals.images.illustrative
+                ? "，其中 " +
+                  baseline.signals.images.illustrative +
+                  " 张为 AI 示意图（已标注，不作为事实证据）"
+                : "") +
+              (baseline.signals.images.broken
+                ? "；" + baseline.signals.images.broken + " 张未能加载"
+                : "") +
+              "。"
+            : baseline.signals.images.rendered +
+              " images rendered in the screenshots" +
+              (baseline.signals.images.illustrative
+                ? ", including " +
+                  baseline.signals.images.illustrative +
+                  " labelled AI illustrations (not evidence)"
+                : "") +
+              (baseline.signals.images.broken
+                ? "; " + baseline.signals.images.broken + " failed to load"
+                : "") +
+              "."}
+        </p>
+      )}
+      <dl className="result-measurements">
+        {Object.entries(baselineLabels).map(([key, label]) => (
+          <div key={key}>
+            <dt>{pick(label)}</dt>
+            <dd>{baseline.scores?.[key] ?? "—"} / 5</dd>
+          </div>
+        ))}
+      </dl>
+      {baseline.belowThreshold && (
+        <div className="notice">
+          <strong>
+            {zh
+              ? "低于阈值 " + baseline.threshold + "，建议使用“按审查改进”："
+              : "Below the " + baseline.threshold + " threshold. Suggested “refine from review” items:"}
+          </strong>
+          <ul>
+            {(baseline.improvements ?? []).map((i: Row) => (
+              <li key={i.code}>
+                {pick(
+                  baselineLabels[i.dimension] ??
+                    ([i.dimension, i.dimension] as [string, string]),
+                )}
+                {": "}
+                {zh ? (baselineAdviceZh[i.code] ?? i.recommendation) : i.recommendation}
+              </li>
+            ))}
+          </ul>
+          <small>
+            {zh
+              ? "不会自动修改、批准或发布，仍需人工审核。"
+              : "Nothing is changed, approved or published automatically."}
+          </small>
+        </div>
+      )}
+    </section>
+  );
+}
 const copy = {
   zh: {
     all: "全部问题",
@@ -374,6 +474,9 @@ export function AgentResults({
                 </div>
               ))}
             </dl>
+          )}
+          {output.baseline && (
+            <BaselinePanel baseline={output.baseline} locale={locale} />
           )}
           {output.screenshots?.length > 0 && (
             <div className="result-screenshots">

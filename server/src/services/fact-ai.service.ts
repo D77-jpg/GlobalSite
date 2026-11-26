@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { decrypt } from "./credential-crypto";
-import { AgentAiProvider } from "../models";
-import { tenantContext } from "../models/tenant-context";
+import { requireTextProvider } from "./ai-provider-resolve";
 import { aiBase, aiFetch } from "./ai-target";
 import { reserve, settle } from "./usage.service";
 import { ensure, AppError } from "../errors";
+import {
+  AiUsageUnknownError,
+  parseProviderJson,
+  providerTokens,
+  readCappedBody,
+  usageUnknown,
+  type UsageUnknownStage,
+} from "./ai-usage-unknown";
 const output = z
   .object({
     facts: z
@@ -32,8 +38,8 @@ export async function extractEvidence(
   operationId: string,
   save: (result: ExtractionResult) => Promise<void>,
 ) {
-  const provider = await AgentAiProvider.findOne({ name: "default" });
-  ensure(provider?.enabled && provider.secret, 409, "AI_UNCONFIGURED");
+  // S36: platform service or (non-production / ALLOW_ORG_AI_KEYS) org provider.
+  const provider = await requireTextProvider();
   const url = await aiBase(provider.baseUrl);
   const budget =
     Buffer.byteLength(text, "utf8") + 8192 + (imageData ? 8192 : 0);
@@ -43,6 +49,7 @@ export async function extractEvidence(
     "AI_USAGE_UNKNOWN",
   );
   let known = false;
+  let stage: UsageUnknownStage = "request";
   try {
     const response = await aiFetch(
       url.href.replace(/\/$/, "") + "/chat/completions",
@@ -52,12 +59,13 @@ export async function extractEvidence(
         signal: AbortSignal.timeout(25000),
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-            "Bearer " +
-            decrypt(provider.secret, "ai:" + tenantContext()!.organizationId),
+          Authorization: "Bearer " + provider.apiKey(),
         },
         body: JSON.stringify({
-          model: provider.modelName,
+          model:
+            imageData && provider.supportsVision && provider.visionModelName
+              ? provider.visionModelName
+              : provider.modelName,
           max_tokens: 2048,
           response_format: { type: "json_object" },
           messages: [
@@ -83,35 +91,17 @@ export async function extractEvidence(
       },
     );
     if (!response.ok) {
+      stage = "persist";
       await settle("ai_tokens", operationId, 0);
       known = true;
       throw new AppError(502, "AI_REQUEST_FAILED");
     }
-    ensure(response.body, 502, "AI_USAGE_UNKNOWN");
-    const reader = response.body.getReader(),
-      chunks: Uint8Array[] = [];
-    let bytes = 0;
-    try {
-      for (;;) {
-        const part = await reader.read();
-        if (part.done) break;
-        bytes += part.value.length;
-        if (bytes > 262144) {
-          await reader.cancel();
-          throw new AppError(502, "AI_USAGE_UNKNOWN");
-        }
-        chunks.push(part.value);
-      }
-    } finally {
-      reader.releaseLock();
-    }
-    const body = JSON.parse(Buffer.concat(chunks).toString("utf8")),
-      tokens = body.usage?.total_tokens;
-    ensure(
-      Number.isSafeInteger(tokens) && tokens >= 0 && tokens <= budget,
-      502,
-      "AI_USAGE_UNKNOWN",
-    );
+    // S35 acceptance fix: unknown outcomes keep a fixed reason code.
+    if (!response.body) throw new AiUsageUnknownError("usage_missing");
+    const body = parseProviderJson(
+        await readCappedBody(response.body, 262144),
+      ) as any,
+      tokens = providerTokens(body, budget);
     let parsed: ReturnType<typeof output.safeParse>;
     try {
       parsed = output.safeParse(
@@ -130,12 +120,13 @@ export async function extractEvidence(
       rejectedCount: original.length - items.length,
       ...(!parsed.success ? { errorCode: "AI_OUTPUT_INVALID" } : {}),
     };
+    stage = "persist";
     await save(result);
     await settle("ai_tokens", operationId, tokens);
     known = true;
     return result;
   } catch (e) {
     if (known) throw e;
-    throw new AppError(502, "AI_USAGE_UNKNOWN");
+    throw usageUnknown(e, stage);
   }
 }

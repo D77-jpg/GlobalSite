@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D0B14" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#171226" stop-opacity="0.45"/>
+      <stop offset="72%" stop-color="#281E38" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#0D0B14" stop-opacity="0.98"/>
+    </linearGradient>
+    <radialGradient id="amberRim" cx="35%" cy="62%" r="58%">
+      <stop offset="0%" stop-color="#C98D68" stop-opacity="0.52"/>
+      <stop offset="45%" stop-color="#6B4A7E" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#0D0B14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ridge1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D89E79" stop-opacity="0.42"/>
+      <stop offset="35%" stop-color="#4A345C" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#0D0B14" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="ridge2" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#7B5AA6" stop-opacity="0.34"/>
+      <stop offset="45%" stop-color="#1E182D" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#0D0B14" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="480" fill="url(#sky)"/>
+  <rect width="360" height="480" fill="url(#amberRim)"/>
+  <!-- Distant twilight ridge -->
+  <path d="M-20,315 Q65,240 155,268 T380,225 L380,480 L-20,480 Z" fill="url(#ridge1)"/>
+  <!-- Mid-ground mist sweep -->
+  <path d="M-20,348 Q110,278 210,318 T380,295 L380,480 L-20,480 Z" fill="url(#ridge2)"/>
+  <!-- Foreground obsidian silhouette -->
+  <path d="M-20,400 Q95,355 215,388 T380,362 L380,480 L-20,480 Z" fill="#0D0B14" fill-opacity="0.92"/>
+</svg>

@@ -2,6 +2,7 @@ import { enqueueCrmInquiry } from "./crm-delivery.service";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 import {
+  Site,
   SiteInquiry,
   InquiryDedupe,
   InquiryDelivery,
@@ -17,7 +18,8 @@ import { runIdentity, tenantContext } from "../models/tenant-context";
 import { encrypt, decrypt } from "./credential-crypto";
 import { fenceTask } from "./product-import.service";
 import { callSiteAgent, type AgentResult } from "./site-agent-provider.service";
-import { settle } from "./usage.service";
+import { absorbUnknownUsage, settle } from "./usage.service";
+import { usageUnknownReasonOf } from "./ai-usage-unknown";
 import { decryptInquiry, ownInquiry, inquiryDetail } from "./inquiry.service";
 import { config } from "../config";
 import { ensure, AppError } from "../errors";
@@ -71,12 +73,20 @@ async function classify(task: any, row: any, enabled: boolean) {
     result = JSON.parse(decrypt(row.aiResult, aiPurpose(String(row._id))));
     await settle("ai_tokens", operationId, result!.tokens);
   } else if (enabled) {
-    const previous = await UsageRecord.exists({
+    const previous = await UsageRecord.findOne({
       metric: "ai_tokens",
       operationId,
     });
-    if (previous) classification = "ai_unknown";
-    else
+    if (previous && !["released", "settled"].includes(previous.state)) {
+      // S37 §2.3: absorb interrupted open reservation per S35 rules.
+      const absorption = await mongoose.connection.transaction(async (session) => {
+        await fenceTask(task, session);
+        return absorbUnknownUsage("ai_tokens", operationId, "interrupted", session);
+      });
+      classification = absorption === "absorbed" ? "ai_failed" : "ai_unknown";
+    } else if (previous) {
+      classification = "ai_unknown";
+    } else
       try {
         // No contact fields, original URLs, attachments, IP, exact UA or organization facts go to AI.
         const message = payload.message
@@ -107,16 +117,25 @@ async function classify(task: any, row: any, enabled: boolean) {
           },
         );
       } catch (error) {
-        classification =
-          error instanceof AppError
-            ? error.code === "QUOTA_EXCEEDED"
-              ? "quota_paused"
-              : error.code === "AI_UNCONFIGURED"
-                ? "rules"
-                : error.code === "AI_USAGE_UNKNOWN"
-                  ? "ai_unknown"
+        if (error instanceof AppError && error.code === "AI_USAGE_UNKNOWN") {
+          // S37 §2.3: unknown outcomes in inquiry AI classification are absorbed
+          // by the platform (releasing customer reservation and recording reason).
+          const reason = usageUnknownReasonOf(error) ?? "unrecorded";
+          await mongoose.connection.transaction(async (session) => {
+            await fenceTask(task, session);
+            await absorbUnknownUsage("ai_tokens", operationId, reason, session);
+          });
+          classification = "ai_unknown";
+        } else {
+          classification =
+            error instanceof AppError
+              ? error.code === "QUOTA_EXCEEDED"
+                ? "quota_paused"
+                : error.code === "AI_UNCONFIGURED"
+                  ? "rules"
                   : "ai_failed"
-            : "ai_failed";
+              : "ai_failed";
+        }
       }
   }
   if (result) {
@@ -228,6 +247,8 @@ async function processInquiry(task: any) {
       classification.spamScore >= 80
         ? "spam"
         : current.status;
+    const shouldAutoReply =
+      !!settings?.autoReplyEnabled && !current.duplicateOf && status !== "spam";
     await SiteInquiry.updateOne(
       { _id: row._id },
       {
@@ -240,12 +261,27 @@ async function processInquiry(task: any) {
             : userIds.length
               ? "pending"
               : "no_recipient",
+          ...(shouldAutoReply ? { autoReplyStatus: "pending" } : {}),
         },
         $inc: { revision: 1 },
       },
       { session },
     );
     await enqueueCrmInquiry(String(row._id), session);
+    if (shouldAutoReply) {
+      await Task.updateOne(
+        { operationId: "inquiry.autoreply:" + row._id },
+        {
+          $setOnInsert: {
+            kind: "inquiry.autoreply",
+            payload: { runId: String(row._id) },
+            status: "pending",
+            nextAttemptAt: new Date(),
+          },
+        },
+        { upsert: true, session },
+      );
+    }
     if (!current.duplicateOf)
       for (const userId of userIds) {
         const delivery = await InquiryDelivery.findOneAndUpdate(
@@ -456,10 +492,128 @@ async function processNotification(task: any) {
     };
   }
 }
+async function processAutoReply(task: any) {
+  const row = await SiteInquiry.findById(task.payload.runId).select("+secret");
+  if (!row) return { status: "dead" as const, error: "NOT_FOUND" };
+  if (["sent", "development"].includes(row.autoReplyStatus))
+    return { status: "done" as const };
+  await fence(task);
+  if (row.autoReplyAttemptedAt) {
+    await mongoose.connection.transaction(async (session) => {
+      await fenceTask(task, session);
+      await SiteInquiry.updateOne(
+        { _id: row._id },
+        { $set: { autoReplyStatus: "unknown" } },
+        { session },
+      );
+    });
+    return { status: "dead" as const, error: "MAIL_RESULT_UNKNOWN" };
+  }
+  const settings = await InquirySettings.findOne({ siteId: row.siteId });
+  if (!settings?.autoReplyEnabled || row.status === "spam" || row.duplicateOf) {
+    await mongoose.connection.transaction(async (session) => {
+      await fenceTask(task, session);
+      await SiteInquiry.updateOne(
+        { _id: row._id },
+        { $set: { autoReplyStatus: "skipped" } },
+        { session },
+      );
+    });
+    return { status: "done" as const };
+  }
+  if (!config.smtpHost) {
+    const dev = config.env !== "production";
+    await mongoose.connection.transaction(async (session) => {
+      await fenceTask(task, session);
+      await SiteInquiry.updateOne(
+        { _id: row._id },
+        { $set: { autoReplyStatus: dev ? "development" : "blocked" } },
+        { session },
+      );
+    });
+    if (dev)
+      console.info(
+        JSON.stringify({
+          event: "inquiry_autoreply_development",
+          inquiryId: String(row._id),
+        }),
+      );
+    return {
+      status: dev
+        ? ("done" as const)
+        : task.attempts < 8
+          ? ("pending" as const)
+          : ("dead" as const),
+      ...(!dev ? { error: "SMTP_UNCONFIGURED" } : {}),
+    };
+  }
+  const payload = decryptInquiry(row);
+  const site = await Site.findById(row.siteId);
+  const siteName = site?.name || "GlobalSite";
+  await mongoose.connection.transaction(async (session) => {
+    await fenceTask(task, session);
+    await SiteInquiry.updateOne(
+      { _id: row._id },
+      {
+        $set: {
+          autoReplyStatus: "sending",
+          autoReplyAttemptedAt: new Date(),
+        },
+      },
+      { session },
+    );
+  });
+  const subject =
+    settings.autoReplySubject?.trim() ||
+    `${siteName}: Inquiry received (${row.receiptId})`;
+  // Never echo the untrusted visitor message back to prevent email reflection abuse.
+  const body =
+    (settings.autoReplyBody?.trim() ||
+      `Thank you for contacting ${siteName}. We have received your inquiry and our team will respond shortly.`) +
+    `\n\nReference ID: ${row.receiptId}`;
+  try {
+    await inquiryMail.send({
+      to: payload.contact.email,
+      subject,
+      text: body,
+      messageId: "<inquiry-autoreply-" + row._id + "@globalsite.invalid>",
+    });
+    await mongoose.connection.transaction(async (session) => {
+      await fenceTask(task, session);
+      await SiteInquiry.updateOne(
+        { _id: row._id },
+        { $set: { autoReplyStatus: "sent" } },
+        { session },
+      );
+    });
+    return { status: "done" as const };
+  } catch (error) {
+    const known =
+      ["EAUTH", "EENVELOPE", "ECONNECTION", "EDNS"].includes(
+        (error as any)?.code,
+      ) || Number((error as any)?.responseCode) >= 400;
+    await mongoose.connection.transaction(async (session) => {
+      await fenceTask(task, session);
+      await SiteInquiry.updateOne(
+        { _id: row._id },
+        {
+          $set: { autoReplyStatus: known ? "failed" : "unknown" },
+          ...(known ? { $unset: { autoReplyAttemptedAt: 1 } } : {}),
+        },
+        { session },
+      );
+    });
+    return {
+      status:
+        known && task.attempts < 8 ? ("pending" as const) : ("dead" as const),
+      error: known ? "MAIL_DELIVERY_FAILED" : "MAIL_RESULT_UNKNOWN",
+    };
+  }
+}
 export async function processInquiryTask(task: any) {
-  return task.kind === "inquiry.process"
-    ? processInquiry(task)
-    : processNotification(task);
+  if (task.kind === "inquiry.process") return processInquiry(task);
+  if (task.kind === "inquiry.autoreply") return processAutoReply(task);
+  return processNotification(task);
 }
 export async function retryNotifications(id: string, actor: string) {
   await ownInquiry(id);

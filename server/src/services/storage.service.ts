@@ -12,11 +12,13 @@ import {
   UsageBucket,
   Site,
   SiteBlock,
+  PublishingSettings,
 } from "../models";
 import { tenantContext } from "../models/tenant-context";
 import { ensure, AppError } from "../errors";
 import { config } from "../config";
 import { reserve, settle } from "./usage.service";
+import { s3Delete, s3Get, s3Put } from "./object-storage.service";
 function location(key: string) {
   const org = tenantContext()?.organizationId;
   ensure(org, 403, "TENANT_REQUIRED");
@@ -24,7 +26,35 @@ function location(key: string) {
   const root = path.resolve(config.storage, org),
     target = path.resolve(root, key);
   ensure(path.dirname(target) === root);
-  return { root, target };
+  return { org, root, target };
+}
+async function writeObject(key: string, body: Buffer, mime: string) {
+  const l = location(key);
+  if (config.storageDriver === "s3") {
+    await s3Put(l.org, key, body, mime);
+    return;
+  }
+  await fs.mkdir(l.root, { recursive: true });
+  await fs.writeFile(l.target, body, { flag: "wx" });
+}
+async function readObject(key: string, maxBytes: number) {
+  const l = location(key);
+  if (config.storageDriver === "s3") return s3Get(l.org, key, maxBytes);
+  const stat = await fs.lstat(l.target);
+  ensure(
+    stat.isFile() && !stat.isSymbolicLink() && stat.size <= maxBytes,
+    404,
+    "NOT_FOUND",
+  );
+  return fs.readFile(l.target);
+}
+export async function deleteStoredObject(key: string) {
+  const l = location(key);
+  if (config.storageDriver === "s3") {
+    await s3Delete(l.org, key);
+    return;
+  }
+  await fs.rm(l.target, { force: true });
 }
 export function detectMime(b: Buffer) {
   if (b.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
@@ -118,9 +148,7 @@ export async function store(
   let asset: any;
   try {
     for (const p of parts) {
-      const l = location(p.key);
-      await fs.mkdir(l.root, { recursive: true });
-      await fs.writeFile(l.target, p.body, { flag: "wx" });
+      await writeObject(p.key, p.body, p.mime);
     }
     asset = await Asset.create({
       key: original.key,
@@ -150,7 +178,7 @@ export async function store(
     return asset;
   } catch (e) {
     if (asset) await Asset.deleteOne({ _id: asset._id });
-    for (const p of parts) await fs.rm(location(p.key).target, { force: true });
+    for (const p of parts) await deleteStoredObject(p.key).catch(() => {});
     await settle("storage_bytes", op, 0);
     throw e;
   }
@@ -182,16 +210,9 @@ export async function readAsset(id: string, variant?: string) {
   ensure(!variant || ["thumb", "webp"].includes(variant));
   const part = variant ? asset.variants?.[variant] : undefined;
   ensure(!variant || part, 404, "NOT_FOUND");
-  const target = location(part?.key ?? asset.key).target,
-    stat = await fs.lstat(target);
-  ensure(
-    stat.isFile() && !stat.isSymbolicLink() && stat.size <= 10 * 1024 * 1024,
-    404,
-    "NOT_FOUND",
-  );
   return {
     asset,
-    body: await fs.readFile(target),
+    body: await readObject(part?.key ?? asset.key, 10 * 1024 * 1024),
     mime: part?.mime ?? asset.mime,
   };
 }
@@ -206,6 +227,9 @@ export async function removeAsset(id: string) {
     ensure(
       !(await Product.exists({ assetIds: id }).session(session)) &&
         !(await Site.exists({ logoId: id }).session(session)) &&
+        !(await PublishingSettings.exists({
+          "seoAnalytics.ogImageAssetId": id,
+        }).session(session)) &&
         !(await SiteBlock.exists({
           $or: [{ assetId: id }, { "items.assetId": id }],
         }).session(session)) &&
@@ -232,7 +256,7 @@ export async function removeAsset(id: string) {
     asset.key,
     ...Object.values(asset.variants ?? {}).map((v: any) => v.key),
   ])
-    await fs.rm(location(key).target, { force: true });
+    await deleteStoredObject(key);
   await mongoose.connection.transaction(async (session) => {
     const row = await Asset.findOne({ _id: id, status: "deleting" }).session(
       session,
@@ -263,29 +287,26 @@ export async function storeArtifact(body: Buffer, operationId: string) {
   const key = operationId;
   const l = location(key);
   await reserve("storage_bytes", body.length, "artifact:" + key);
-  await fs.mkdir(l.root, { recursive: true });
-  try {
-    await fs.writeFile(l.target, body, { flag: "wx" });
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-    ensure(
-      createHash("sha256")
-        .update(await fs.readFile(l.target))
-        .digest("hex") === createHash("sha256").update(body).digest("hex"),
-      409,
-      "ARTIFACT_CONFLICT",
-    );
+  if (config.storageDriver === "s3") {
+    await s3Put(l.org, key, body, "application/octet-stream");
+  } else {
+    await fs.mkdir(l.root, { recursive: true });
+    try {
+      await fs.writeFile(l.target, body, { flag: "wx" });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+      ensure(
+        createHash("sha256")
+          .update(await fs.readFile(l.target))
+          .digest("hex") === createHash("sha256").update(body).digest("hex"),
+        409,
+        "ARTIFACT_CONFLICT",
+      );
+    }
   }
   await settle("storage_bytes", "artifact:" + key, body.length);
   return key;
 }
 export async function readArtifact(key: string) {
-  const t = location(key).target,
-    stat = await fs.lstat(t);
-  ensure(
-    stat.isFile() && !stat.isSymbolicLink() && stat.size <= 100 * 1024 * 1024,
-    404,
-    "NOT_FOUND",
-  );
-  return fs.readFile(t);
+  return readObject(key, 100 * 1024 * 1024);
 }

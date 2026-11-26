@@ -55,6 +55,13 @@ export const catalogMessages = {
   productSections: ["产品编辑分区", "Product sections"],
   importSteps: ["导入步骤", "Import steps"],
   imageModel: ["生图模型", "Image model"],
+  imageBaseUrl: ["生图服务地址", "Image service URL"],
+  imageMode: ["接口模式", "API mode"],
+  imageModeAuto: ["自动识别（Gemini 走对话，其余走生图接口）", "Auto (chat for Gemini, images API otherwise)"],
+  imageModeImages: ["标准生图接口 (/images/generations)", "Images API (/images/generations)"],
+  imageModeChat: ["对话生图接口 (/chat/completions)", "Chat API (/chat/completions)"],
+  imagePreset: ["生图服务预设", "Image provider preset"],
+  imageKeepKey: ["留空则保留已有密钥", "Leave empty to keep existing key"],
   CONCEPT_NOT_EVIDENCE: [
     "概念配图仅用于视觉展示。请使用原始资料提取事实。",
     "Concept imagery is for illustration. Use source documents for facts.",
@@ -69,8 +76,8 @@ export const catalogMessages = {
   "shot-still-life": ["系列静物", "Collection still life"],
   "shot-detail": ["材质特写", "Texture detail"],
   imageConsent: [
-    "生成一张概念图，将描述发送至 codex789.com，按服务商费率计费。可在页面编辑器使用。",
-    "Generate one concept image. The description goes to codex789.com and provider charges apply. Select the result in the page editor.",
+    "生成一张概念图，将描述发送至组织配置的生图服务商，按服务商费率计费。可在页面编辑器使用。",
+    "Generate one concept image. The description goes to the configured image provider and provider charges apply. Select the result in the page editor.",
   ],
   imageWorking: ["正在生成配图…", "Generating image…"],
   generateImage: ["生成一张配图", "Generate one image"],
@@ -78,6 +85,18 @@ export const catalogMessages = {
   IMAGE_PROVIDER_MISSING: [
     "请组织管理员连接生图服务。",
     "Ask an administrator to connect the image provider.",
+  ],
+  imageManaged: [
+    "AI 配图由平台提供，按套餐的 AI 图片额度计费。",
+    "AI images are provided by the platform and billed against your plan's image allowance.",
+  ],
+  imageManagedUnavailable: [
+    "平台 AI 配图服务暂时未开通，请联系我们。",
+    "The platform image service is not available yet. Please contact us.",
+  ],
+  PLATFORM_MANAGED: [
+    "AI 配图由平台提供，无需在此设置。",
+    "AI images are provided by the platform; nothing needs to be set up here.",
   ],
   IMAGE_REQUEST_FAILED: [
     "生图服务未成功返回，请检查额度、权限及模型状态。",
@@ -235,6 +254,10 @@ export const catalogMessages = {
   manual: ["人工", "Manual"],
   asset: ["上传资料", "Uploaded file"],
   confirm: ["确认", "Confirm"],
+  batchConfirm: ["批量确认所选", "Batch confirm selected"],
+  selectAllCandidates: ["全选本页待确认", "Select all pending on page"],
+  clearSelection: ["清空选择", "Clear selection"],
+  selectedCount: ["项已选", "selected"],
   reject: ["驳回", "Reject"],
   edit: ["编辑", "Edit"],
   reviewHint: [
@@ -316,8 +339,8 @@ export const catalogMessages = {
     "Ask an administrator to configure AI first.",
   ],
   AI_USAGE_UNKNOWN: [
-    "AI 调用结果尚不确定，额度暂时保留，请联系管理员核查。",
-    "The AI result is uncertain; reserved usage is retained for administrator review.",
+    "生成服务暂时不稳定，请稍后重试或联系客服。",
+    "The generation service is temporarily unstable. Please retry later or contact support.",
   ],
   AI_OUTPUT_INVALID: [
     "AI 返回内容无法使用，请核对来源后重试。",
@@ -386,6 +409,12 @@ export const catalogMessages = {
   WEBSITE_ROBOTS_DISALLOWED: [
     "网站不允许自动读取该路径。",
     "The website does not allow automated reading of this path.",
+  ],
+  "ai-suggested": ["AI 建议", "AI suggestion"],
+  aiSuggestedFilter: ["AI 建议", "AI suggestions"],
+  aiSuggestedHint: [
+    "AI 建议事实为待确认候选，仅在站点开启演示模式时可用于预览；确认前不能用于批准或发布。",
+    "AI suggestions are unconfirmed candidates. They can only be previewed in demo mode and cannot be approved or published until confirmed.",
   ],
   SOURCE_NOT_LOCAL: [
     "此来源尚未开放，请使用本地产品、资料或手工依据。",

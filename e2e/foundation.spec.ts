@@ -108,8 +108,8 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
     fullPage: true,
   });
   await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "组织设置" })
+    .getByRole("navigation", { name: "工作空间" })
+    .getByRole("link", { name: /团队与协作/ })
     .click();
   await page
     .getByLabel("企业 / 组织名称", { exact: true })
@@ -118,32 +118,24 @@ test("desktop: register, verify, sign in, organization, invitation, usage and tw
   await expect(
     page.getByRole("status").filter({ hasText: "已保存" }),
   ).toBeVisible();
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "成员管理" })
-    .click();
+  const settingsNav = page.getByRole("navigation", { name: "设置" });
+  await settingsNav.getByRole("link", { name: "成员管理" }).click();
   await page.locator(".member-invite > summary").click();
   await page
     .getByLabel("工作邮箱", { exact: true })
     .fill("invite-" + randomBytes(6).toString("hex") + "@example.invalid");
   await page.getByRole("button", { name: "邀请成员", exact: true }).click();
   await expect(page.getByText("邀请已发送", { exact: true })).toBeVisible();
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "套餐与用量" })
-    .click();
+  await settingsNav.getByRole("link", { name: "套餐与用量" }).click();
   await expect(
-    page.getByRole("progressbar", { name: "AI Tokens", exact: true }),
+    page.getByRole("progressbar", { name: "AI 额度", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "切换语言" }).click();
   await expect(
     page.getByRole("heading", { name: "Plan & usage", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Change language" }).click();
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "个人安全" })
-    .click();
+  await settingsNav.getByRole("link", { name: "个人安全" }).click();
   await page.getByLabel("密码", { exact: true }).fill(password);
   await authClick(page, "发送验证码");
   await page.getByRole("button", { name: "查看开发邮件" }).click();
@@ -194,8 +186,8 @@ test("mobile: sign in, navigate settings, switch language and avoid horizontal o
   });
   await page.locator(".mobile-menu").click();
   await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "个人安全" })
+    .getByRole("dialog")
+    .getByRole("link", { name: "个人安全", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "个人安全", exact: true }),

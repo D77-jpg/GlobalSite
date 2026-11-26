@@ -1,6 +1,8 @@
 const allowed = new Set([
   "/",
   "/agent",
+  "/knowledge",
+  "/settings",
   "/sites/new",
   "/organization",
   "/sites",

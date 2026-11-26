@@ -77,12 +77,35 @@ try {
         brokenImages: [...document.images].filter(
           (n) => !n.complete || !n.naturalWidth,
         ).length,
-        navigation: [
-          ...document.querySelectorAll("header nav a,.main-nav a"),
-        ].map((n) => ({
-          label: n.textContent.trim(),
-          href: n.getAttribute("href"),
-        })),
+        // S35 acceptance fix: rendered image count and labelled AI illustrations.
+        images: document.images.length,
+        conceptImages: document.querySelectorAll(".concept-note").length,
+        // S36 review fix: the header repeats its links in the collapsed mobile
+        // menu. Read links only from navigation containers rendered at this
+        // width (not display:none, not inside a closed menu, hidden, inert or
+        // aria-hidden), once per href and label. When no container is shown
+        // (closed mobile menu) the unique set of all header links is used.
+        navigation: (() => {
+          const navs = [...document.querySelectorAll("header nav,.main-nav")];
+          const shown = navs.filter(
+            (n) =>
+              n.getClientRects().length > 0 &&
+              !n.closest("[hidden],[inert],[aria-hidden='true']"),
+          );
+          const seen = new Set();
+          return (shown.length ? shown : navs)
+            .flatMap((n) => [...n.querySelectorAll("a")])
+            .map((n) => ({
+              label: n.textContent.trim(),
+              href: n.getAttribute("href"),
+            }))
+            .filter((l) => {
+              const key = l.href + "\u0000" + l.label;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+        })(),
         sections: [...document.querySelectorAll("main>section")].map((n) => {
           const box = n.getBoundingClientRect();
           return {
@@ -90,6 +113,10 @@ try {
             height: Math.round(box.height),
             words: (n.innerText ?? "").split(/\s+/).filter(Boolean).length,
             images: n.querySelectorAll("img").length,
+            broken: [...n.querySelectorAll("img")].filter(
+              (img) => !img.complete || !img.naturalWidth,
+            ).length,
+            concepts: n.querySelectorAll(".concept-note").length,
             frame: [...n.classList].find((c) => c.startsWith("frame-")) ?? null,
             media: [...n.querySelectorAll("img")].map((img) => {
               const r = img.getBoundingClientRect(),

@@ -1,0 +1,437 @@
+// S35 stage B: AI illustration fill for generated pages.
+//
+// Runs inside the site.agent Worker unit, after the model result is stored and
+// before the unit is applied, so it shares the run lease, fence and resume
+// path. It is opt-in (site.autoImages) and needs a configured images provider.
+// Each slot is billed through generateImage (reserve/settle per image). The
+// generated asset id is persisted on the unit before use, and the billing
+// operation is stable per run+slot, so a resumed unit never pays twice. Any
+// failure skips the slot with a fixed event code; the run never fails because
+// of illustrations. Existing images are never replaced.
+import mongoose from "mongoose";
+import { AgentRun, Asset } from "../../models";
+import { AppError } from "../../errors";
+import * as v from "../../validators/sites.validator";
+import { sha } from "../catalog.service";
+import { validatePage } from "../page-validation.service";
+import { generateImage } from "../image-studio.service";
+import { imageProviderAvailable } from "../ai-provider-resolve";
+import type { AgentResult } from "../site-agent-provider.service";
+import { fenceRun, ownRun } from "./runtime";
+import {
+  normalizeNullableAxes,
+  repairDraftPage,
+  snapshotIdentifiers,
+} from "./validation";
+import { runBounded } from "./outline";
+import type { AgentRunDoc, AgentStepUnit, AgentTaskDoc } from "./types";
+
+export type ImageSlot = {
+  key: string;
+  blockKey: string;
+  itemIndex: number | null;
+  kind: "hero" | "split" | "gallery" | "features" | "product";
+  composition: "campaign" | "still-life" | "detail";
+  subject: string;
+  alt: string;
+  insertHero?: boolean;
+};
+
+const clampInt = (raw: string | undefined, fallback: number) => {
+  const n = Number(raw);
+  return Number.isInteger(n) ? Math.min(12, Math.max(0, n)) : fallback;
+};
+
+/** Per-page illustration caps (AUTO_IMAGE_HOME_MAX / AUTO_IMAGE_DETAIL_MAX). */
+export function autoImageCaps() {
+  return {
+    home: clampInt(process.env.AUTO_IMAGE_HOME_MAX, 6),
+    detail: clampInt(process.env.AUTO_IMAGE_DETAIL_MAX, 3),
+  };
+}
+
+/** Bounded parallel image fills per unit (AUTO_IMAGE_CONCURRENCY, default 2, 1-4). */
+export function autoImageConcurrency(
+  raw: string | undefined = process.env.AUTO_IMAGE_CONCURRENCY,
+): number {
+  const n = Number(raw);
+  if (raw === undefined || !raw.trim() || !Number.isInteger(n)) return 2;
+  return Math.min(4, Math.max(1, n));
+}
+
+const IMAGE_ISSUES = new Set(["CONTENT_IMAGE_REQUIRED", "IMAGE_ALT_REQUIRED"]);
+const clip = (s: string, n: number) => s.replace(/\s+/g, " ").trim().slice(0, n);
+const RULES =
+  "Commercial B2B illustration. No people, no human faces or hands, no readable text, letters, numbers, labels, LCD digits, dial markings, watermarks or logos anywhere on the product or scene.";
+
+const heroDesign: NonNullable<v.PageInput["blocks"][number]["design"]> = {
+  purpose: "context",
+  frame: "story",
+  ratio: "landscape",
+  fit: "cover",
+  focus: "center",
+  density: "comfortable",
+};
+
+/** Plans missing-image slots in priority order; never targets existing images. */
+export function planImageSlots(
+  page: v.PageInput,
+  options: {
+    siteName: string;
+    max: number;
+    productPaths?: Record<string, { name: string; hasImage: boolean }>;
+    /**
+     * S36 review fix: the rendering pack already has a real first-screen image
+     * for this page (own block asset, its product or a product in its
+     * category), so no AI hero is generated for it.
+     */
+    skipHero?: boolean;
+  },
+): ImageSlot[] {
+  const slots: ImageSlot[] = [];
+  const subjectOf = (...parts: Array<string | undefined>) =>
+    clip(
+      [options.siteName + ":", ...parts.filter(Boolean)].join(" ") + ". " + RULES,
+      560,
+    );
+  const hasHero = page.blocks.some((b) => b.type === "image" && !!b.assetId);
+  if (!hasHero && !options.skipHero) {
+    const empty = page.blocks.find((b) => b.type === "image" && !b.assetId);
+    const headline = page.presentation?.headline ?? page.title;
+    slots.push({
+      key: "hero",
+      blockKey: empty?.key ?? "hero-image",
+      itemIndex: null,
+      kind: "hero",
+      composition: "campaign",
+      subject: subjectOf("hero scene for", headline),
+      alt: clip(headline, 200),
+      insertHero: !empty,
+    });
+  }
+  for (const b of page.blocks) {
+    if (b.type === "split" && !b.assetId)
+      slots.push({
+        key: "split:" + b.key,
+        blockKey: b.key,
+        itemIndex: null,
+        kind: "split",
+        composition: "still-life",
+        subject: subjectOf("companion product scene for", b.heading),
+        alt: clip(b.heading || page.title, 200),
+      });
+  }
+  for (const type of ["gallery", "features"] as const)
+    for (const b of page.blocks) {
+      if (b.type !== type) continue;
+      let used = 0;
+      for (const [i, item] of (b.items ?? []).entries()) {
+        if (item.assetId || used >= 3) continue;
+        used++;
+        slots.push({
+          key: type + ":" + b.key + ":" + i,
+          blockKey: b.key,
+          itemIndex: i,
+          kind: type,
+          composition: type === "gallery" ? "detail" : "campaign",
+          subject: subjectOf(
+            type === "gallery" ? "craft or process detail:" : "application scene:",
+            item.title,
+            b.heading,
+          ),
+          alt: clip(item.title || b.heading || page.title, 200),
+        });
+      }
+    }
+  for (const b of page.blocks) {
+    if (b.type !== "product-grid") continue;
+    for (const [i, item] of (b.items ?? []).entries()) {
+      const product = item.href ? options.productPaths?.[item.href] : undefined;
+      if (item.assetId || !product || product.hasImage) continue;
+      slots.push({
+        key: "product:" + b.key + ":" + i,
+        blockKey: b.key,
+        itemIndex: i,
+        kind: "product",
+        composition: "still-life",
+        subject: subjectOf("product concept of", product.name),
+        alt: clip(product.name, 200),
+      });
+    }
+  }
+  return slots.slice(0, Math.max(0, options.max));
+}
+
+/** Applies generated asset ids to their slots; existing images are kept. */
+export function applyImageSlots(
+  page: v.PageInput,
+  slots: ImageSlot[],
+  assets: Record<string, string>,
+): v.PageInput {
+  const out = structuredClone(page);
+  for (const slot of slots) {
+    const assetId = assets[slot.key];
+    if (!assetId) continue;
+    if (slot.insertHero) {
+      if (out.blocks.some((b) => b.type === "image" && !!b.assetId)) continue;
+      out.blocks.unshift({
+        key: out.blocks.some((b) => b.key === slot.blockKey)
+          ? slot.blockKey + "-ai"
+          : slot.blockKey,
+        type: "image",
+        heading: "",
+        body: "",
+        table: null,
+        faq: [],
+        assetId,
+        alt: slot.alt || "Illustrative image",
+        refs: [],
+        ...(out.blocks.some((b) => b.design) ? { design: heroDesign } : {}),
+      });
+      continue;
+    }
+    const block = out.blocks.find((b) => b.key === slot.blockKey);
+    if (!block) continue;
+    if (slot.itemIndex === null) {
+      if (block.assetId) continue;
+      block.assetId = assetId;
+      if (!block.alt.trim()) block.alt = slot.alt || "Illustrative image";
+    } else {
+      const item = block.items?.[slot.itemIndex];
+      if (!item || item.assetId) continue;
+      item.assetId = assetId;
+      if (!item.alt.trim()) item.alt = slot.alt || "Illustrative image";
+    }
+  }
+  return out;
+}
+
+function issueCount(
+  run: AgentRunDoc,
+  unit: AgentStepUnit,
+  page: v.PageInput,
+  onlyImage: boolean,
+) {
+  const site = run.inputSnapshot.site;
+  return validatePage(page, run.inputSnapshot.facts, {
+    type: unit.node?.type ?? "home",
+    productId: unit.node?.productId,
+    productIds: site.productIds,
+    requiredProductSections: site.plan?.strategy?.productSections,
+    paths: (site.plan?.nodes ?? []).map((n) => n.path),
+    brandName: site.name,
+    language: site.language,
+    allowDemoFacts: !!site.demoMode,
+    identifiers: snapshotIdentifiers(run),
+  }).filter((i) => IMAGE_ISSUES.has(i.code) === onlyImage).length;
+}
+
+/**
+ * S36 review fix: mirrors the first three sources of the rendering-pack hero
+ * fallback (static-template heroFallback): an image already used on the page,
+ * the page's product main image, or a product image in its category. Only for
+ * pack pages; other pages keep the former AI hero slot.
+ */
+export function packHeroAvailable(
+  run: AgentRunDoc,
+  unit: AgentStepUnit,
+  page: v.PageInput,
+): boolean {
+  const site = run.inputSnapshot.site;
+  const node = unit.node;
+  if (
+    !node ||
+    !(site.designDirection?.composition?.pack ?? page.presentation?.composition?.pack)
+  )
+    return false;
+  if (
+    page.blocks.some(
+      (b) =>
+        !["downloads", "certifications"].includes(b.type) &&
+        (!!b.assetId || (b.items ?? []).some((i) => !!i.assetId)),
+    )
+  )
+    return true;
+  const hasImage = (productId?: string | null) =>
+    !!productId &&
+    !!run.inputSnapshot.products.find((p) => p.id === productId)?.assetIds
+      ?.length;
+  if (hasImage(node.productId)) return true;
+  const prefix = node.path.replace(/\/$/, "") + "/";
+  return (site.plan?.nodes ?? []).some(
+    (n) =>
+      n.type === "product" &&
+      n.key !== node.key &&
+      ((prefix !== "/" && n.path.startsWith(prefix)) || n.parentKey === node.key) &&
+      hasImage(n.productId),
+  );
+}
+
+function event(code: string) {
+  console.error(JSON.stringify({ event: "auto_image_skipped", code }));
+  return code;
+}
+
+/**
+ * Fills missing images for one design/content/refine unit. Returns the result
+ * unchanged when disabled, unconfigured or nothing is missing.
+ */
+export async function fillUnitImages(
+  run: AgentRunDoc,
+  index: number,
+  result: AgentResult,
+  task: AgentTaskDoc,
+  generate: typeof generateImage = generateImage,
+): Promise<AgentResult> {
+  const unit = run.steps[index];
+  const site = run.inputSnapshot.site;
+  if (
+    result.errorCode ||
+    !site.autoImages ||
+    !unit?.node ||
+    !["design", "content", "refine"].includes(run.step) ||
+    (run.step === "design" && !unit.pageKind)
+  )
+    return result;
+  const raw = normalizeNullableAxes(result.output) as {
+    page?: unknown;
+  } & Record<string, unknown>;
+  const parsed = v.pageInput.safeParse(raw?.page);
+  if (!parsed.success) return result;
+  const page = repairDraftPage(run, unit, parsed.data, {
+    preserveImageLayouts: true,
+  });
+  // Only spend on pages whose remaining issues are image-related.
+  if (issueCount(run, unit, page, false) > 0) return result;
+  const isHome = unit.node.type === "home";
+  const caps = autoImageCaps();
+  const productPaths: Record<string, { name: string; hasImage: boolean }> = {};
+  for (const n of site.plan?.nodes ?? []) {
+    if (n.type !== "product" || !n.productId) continue;
+    const p = run.inputSnapshot.products.find((x) => x.id === n.productId);
+    if (p) productPaths[n.path] = { name: p.name, hasImage: !!p.assetIds?.length };
+  }
+  const slots = planImageSlots(page, {
+    siteName: site.name,
+    max: isHome ? caps.home : caps.detail,
+    productPaths,
+    skipHero: packHeroAvailable(run, unit, page),
+  });
+  if (!slots.length) return result;
+  // S36: platform image service or the organization's own (see resolver).
+  if (!(await imageProviderAvailable())) return result;
+
+  const palette = (site.designDirection?.composition?.palette ??
+    page.presentation?.composition?.palette) as
+    | "obsidian"
+    | "ivory"
+    | "clay"
+    | "graphite"
+    | "cobalt"
+    | "forest"
+    | "ocean"
+    | "violet"
+    | "brand"
+    | undefined;
+  const assets: Record<string, string> = { ...(unit.generatedImages ?? {}) };
+  const events: string[] = [...(unit.imageEvents ?? [])];
+  let stop = false;
+  const persistAssets = async () => {
+    await mongoose.connection.transaction(async (session) => {
+      await fenceRun(task, session);
+      const fresh = await ownRun(String(run._id), session);
+      if (fresh.cancelRequested) throw new AppError(409, "AGENT_CANCELLED");
+      await AgentRun.updateOne(
+        { _id: fresh._id },
+        {
+          $set: {
+            ["steps." + index + ".generatedImages"]: { ...assets },
+            ["steps." + index + ".imageEvents"]: events.slice(-20),
+          },
+        },
+        { session },
+      );
+    });
+  };
+  // 1. Resolve already-persisted or originKey-reusable assets first without calling provider.
+  const pendingSlots: Array<{ slot: ImageSlot; originKey: string }> = [];
+  let reusedAny = false;
+  for (const slot of slots) {
+    if (assets[slot.key]) {
+      if (await Asset.exists({ _id: assets[slot.key], status: "ready" }))
+        continue;
+      delete assets[slot.key];
+    }
+    const originKey =
+      "auto-image:" +
+      sha(
+        JSON.stringify({
+          site: site.id,
+          node: unit.node.key,
+          slot: slot.key,
+          palette: palette ?? null,
+          subject: slot.subject,
+        }),
+      ).slice(0, 48);
+    const reused = await Asset.findOne({
+      originKey,
+      status: "ready",
+      generatedConcept: true,
+    })
+      .select("_id")
+      .lean();
+    if (reused) {
+      assets[slot.key] = String(reused._id);
+      reusedAny = true;
+    } else {
+      pendingSlots.push({ slot, originKey });
+    }
+  }
+  if (reusedAny) await persistAssets();
+
+  // 2. S37 §4.7-2: generate missing slots in bounded parallel batches, persisting
+  // after each completed batch so resumed units reuse already-paid images.
+  const concurrency = autoImageConcurrency();
+  for (let offset = 0; offset < pendingSlots.length && !stop; offset += concurrency) {
+    const batch = pendingSlots.slice(offset, offset + concurrency);
+    let batchChanged = false;
+    await runBounded(
+      batch,
+      concurrency,
+      async ({ slot, originKey }) => {
+        if (stop) return;
+        try {
+          const generated = await generate(
+            {
+              subject: slot.subject,
+              composition: slot.composition,
+              ...(palette ? { palette } : {}),
+            },
+            "auto:" + String(run._id) + ":" + originKey.slice(11, 43),
+            { originKey },
+          );
+          assets[slot.key] = generated.id;
+          batchChanged = true;
+        } catch (error) {
+          const code = error instanceof AppError ? error.code : "IMAGE_FAILED";
+          events.push(event(code));
+          batchChanged = true;
+          if (["IMAGE_PROVIDER_MISSING", "QUOTA_EXCEEDED"].includes(code))
+            stop = true;
+        }
+      },
+      () => stop,
+    );
+    if (batchChanged) await persistAssets();
+  }
+  const filled = applyImageSlots(page, slots, assets);
+  // Never let illustrations make validation worse.
+  if (
+    issueCount(run, unit, filled, true) > issueCount(run, unit, page, true) ||
+    issueCount(run, unit, filled, false) > 0
+  ) {
+    events.push(event("IMAGE_FILL_REVERTED"));
+    return result;
+  }
+  return { ...result, output: { ...raw, page: filled } };
+}

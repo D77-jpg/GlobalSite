@@ -5,7 +5,7 @@ import {
   type NextFunction,
 } from "express";
 import {
-  imageModel,
+  imageProviderInput,
   configureImages,
   generateImage,
   imageBrief,
@@ -32,6 +32,7 @@ import {
   saveFact,
   factDto,
   transitionFact,
+  batchConfirmFacts,
 } from "../services/catalog.service";
 import {
   prepareImport,
@@ -232,14 +233,8 @@ router.put(
   "/assets/image-provider",
   admin,
   wrap(async (req, res) => {
-    const { apiKey, model } = z
-      .object({
-        apiKey: z.string().trim().max(512),
-        model: imageModel.optional(),
-      })
-      .strict()
-      .parse(req.body);
-    ok(res, await configureImages(apiKey, req.auth!.userId, model));
+    const parsed = imageProviderInput.parse(req.body);
+    ok(res, await configureImages(parsed, req.auth!.userId));
   }),
 );
 router.post(
@@ -302,6 +297,7 @@ router.get(
     return listing(req, res, FactSheet, factDto, {
       ...(q.status ? { status: q.status } : {}),
       ...(q.subjectId ? { subjectId: q.subjectId } : {}),
+      ...(q.source ? { "source.kind": q.source } : {}),
     });
   }),
 );
@@ -319,6 +315,28 @@ router.patch(
     await owned(FactSheet, id(req));
     const d = v.factPatch.parse(req.body);
     ok(res, await saveFact(d.data, req.auth!.userId, id(req), d.revision));
+  }),
+);
+router.post(
+  "/facts/batch-confirm",
+  admin,
+  wrap(async (req, res) => {
+    const d = z
+      .object({
+        items: z
+          .array(
+            z
+              .object({ id: v.objectId, revision: v.revision })
+              .strict(),
+          )
+          .min(1)
+          .max(50),
+        reason: z.string().trim().max(500).optional(),
+      })
+      .strict()
+      .refine((x) => new Set(x.items.map((i) => i.id)).size === x.items.length)
+      .parse(req.body);
+    ok(res, await batchConfirmFacts(d.items, req.auth!.userId, d.reason));
   }),
 );
 for (const [action, status] of [

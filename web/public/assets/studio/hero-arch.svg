@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 420" preserveAspectRatio="xMaxYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#09080E"/>
+      <stop offset="38%" stop-color="#110E1B"/>
+      <stop offset="72%" stop-color="#221A2B"/>
+      <stop offset="100%" stop-color="#16121E"/>
+    </linearGradient>
+    <radialGradient id="warmLight" cx="68%" cy="18%" r="48%">
+      <stop offset="0%" stop-color="#E7C8A9" stop-opacity="0.72"/>
+      <stop offset="32%" stop-color="#A87E62" stop-opacity="0.42"/>
+      <stop offset="68%" stop-color="#4A3656" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#09080E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="violetMist" cx="44%" cy="12%" r="36%">
+      <stop offset="0%" stop-color="#8B6BFF" stop-opacity="0.34"/>
+      <stop offset="55%" stop-color="#5636E5" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#09080E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="archSweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F2DEC6" stop-opacity="0.88"/>
+      <stop offset="45%" stop-color="#9A7D6A" stop-opacity="0.58"/>
+      <stop offset="85%" stop-color="#2A2232" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#09080E" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ribWall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3E3139" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#09080E" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="leftFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#09080E" stop-opacity="1"/>
+      <stop offset="34%" stop-color="#09080E" stop-opacity="0.96"/>
+      <stop offset="62%" stop-color="#09080E" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#09080E" stop-opacity="0.22"/>
+    </linearGradient>
+    <linearGradient id="bottomFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#09080E" stop-opacity="0"/>
+      <stop offset="65%" stop-color="#09080E" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#09080E" stop-opacity="1"/>
+    </linearGradient>
+    <pattern id="ribs" width="18" height="420" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="9" height="420" fill="#ffffff" fill-opacity="0.032"/>
+      <rect x="9" y="0" width="9" height="420" fill="#000000" fill-opacity="0.18"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="420" fill="url(#bg)"/>
+  <!-- Ribbed architectural wood wall -->
+  <rect x="920" y="0" width="680" height="420" fill="url(#ribWall)"/>
+  <rect x="920" y="0" width="680" height="420" fill="url(#ribs)"/>
+  <!-- Sculptural sweeping curved concrete arch -->
+  <path d="M560,-20 C760,260 1120,255 1290,-20 L1140,-20 C1020,170 790,165 650,-20 Z" fill="url(#archSweep)"/>
+  <path d="M520,-20 C735,290 1150,285 1335,-20 L1285,-20 C1120,255 760,260 560,-20 Z" fill="#181322" fill-opacity="0.68"/>
+  <path d="M980,420 C1090,260 1290,160 1600,120 L1600,420 Z" fill="#13101D" fill-opacity="0.65"/>
+  <!-- Architectural light sweeps -->
+  <rect width="1600" height="420" fill="url(#warmLight)"/>
+  <rect width="1600" height="420" fill="url(#violetMist)"/>
+  <!-- Seamless edge blends into obsidian studio -->
+  <rect width="1600" height="420" fill="url(#leftFade)"/>
+  <rect width="1600" height="420" fill="url(#bottomFade)"/>
+</svg>

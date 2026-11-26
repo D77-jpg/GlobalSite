@@ -1,0 +1,2386 @@
+/* ============================================================================
+   S35 Precision rendering pack (composition.pack = "precision")
+   Equipment / machinery / hardware / commercial appliance storefronts.
+   Quality baseline: Verona Brewtech sample (condensed caps headings, serif body,
+   alternating ink / cream / charcoal bands, full-bleed photography).
+   Every selector is scoped below body.pack-precision; sites without the pack
+   are unaffected. Only bundled local fonts (SIL OFL 1.1), no network resources.
+   Image crop intent (fit-contain / focus-*) from section design is preserved.
+   ============================================================================ */
+
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/assets/fonts/barlow-condensed-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/assets/fonts/barlow-condensed-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow";
+  src: url("/assets/fonts/barlow-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow";
+  src: url("/assets/fonts/barlow-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow";
+  src: url("/assets/fonts/barlow-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/assets/fonts/source-serif-4-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("/assets/fonts/source-serif-4-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Tokens. The pack owns its palette; composition tokens are re-mapped so the
+   existing composition.css rules (which read var(--ink), var(--muted) ...)
+   follow the active band automatically.
+   --------------------------------------------------------------------------- */
+.composed-site.pack-precision {
+  --pp-ink: #131110;
+  --pp-char: #1c1916;
+  --pp-char-2: #26211d;
+  --pp-cream: #fef7f1;
+  --pp-sand: #f2e7dc;
+  --pp-copper: #d9823b;
+  --pp-copper-hover: #e89552;
+  --pp-copper-deep: #9a4f17;
+  --pp-muted-d: #b9afa6;
+  --pp-muted-l: #5e554d;
+  --pp-line-d: rgba(254, 247, 241, 0.14);
+  --pp-line-l: rgba(19, 17, 16, 0.14);
+  --pp-head: "Barlow Condensed", "Arial Narrow", "Roboto Condensed",
+    "PingFang SC", "Noto Sans SC", "Hiragino Sans", "Noto Sans Arabic",
+    "Helvetica Neue", Arial, sans-serif;
+  --pp-ui: "Barlow", "PingFang SC", "Noto Sans SC", "Hiragino Sans",
+    "Noto Sans Arabic", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --pp-serif: "Source Serif 4", "Source Serif Pro", "Noto Serif SC",
+    "Songti SC", "Hiragino Mincho ProN", "Noto Sans Arabic", Georgia,
+    "Times New Roman", serif;
+  --pp-wrap: 1320px;
+  --pp-gut: clamp(20px, 4vw, 56px);
+  --pp-pad: max(var(--pp-gut), calc((100vw - var(--pp-wrap)) / 2 + var(--pp-gut)));
+  --pp-sec: clamp(72px, 9vw, 140px);
+  --pp-hdr: 72px;
+  --pp-card: var(--pp-char);
+  --pp-btn-bg: var(--pp-copper);
+  --pp-btn-ink: var(--pp-ink);
+  --pp-btn-hover: var(--pp-copper-hover);
+  --paper: var(--pp-ink);
+  --surface: var(--pp-char);
+  --surface-2: var(--pp-char-2);
+  --ink: var(--pp-cream);
+  --muted: var(--pp-muted-d);
+  --line: var(--pp-line-d);
+  --line-strong: rgba(254, 247, 241, 0.28);
+  --accent: var(--pp-copper);
+  --accent-ink: var(--pp-ink);
+  --band-dark-bg: var(--pp-char);
+  --band-dark-ink: var(--pp-cream);
+  --band-dark-muted: var(--pp-muted-d);
+  --table-bg: transparent;
+  --input-bg: var(--pp-char-2);
+  --card-radius: 0px;
+  --btn-radius: 0px;
+  --media-radius: 0px;
+  --display: var(--pp-head);
+  --body: var(--pp-serif);
+  --mono: var(--pp-ui);
+  font-family: var(--pp-serif);
+  font-size: 18px;
+  line-height: 1.6;
+  background: var(--pp-ink);
+  color: var(--pp-cream);
+  font-variant-numeric: normal;
+}
+/* The footer reserves room for a visible quote bar instead of the legacy body padding. */
+.composed-site.b2b-site.pack-precision {
+  padding-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Type
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision :is(h1, h2, h3, h4) {
+  font-family: var(--pp-head);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.composed-site.b2b-site.pack-precision main > section:is(.b2b-section, .section) h2 {
+  font-size: clamp(2.4rem, 4.2vw + 0.6rem, 4.75rem);
+  line-height: 0.95;
+  max-width: 16em;
+  margin: 0 0 0.45em;
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision main > section:is(.b2b-section, .section) h3 {
+  font-size: clamp(1.3rem, 0.8vw + 1rem, 1.6rem);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision .section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-family: var(--pp-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision .section-kicker::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 28px;
+  height: 2px;
+  background: currentColor;
+}
+.composed-site.b2b-site.pack-precision .section-kicker:empty {
+  display: none;
+}
+.composed-site.b2b-site.pack-precision main > section .section-intro {
+  max-width: 760px;
+  margin: 0 0 clamp(40px, 5vw, 64px);
+}
+.composed-site.b2b-site.pack-precision .section-intro > p:not(.section-kicker),
+.composed-site.b2b-site.pack-precision .section-heading p:not(.section-kicker) {
+  max-width: 34em;
+  margin: 0;
+  font-size: clamp(1.05rem, 0.4vw + 1rem, 1.25rem);
+  line-height: 1.5;
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section .section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px 32px;
+  margin: 0 0 clamp(40px, 5vw, 64px);
+}
+.composed-site.b2b-site.pack-precision main > section .section-heading > div {
+  max-width: 760px;
+  min-width: 0;
+}
+.composed-site.b2b-site.pack-precision .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  padding: 6px 0 4px;
+  border: 0;
+  border-bottom: 2px solid currentColor;
+  font-family: var(--pp-head);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision .text-link:hover {
+  color: var(--ink);
+  border-bottom-color: currentColor;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons: square, uppercase, high-contrast (copper/ink 7.1:1, ink/cream 17:1)
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision :is(.cta, .header-action) {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 0 28px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  background: var(--pp-btn-bg);
+  color: var(--pp-btn-ink);
+  font-family: var(--pp-head);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+.composed-site.b2b-site.pack-precision :is(.cta, .header-action):hover {
+  background: var(--pp-btn-hover);
+  color: var(--pp-btn-ink);
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+.composed-site.b2b-site.pack-precision .header-action {
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 15px;
+  background: var(--pp-copper);
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision .header-action:hover {
+  background: var(--pp-copper-hover);
+  color: var(--pp-ink);
+}
+
+/* ---------------------------------------------------------------------------
+   Header & navigation
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(19, 17, 16, 0.96);
+  border-bottom: 1px solid var(--pp-line-d);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .header-inner {
+  max-width: none;
+  min-height: var(--pp-hdr);
+  margin: 0;
+  padding-inline: var(--pp-pad);
+  gap: 24px;
+}
+.composed-site.b2b-site.pack-precision .site-header .brand {
+  min-width: 0;
+  flex: 0 1 auto;
+  gap: 12px;
+  font-family: var(--pp-head);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .site-header .brand > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composed-site.b2b-site.pack-precision .site-header .brand .brand-mark {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border: 2px solid var(--pp-copper);
+  border-radius: 0;
+  background: transparent;
+  color: var(--pp-copper);
+  font-family: var(--pp-head);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.composed-site.b2b-site.pack-precision .desktop-nav {
+  gap: clamp(16px, 1.8vw, 28px);
+}
+.composed-site.b2b-site.pack-precision .desktop-nav :is(a, summary) {
+  font-family: var(--pp-head);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pp-cream);
+  opacity: 0.82;
+}
+.composed-site.b2b-site.pack-precision .desktop-nav :is(a, summary):hover,
+.composed-site.b2b-site.pack-precision .desktop-nav a[aria-current="page"] {
+  opacity: 1;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .buyer-menu {
+  background: var(--pp-ink);
+  border: 1px solid var(--pp-line-d);
+  border-top: 2px solid var(--pp-copper);
+  border-radius: 0;
+  box-shadow: 0 24px 48px -18px rgba(0, 0, 0, 0.7);
+}
+.composed-site.b2b-site.pack-precision .buyer-menu a {
+  border-radius: 0;
+  font-family: var(--pp-ui);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--pp-cream);
+  opacity: 1;
+}
+.composed-site.b2b-site.pack-precision .buyer-menu a:hover {
+  background: var(--pp-char-2);
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .mobile-navigation summary {
+  font-family: var(--pp-head);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .mobile-navigation nav {
+  background: var(--pp-ink);
+  color: var(--pp-cream);
+  border: 0;
+  border-top: 1px solid var(--pp-line-d);
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision .mobile-navigation nav a,
+.composed-site.b2b-site.pack-precision .mobile-navigation nav summary {
+  font-family: var(--pp-head);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .mobile-navigation .buyer-menu a {
+  font-family: var(--pp-ui);
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+/* ---------------------------------------------------------------------------
+   Full-bleed page frame and automatic band rhythm (ink -> cream -> charcoal).
+   The hero is the first section; #inquiry always uses the sand band.
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.composed-site.b2b-site.pack-precision main > :is(section, nav) {
+  max-width: none;
+  margin: 0;
+  padding: var(--pp-sec) var(--pp-pad);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision main > section:not(#inquiry) {
+  border-top: 0;
+}
+.composed-site.b2b-site.pack-precision main > .spacing-compact {
+  padding-block: clamp(48px, 6vw, 88px);
+}
+.composed-site.b2b-site.pack-precision main > section:nth-of-type(3n + 1) {
+  --paper: var(--pp-ink);
+  --surface: var(--pp-char);
+  --surface-2: var(--pp-char-2);
+  --ink: var(--pp-cream);
+  --muted: var(--pp-muted-d);
+  --line: var(--pp-line-d);
+  --line-strong: rgba(254, 247, 241, 0.28);
+  --accent: var(--pp-copper);
+  --accent-ink: var(--pp-ink);
+  --band-dark-bg: var(--pp-ink);
+  --band-dark-ink: var(--pp-cream);
+  --band-dark-muted: var(--pp-muted-d);
+  --input-bg: var(--pp-char-2);
+  --pp-card: var(--pp-char);
+  --pp-btn-bg: var(--pp-copper);
+  --pp-btn-ink: var(--pp-ink);
+  --pp-btn-hover: var(--pp-copper-hover);
+  background: var(--pp-ink);
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision main > section:nth-of-type(3n + 2) {
+  --paper: var(--pp-cream);
+  --surface: var(--pp-sand);
+  --surface-2: #e9dccd;
+  --ink: var(--pp-ink);
+  --muted: var(--pp-muted-l);
+  --line: var(--pp-line-l);
+  --line-strong: rgba(19, 17, 16, 0.28);
+  --accent: var(--pp-copper-deep);
+  --accent-ink: var(--pp-cream);
+  --band-dark-bg: var(--pp-cream);
+  --band-dark-ink: var(--pp-ink);
+  --band-dark-muted: var(--pp-muted-l);
+  --input-bg: #ffffff;
+  --pp-card: var(--pp-ink);
+  --pp-btn-bg: var(--pp-ink);
+  --pp-btn-ink: var(--pp-cream);
+  --pp-btn-hover: #2b2622;
+  background: var(--pp-cream);
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section:nth-of-type(3n) {
+  --paper: var(--pp-char);
+  --surface: var(--pp-char-2);
+  --surface-2: #2f2924;
+  --ink: var(--pp-cream);
+  --muted: var(--pp-muted-d);
+  --line: var(--pp-line-d);
+  --line-strong: rgba(254, 247, 241, 0.28);
+  --accent: var(--pp-copper);
+  --accent-ink: var(--pp-ink);
+  --band-dark-bg: var(--pp-char);
+  --band-dark-ink: var(--pp-cream);
+  --band-dark-muted: var(--pp-muted-d);
+  --input-bg: var(--pp-ink);
+  --pp-card: var(--pp-char-2);
+  --pp-btn-bg: var(--pp-copper);
+  --pp-btn-ink: var(--pp-ink);
+  --pp-btn-hover: var(--pp-copper-hover);
+  background: var(--pp-char);
+  color: var(--pp-cream);
+}
+/* Legacy tone/contrast bands follow the active band instead of nesting boxes. */
+.composed-site.b2b-site.pack-precision main > section :is(h2, h3, h4, strong, dt) {
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision main > section:is(.tone-dark, .block-metrics, .block-cta) :is(p, dd, li) {
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section:is(.tone-dark, .block-metrics, .block-cta) .section-kicker {
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision main > section:is(.b2b-section, .section) > p {
+  max-width: 40em;
+  margin-left: 0;
+  font-size: clamp(1.05rem, 0.4vw + 1rem, 1.2rem);
+}
+.composed-site.b2b-site.pack-precision main > section.information-request {
+  padding-block: clamp(40px, 5vw, 64px);
+}
+.composed-site.b2b-site.pack-precision main > nav.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 20px var(--pp-pad) 0;
+  background: var(--pp-ink);
+  color: var(--pp-muted-d);
+  font-family: var(--pp-ui);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.composed-site.b2b-site.pack-precision main > nav.breadcrumbs a {
+  color: var(--pp-muted-d);
+  text-decoration: none;
+}
+.composed-site.b2b-site.pack-precision main > nav.breadcrumbs a:hover {
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision main > nav.product-guide {
+  position: sticky;
+  top: var(--pp-hdr);
+  z-index: 30;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 28px;
+  min-height: 56px;
+  padding: 0 var(--pp-pad);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--pp-cream);
+  color: var(--pp-ink);
+  border-bottom: 1px solid var(--pp-line-l);
+}
+.composed-site.b2b-site.pack-precision main > nav.product-guide a {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--pp-head);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--pp-ink);
+  opacity: 0.78;
+}
+.composed-site.b2b-site.pack-precision main > nav.product-guide a:hover {
+  opacity: 1;
+  color: var(--pp-copper-deep);
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Hero: full-bleed photograph with left gradient on home; split frame on
+   inner pages; framed stage when the section asks for fit-contain.
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section.hero {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: clamp(72px, 9vw, 140px) var(--pp-pad) clamp(56px, 7vw, 104px);
+  gap: 0;
+  overflow: hidden;
+  background: var(--pp-ink);
+  color: var(--pp-cream);
+  text-align: start;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-copy {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: start;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-copy .hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-family: var(--pp-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-copy .hero-eyebrow::before {
+  width: 28px;
+  height: 2px;
+  opacity: 1;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-copy h1 {
+  max-width: 10.5em;
+  margin: 0 0 0.35em;
+  font-family: var(--pp-head);
+  font-size: clamp(2.6rem, 5.4vw + 0.5rem, 6.5rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-shadow: none;
+  color: var(--pp-cream);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero .hero-copy h1 {
+  font-size: clamp(2.4rem, 3.6vw + 0.8rem, 4.75rem);
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-copy .hero-lead {
+  max-width: 30em;
+  margin: 0 0 34px;
+  padding: 0;
+  font-family: var(--pp-serif);
+  font-size: clamp(1.1rem, 0.5vw + 1rem, 1.35rem);
+  line-height: 1.5;
+  color: #e9dfd6;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-copy .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  margin: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-actions .cta {
+  background: var(--pp-copper);
+  color: var(--pp-ink);
+  border-color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-actions .cta:hover {
+  background: var(--pp-copper-hover);
+  border-color: var(--pp-copper-hover);
+  color: var(--pp-ink);
+  transform: none;
+  box-shadow: none;
+  filter: none;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-actions .secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 0 28px;
+  border: 2px solid var(--pp-cream);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  color: var(--pp-cream);
+  font-family: var(--pp-head);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-actions .secondary-link:hover {
+  background: var(--pp-cream);
+  border-color: var(--pp-cream);
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-visual {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  max-height: none;
+}
+.composed-site.b2b-site.pack-precision main > section.hero .hero-visual img {
+  border-radius: 0;
+}
+
+/* Home: full-bleed cover photograph + left gradient, headline <= 3 lines. */
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  min-height: clamp(560px, 88vh, 860px);
+  padding: 120px var(--pp-pad) clamp(48px, 6vw, 80px);
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--pp-ink);
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #0c0b0a;
+}
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: cover;
+}
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(19, 17, 16, 0.92) 0%,
+      rgba(19, 17, 16, 0.62) 42%,
+      rgba(19, 17, 16, 0) 75%
+    ),
+    linear-gradient(0deg, rgba(19, 17, 16, 0.9) 0%, rgba(19, 17, 16, 0) 40%);
+}
+[dir="rtl"] .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual::after {
+  background:
+    linear-gradient(
+      270deg,
+      rgba(19, 17, 16, 0.92) 0%,
+      rgba(19, 17, 16, 0.62) 42%,
+      rgba(19, 17, 16, 0) 75%
+    ),
+    linear-gradient(0deg, rgba(19, 17, 16, 0.9) 0%, rgba(19, 17, 16, 0) 40%);
+}
+
+/* Home with a contained product silhouette: copy + framed stage. */
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual.fit-contain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 80px);
+  min-height: clamp(520px, 80vh, 820px);
+  padding: clamp(72px, 9vw, 140px) var(--pp-pad) clamp(56px, 7vw, 104px);
+  border: 0;
+  border-radius: 0;
+  background: var(--pp-ink);
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual.fit-contain .hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  padding: clamp(16px, 3vw, 40px);
+  background: var(--pp-char);
+}
+.composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual.fit-contain .hero-visual img {
+  width: 100%;
+  height: auto;
+  max-height: 620px;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+/* Inner pages: split frame, image edge-to-edge (product pages: image first). */
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  min-height: clamp(440px, 62vh, 640px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--pp-ink);
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual .hero-copy {
+  align-self: center;
+  padding-block: clamp(56px, 7vw, 110px);
+  padding-inline: var(--pp-pad) clamp(28px, 5vw, 80px);
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual .hero-visual {
+  position: relative;
+  order: 2;
+  min-height: 320px;
+  overflow: hidden;
+  background: #0c0b0a;
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual:not(.fit-contain) .hero-visual img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: cover;
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual.fit-contain .hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 3vw, 48px);
+  background: var(--pp-char);
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual.fit-contain .hero-visual img {
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+.composed-site.b2b-site.pack-precision.page-product main > section.hero.has-visual .hero-visual {
+  order: -1;
+}
+.composed-site.b2b-site.pack-precision.page-product main > section.hero.has-visual .hero-copy {
+  padding-inline: clamp(28px, 5vw, 80px) var(--pp-pad);
+}
+
+/* ---------------------------------------------------------------------------
+   Metrics -> data band (large figure + small label)
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section.block-metrics {
+  padding-block: clamp(56px, 6vw, 96px);
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .section-intro {
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .section-intro h2 {
+  font-size: clamp(1.75rem, 2vw + 0.8rem, 2.6rem);
+  line-height: 1;
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: clamp(28px, 3.5vw, 52px) 24px;
+  border: 0;
+  border-inline-start: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .metric-card:first-child {
+  border-inline-start: 0;
+  padding-inline-start: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .metric-card dt {
+  margin: 0;
+  font-family: var(--pp-head);
+  font-size: clamp(2.25rem, 3vw + 0.5rem, 3.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.composed-site.b2b-site.pack-precision main > section.block-metrics .metric-card dd {
+  margin: 0;
+  font-family: var(--pp-ui);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Product grid -> model lineup (large image cards, tag, 2 key specs)
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid:has(> .product-card:nth-child(2):last-child),
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid:has(> .product-card:nth-child(4):last-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-card {
+  --ink: var(--pp-cream);
+  --muted: var(--pp-muted-d);
+  --line: var(--pp-line-d);
+  --line-strong: rgba(254, 247, 241, 0.34);
+  --accent: var(--pp-copper);
+  --accent-ink: var(--pp-ink);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--pp-card);
+  color: var(--pp-cream);
+  box-shadow: none;
+  transform: none;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-visual {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 0;
+  background: #0c0b0a;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-landscape .product-visual {
+  aspect-ratio: 4 / 3;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-portrait .product-visual {
+  aspect-ratio: 4 / 5;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-visual:empty {
+  display: none;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-visual img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section:not(.fit-contain) .product-visual img {
+  object-fit: cover;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.fit-contain .product-visual {
+  background: var(--pp-char-2);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.fit-contain .product-visual img {
+  padding: 6%;
+  object-fit: contain;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-natural .product-visual {
+  aspect-ratio: auto;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-natural .product-visual img {
+  position: static;
+  height: auto;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-card:hover .product-visual img {
+  transform: scale(1.04);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  padding: 28px 28px 30px;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-copy .product-category {
+  position: absolute;
+  top: 18px;
+  inset-inline-start: 18px;
+  z-index: 2;
+  max-width: calc(100% - 36px);
+  margin: 0;
+  padding: 7px 12px;
+  overflow: hidden;
+  background: var(--pp-cream);
+  color: var(--pp-ink);
+  font-family: var(--pp-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-card:has(> .product-visual:empty) .product-category {
+  position: static;
+  align-self: flex-start;
+  margin-bottom: 18px;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-copy h3 {
+  margin: 0 0 14px;
+  font-size: clamp(1.75rem, 2vw + 0.8rem, 2.6rem);
+  line-height: 1;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-copy h3 a {
+  color: var(--pp-cream);
+  text-decoration: none;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-copy > p:not(.product-category) {
+  margin: 0 0 22px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--pp-muted-d);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 26px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--pp-line-d);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-specs > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 0 0;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-specs > div + div {
+  padding-inline-start: 18px;
+  border-inline-start: 1px solid var(--pp-line-d);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-specs dd {
+  margin: 0;
+  font-family: var(--pp-head);
+  font-size: clamp(1.35rem, 1vw + 0.9rem, 1.9rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-align: start;
+  color: var(--pp-cream);
+  overflow-wrap: anywhere;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-specs dt {
+  font-family: var(--pp-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pp-muted-d);
+  overflow-wrap: anywhere;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .card-actions .text-link {
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision .quote-add {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid rgba(254, 247, 241, 0.4);
+  border-radius: 0;
+  background: transparent;
+  color: var(--pp-cream);
+  font-family: var(--pp-head);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.composed-site.b2b-site.pack-precision .quote-add:hover,
+.composed-site.b2b-site.pack-precision .quote-add[aria-pressed="true"] {
+  background: var(--pp-copper);
+  border-color: var(--pp-copper);
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .catalog-tools {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+/* One model, or productLayout=rows: wide rows with the photograph beside copy. */
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid:has(> .product-card:only-child),
+.composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img),
+.composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img) .product-visual,
+.composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) .product-visual {
+  aspect-ratio: auto;
+  min-height: clamp(320px, 36vw, 520px);
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img) .product-copy,
+.composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) .product-copy {
+  justify-content: center;
+  padding: clamp(36px, 4.5vw, 72px);
+}
+
+/* ---------------------------------------------------------------------------
+   Generic card grids (features without photography, evidence, downloads,
+   certifications, customization): flat columns ruled in the band colour.
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section :is(.feature-grid, .resource-grid, .cert-wall) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: clamp(20px, 2.4vw, 36px);
+}
+.composed-site.b2b-site.pack-precision main > section :is(.feature-grid > article, .resource-grid > article, .cert-wall > .cert-card) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  text-align: start;
+  min-width: 0;
+  margin: 0;
+  padding: 22px 0 0;
+  border: 0;
+  border-top: 2px solid var(--accent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.composed-site.b2b-site.pack-precision main > section :is(.feature-grid, .resource-grid) > article > h3,
+.composed-site.b2b-site.pack-precision main > section .cert-copy h3 {
+  margin: 0 0 10px;
+}
+.composed-site.b2b-site.pack-precision main > section :is(.feature-grid, .resource-grid) > article > p,
+.composed-site.b2b-site.pack-precision main > section .cert-copy p {
+  max-width: none;
+  margin: 0 0 14px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section .feature-grid > article > img {
+  width: 100%;
+  margin: 0 0 18px;
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision main > section .feature-grid > article > .text-link {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.composed-site.b2b-site.pack-precision main > section .resource-type,
+.composed-site.b2b-site.pack-precision main > section .cert-badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin: 0 0 12px;
+  padding: 5px 10px;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--pp-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision main > section .cert-media {
+  margin-bottom: 16px;
+  border-radius: 0;
+  background: var(--surface);
+}
+
+/* Customization -> option cards on the band surface. */
+.composed-site.b2b-site.pack-precision main > section.block-customization .feature-grid > article {
+  padding: 30px 28px;
+  border-top-width: 4px;
+  background: var(--surface);
+}
+.composed-site.b2b-site.pack-precision main > section.block-customization .feature-grid > article > h3 {
+  font-size: clamp(1.35rem, 1vw + 1rem, 1.75rem);
+}
+
+/* Features with photography -> full-bleed scene tiles (shop by application). */
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) {
+  padding-inline: 0;
+  padding-bottom: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) > .section-intro {
+  padding-inline: var(--pp-pad);
+  max-width: none;
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) > .section-intro > * {
+  max-width: 760px;
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0;
+  counter-reset: pp-scene;
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid:has(> article:nth-child(6)) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article {
+  --ink: var(--pp-cream);
+  --muted: #e3d9cf;
+  --accent: var(--pp-copper);
+  position: relative;
+  isolation: isolate;
+  justify-content: flex-end;
+  min-height: clamp(440px, 42vw, 640px);
+  padding: 32px 28px;
+  overflow: hidden;
+  border: 0;
+  background: #0c0b0a;
+  color: var(--pp-cream);
+  counter-increment: pp-scene;
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article::before {
+  content: counter(pp-scene, decimal-leading-zero);
+  display: block;
+  margin-bottom: 12px;
+  font-family: var(--pp-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    0deg,
+    rgba(19, 17, 16, 0.94) 0%,
+    rgba(19, 17, 16, 0.55) 45%,
+    rgba(19, 17, 16, 0.1) 100%
+  );
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article > img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  aspect-ratio: auto;
+  object-fit: cover;
+  transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article:hover > img {
+  transform: scale(1.05);
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article > h3 {
+  margin: 0 0 12px;
+  font-size: clamp(1.75rem, 2vw + 0.8rem, 2.6rem);
+  line-height: 1;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article > p {
+  margin: 0 0 18px;
+  color: #e3d9cf;
+}
+.composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article > .text-link {
+  margin-top: 0;
+  color: var(--pp-copper);
+}
+
+/* ---------------------------------------------------------------------------
+   Split -> half-bleed photograph with a ticked recommendation list
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section.block-split:has(> figure) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split:has(> figure) > figure {
+  position: relative;
+  min-height: clamp(360px, 40vw, 600px);
+  margin: 0;
+  overflow: hidden;
+  background: #0c0b0a;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split:not(.fit-contain) > figure img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  object-fit: cover;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split.fit-contain > figure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 3vw, 48px);
+  background: var(--surface);
+}
+.composed-site.b2b-site.pack-precision main > section.block-split.fit-contain > figure img {
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split:has(> figure) > .split-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding-block: var(--pp-sec);
+  padding-inline: clamp(28px, 5vw, 80px) var(--pp-pad);
+}
+.composed-site.b2b-site.pack-precision main > section.block-split:nth-of-type(even):has(> figure) > figure {
+  order: 2;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split:nth-of-type(even):has(> figure) > .split-copy {
+  padding-inline: var(--pp-pad) clamp(28px, 5vw, 80px);
+}
+.composed-site.b2b-site.pack-precision main > section.block-split .split-copy > * {
+  max-width: 600px;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split .split-copy > .section-intro {
+  margin-bottom: 26px;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split .split-copy > h3 {
+  position: relative;
+  margin: 0;
+  padding: 16px 0 6px;
+  padding-inline-start: 34px;
+  border-top: 1px solid var(--line);
+  font-size: clamp(1.15rem, 0.6vw + 1rem, 1.4rem);
+  line-height: 1.1;
+}
+.composed-site.b2b-site.pack-precision main > section.block-split .split-copy > h3::before {
+  content: "";
+  position: absolute;
+  top: 21px;
+  inset-inline-start: 2px;
+  width: 14px;
+  height: 8px;
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+.composed-site.b2b-site.pack-precision main > section.block-split .split-copy > p {
+  margin: 0 0 14px;
+  padding-inline-start: 34px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Gallery -> craft triptych (wide lead frame + two close-ups)
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(12px, 1.6vw, 24px);
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery:has(> .gallery-item:nth-child(2):last-child) {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery:has(> .gallery-item:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  margin: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .gallery-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #0b0a09;
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery:not(.directed-section) .gallery-trigger img {
+  aspect-ratio: 3 / 4;
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .gallery-trigger img {
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .gallery-item figcaption {
+  display: grid;
+  gap: 6px;
+  padding-top: 20px;
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .gallery-item figcaption strong {
+  font-family: var(--pp-head);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision main > section.block-gallery .gallery-item figcaption span {
+  max-width: 30em;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Case study -> customer story (lead story + supporting stories)
+   No quotation marks are added: the copy is a sourced statement, not a quote.
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 clamp(24px, 3vw, 48px);
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article {
+  padding: 24px 0 0;
+  border-top: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "story" "client" "link";
+  align-items: start;
+  margin-bottom: clamp(32px, 4vw, 56px);
+  padding: 0;
+  border-top: 0;
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child:has(> img) {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-rows: 1fr auto auto;
+  grid-template-areas: "media story" "media client" "media link";
+  column-gap: clamp(32px, 5vw, 80px);
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child > img {
+  grid-area: media;
+  align-self: center;
+  width: 100%;
+  margin: 0;
+  aspect-ratio: 4 / 3;
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child > p {
+  grid-area: story;
+  align-self: end;
+  margin: 0 0 24px;
+  padding-top: 22px;
+  border-top: 3px solid var(--accent);
+  font-family: var(--pp-serif);
+  font-size: clamp(1.35rem, 1.2vw + 1rem, 2rem);
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child > h3 {
+  grid-area: client;
+  margin: 0;
+  font-family: var(--pp-ui);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child > .text-link {
+  grid-area: link;
+  justify-self: start;
+  margin-top: 18px;
+}
+
+/* ---------------------------------------------------------------------------
+   Process, CTA, tables, FAQ, showcase, categories
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section .process-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pp-step;
+  border-top: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section .process-grid > li {
+  display: block;
+  min-width: 0;
+  padding: 30px 26px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  counter-increment: pp-step;
+}
+.composed-site.b2b-site.pack-precision main > section .process-grid > li + li {
+  padding-inline-start: 26px;
+  border-inline-start: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section .process-grid > li::before {
+  content: counter(pp-step, decimal-leading-zero);
+  display: block;
+  margin-bottom: 14px;
+  font-family: var(--pp-head);
+  font-size: 54px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision main > section .process-grid > li > p {
+  font-size: 16px;
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section .process-grid > li > img {
+  width: 100%;
+  margin-bottom: 16px;
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision main > section .cta-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.composed-site.b2b-site.pack-precision main > section .cta-band .section-intro {
+  margin: 0;
+}
+.composed-site.b2b-site.pack-precision main > section .table-scroll {
+  overflow-x: auto;
+  border: 0;
+  border-top: 2px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+}
+.composed-site.b2b-site.pack-precision main > section table {
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--pp-ui);
+}
+.composed-site.b2b-site.pack-precision main > section table caption {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: start;
+  font-family: var(--pp-head);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision main > section :is(th, td) {
+  padding: 15px 18px 15px 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: start;
+  vertical-align: top;
+}
+.composed-site.b2b-site.pack-precision main > section th {
+  font-family: var(--pp-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section td {
+  font-size: 16px;
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision main > section tbody tr:hover td {
+  background: transparent;
+}
+.composed-site.b2b-site.pack-precision main > section details {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.composed-site.b2b-site.pack-precision main > section h2 + details,
+.composed-site.b2b-site.pack-precision main > section .section-intro + details {
+  border-top: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section details > summary {
+  padding: 22px 0;
+  font-family: var(--pp-head);
+  font-size: clamp(1.15rem, 0.6vw + 1rem, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+}
+.composed-site.b2b-site.pack-precision main > section details > summary::after {
+  font-family: var(--pp-head);
+  font-size: 26px;
+  color: var(--accent);
+}
+.composed-site.b2b-site.pack-precision main > section details > :not(summary) {
+  max-width: 46em;
+  margin: 0;
+  padding: 0 0 22px;
+  font-size: 17px;
+  color: var(--muted);
+}
+.composed-site.b2b-site.pack-precision main > section .showcase-card {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+}
+.composed-site.b2b-site.pack-precision main > section .showcase-visual img {
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision main > section .showcase-copy {
+  padding: 26px 28px 30px;
+}
+.composed-site.b2b-site.pack-precision main > section .showcase-card.showcase-lead .showcase-copy {
+  padding: clamp(28px, 4vw, 56px);
+}
+.composed-site.b2b-site.pack-precision main > section .category-grid > a {
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none;
+  transform: none;
+}
+.composed-site.b2b-site.pack-precision main > section .category-grid > a > img {
+  border-radius: 0;
+}
+.composed-site.b2b-site.pack-precision main > section .category-grid > a > span {
+  font-family: var(--pp-head);
+  font-size: clamp(1.3rem, 0.8vw + 1rem, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.composed-site.b2b-site.pack-precision main > section .category-grid > a > small {
+  font-family: var(--pp-ui);
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Inquiry: sand band, brief on the left, white form panel on the right
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision main > section#inquiry {
+  --paper: var(--pp-sand);
+  --surface: #ffffff;
+  --surface-2: var(--pp-cream);
+  --ink: var(--pp-ink);
+  --muted: var(--pp-muted-l);
+  --line: var(--pp-line-l);
+  --line-strong: rgba(19, 17, 16, 0.28);
+  --accent: var(--pp-copper-deep);
+  --accent-ink: var(--pp-cream);
+  --band-dark-bg: var(--pp-sand);
+  --band-dark-ink: var(--pp-ink);
+  --band-dark-muted: var(--pp-muted-l);
+  --input-bg: var(--pp-cream);
+  --pp-btn-bg: var(--pp-ink);
+  --pp-btn-ink: var(--pp-cream);
+  --pp-btn-hover: #2b2622;
+  padding: var(--pp-sec) var(--pp-pad);
+  border: 0;
+  background: var(--pp-sand);
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .inquiry {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-rows: auto auto auto 1fr;
+  align-items: start;
+  column-gap: clamp(40px, 6vw, 96px);
+  row-gap: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .inquiry > :not(form):not(details) {
+  grid-column: 1;
+  max-width: 34em;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .inquiry > p {
+  margin: 0 0 16px;
+  font-size: clamp(1.05rem, 0.4vw + 1rem, 1.25rem);
+  line-height: 1.5;
+  color: var(--pp-muted-l);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .inquiry > :is(form, details) {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: clamp(28px, 3.6vw, 52px);
+  border: 1px solid var(--pp-line-l);
+  border-radius: 0;
+  background: #ffffff;
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .inquiry-preview > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--pp-head);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pp-ink);
+  cursor: pointer;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .inquiry-preview > form {
+  max-width: none;
+  margin: 0;
+  padding: 24px 0 0;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry legend {
+  margin-bottom: 18px;
+  padding: 0;
+  font-family: var(--pp-head);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .fields {
+  gap: 18px 20px;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry label {
+  margin: 0 0 18px;
+  font-family: var(--pp-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #3a332d;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .fields label {
+  margin: 0;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry :is(.product-choices label, .consent-line) {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .consent-line {
+  display: block;
+  position: relative;
+  padding-inline-start: 32px;
+  line-height: 1.5;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .consent-line input[type="checkbox"] {
+  position: absolute;
+  top: 1px;
+  inset-inline-start: 0;
+  margin: 0;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry :is(input:not([type="checkbox"]):not([type="file"]), textarea, select) {
+  margin-top: 8px;
+  min-height: 50px;
+  padding: 13px 14px;
+  border: 1.5px solid rgba(19, 17, 16, 0.2);
+  border-radius: 0;
+  background: var(--pp-cream);
+  color: var(--pp-ink);
+  font: 400 16px/1.4 var(--pp-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry input[type="file"] {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1.5px dashed rgba(19, 17, 16, 0.3);
+  border-radius: 0;
+  background: var(--pp-cream);
+  color: var(--pp-ink);
+  font: 400 14px/1.4 var(--pp-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry :is(input, textarea, select):focus {
+  outline: 2px solid var(--pp-copper-deep);
+  outline-offset: 1px;
+  border-color: var(--pp-copper-deep);
+  background: #ffffff;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry input[type="checkbox"] {
+  accent-color: var(--pp-ink);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .product-choices {
+  margin: 8px 0 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--pp-line-l);
+  border-radius: 0;
+  background: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry .product-choices legend {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry button[type="submit"] {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 8px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 0;
+  background: var(--pp-ink);
+  color: var(--pp-cream);
+  font-family: var(--pp-head);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry button[type="submit"]:hover {
+  background: #2b2622;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry [data-quote-list] button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid rgba(19, 17, 16, 0.28);
+  border-radius: 0;
+  background: transparent;
+  color: var(--pp-ink);
+  font: 600 12px/1.2 var(--pp-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry :is(.form-hint, [data-unavailable], noscript p) {
+  font-family: var(--pp-ui);
+  font-size: 13px;
+  color: var(--pp-muted-l);
+}
+.composed-site.b2b-site.pack-precision main > section#inquiry [data-form-error] {
+  border-radius: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 2fr) auto;
+  gap: 40px;
+  max-width: none;
+  margin: 0;
+  padding: clamp(64px, 7vw, 96px) var(--pp-pad) 36px;
+  border-top: 1px solid var(--pp-line-d);
+  background: #0d0c0b;
+  color: var(--pp-cream);
+  font-family: var(--pp-ui);
+  font-size: 15px;
+}
+.composed-site.b2b-site.pack-precision footer .footer-brand strong {
+  display: block;
+  margin-bottom: 14px;
+  font-family: var(--pp-head);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision footer .footer-brand p {
+  max-width: 36ch;
+  font-family: var(--pp-ui);
+  font-size: 15px;
+  color: var(--pp-muted-d);
+}
+.composed-site.b2b-site.pack-precision footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 0 28px;
+}
+.composed-site.b2b-site.pack-precision footer nav :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--pp-ui);
+  font-size: 15px;
+  text-decoration: none;
+  color: var(--pp-muted-d);
+  cursor: pointer;
+}
+.composed-site.b2b-site.pack-precision footer nav :is(a, button):hover {
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision footer .footer-social a {
+  font-family: var(--pp-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision footer .back-top {
+  align-self: start;
+  padding-top: 12px;
+  font-family: var(--pp-head);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--pp-copper);
+}
+
+/* ---------------------------------------------------------------------------
+   Floating layers: quote bar, contact dock and cookie panel never overlap.
+   (composition.css already hides the quote bar while the cookie panel is open
+   and lifts the cookie panel above a visible quote bar.)
+   --------------------------------------------------------------------------- */
+.composed-site.b2b-site.pack-precision .quote-bar {
+  border: 1px solid rgba(254, 247, 241, 0.2);
+  border-radius: 0;
+  background: var(--pp-ink);
+  color: var(--pp-cream);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+  font-family: var(--pp-ui);
+}
+.composed-site.b2b-site.pack-precision .quote-bar a {
+  font-family: var(--pp-head);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .quote-bar [data-quote-count] {
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision .quote-bar button {
+  min-height: 40px;
+  border: 1px solid var(--pp-copper);
+  border-radius: 0;
+  background: var(--pp-copper);
+  color: var(--pp-ink);
+  font-family: var(--pp-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.composed-site.b2b-site.pack-precision .quote-bar [data-quote-clear] {
+  border-color: rgba(254, 247, 241, 0.3);
+  background: transparent;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .gs-cookie {
+  border: 1px solid rgba(254, 247, 241, 0.22);
+  border-radius: 0;
+  background: rgba(28, 25, 22, 0.97);
+  color: var(--pp-cream);
+  font-family: var(--pp-ui);
+}
+.composed-site.b2b-site.pack-precision .gs-cookie h2 {
+  font-family: var(--pp-head);
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  color: var(--pp-cream);
+}
+.composed-site.b2b-site.pack-precision .gs-cookie p {
+  font-family: var(--pp-ui);
+  color: var(--pp-muted-d);
+}
+.composed-site.b2b-site.pack-precision .gs-cookie button {
+  border-radius: 0;
+  font-family: var(--pp-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.composed-site.b2b-site.pack-precision .dock-btn {
+  border-radius: 0;
+  font-family: var(--pp-ui);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.composed-site.b2b-site.pack-precision:has(.quote-bar:not([hidden])) .brand-dock {
+  bottom: 96px;
+}
+.composed-site.b2b-site.pack-precision:has(.gs-cookie:not([hidden])) .brand-dock {
+  visibility: hidden;
+}
+.composed-site.b2b-site.pack-precision:has(.quote-bar:not([hidden])) footer {
+  padding-bottom: 112px;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+@media (max-width: 1240px) {
+  .composed-site.b2b-site.pack-precision .header-action {
+    display: none;
+  }
+  .composed-site.b2b-site.pack-precision .desktop-nav :is(a, summary) {
+    font-size: 15px;
+    letter-spacing: 0.1em;
+  }
+}
+
+/* composition.css switches to the menu below 1050px, while site.css only styles the
+   collapsed menu below 768px; the pack closes that gap for its own storefronts. */
+@media (max-width: 1050px) {
+  .composed-site.b2b-site.pack-precision .header-inner {
+    position: relative;
+  }
+  .composed-site.b2b-site.pack-precision .mobile-navigation {
+    display: block;
+    border: 0;
+    padding: 0;
+  }
+  .composed-site.b2b-site.pack-precision .mobile-navigation > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 0;
+    list-style: none;
+    cursor: pointer;
+  }
+  .composed-site.b2b-site.pack-precision .mobile-navigation > summary::-webkit-details-marker {
+    display: none;
+  }
+  .composed-site.b2b-site.pack-precision .mobile-navigation > nav {
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    z-index: 10;
+    max-height: 75vh;
+    overflow: auto;
+    padding: 12px var(--pp-pad) 24px;
+    box-shadow: 0 24px 40px -16px rgba(0, 0, 0, 0.6);
+  }
+  .composed-site.b2b-site.pack-precision .mobile-navigation > nav > a {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    border-top: 1px solid var(--pp-line-d);
+  }
+  .composed-site.b2b-site.pack-precision .mobile-navigation > nav > .range-menu {
+    padding-block: 4px;
+    border-top: 1px solid var(--pp-line-d);
+  }
+}
+
+@media (max-width: 980px) {
+  .composed-site.pack-precision {
+    --pp-hdr: 64px;
+  }
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-split:has(> figure) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-split:has(> figure) > figure,
+  .composed-site.b2b-site.pack-precision main > section.block-split:nth-of-type(even):has(> figure) > figure {
+    order: 0;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-split.fit-contain:has(> figure) > figure {
+    aspect-ratio: auto;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-split:has(> figure) > .split-copy,
+  .composed-site.b2b-site.pack-precision main > section.block-split:nth-of-type(even):has(> figure) > .split-copy {
+    padding: clamp(48px, 9vw, 80px) var(--pp-pad);
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery > .gallery-item:first-child:not(:nth-last-child(2)) {
+    grid-column: 1 / -1;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child:has(> img) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: "media" "story" "client" "link";
+    row-gap: 24px;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-case-study .feature-grid > article:first-child > p {
+    margin-bottom: 0;
+  }
+  .composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual .hero-visual {
+    order: -1;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+  .composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual.fit-contain .hero-visual {
+    aspect-ratio: auto;
+  }
+  .composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.has-visual .hero-copy,
+  .composed-site.b2b-site.pack-precision.page-product main > section.hero.has-visual .hero-copy {
+    padding: clamp(36px, 7vw, 64px) var(--pp-pad) clamp(48px, 8vw, 72px);
+  }
+  .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual.fit-contain {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img),
+  .composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img) .product-visual,
+  .composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) .product-visual {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+  .composed-site.b2b-site.pack-precision main > section#inquiry .inquiry {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .composed-site.b2b-site.pack-precision main > section#inquiry .inquiry > :is(form, details) {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 16px;
+  }
+  .composed-site.b2b-site.pack-precision footer {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .composed-site.b2b-site.pack-precision footer .footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .composed-site.pack-precision {
+    --pp-sec: clamp(44px, 7.5vw, 72px);
+    font-size: 17px;
+  }
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid,
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid:has(> .product-card:nth-child(2):last-child),
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid:has(> .product-card:nth-child(4):last-child) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* S37 §4.6-5: horizontal scroll-snap tracks keep mobile 375px pages compact without page overflow. */
+  .composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid,
+  .composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid:has(> article:nth-child(6)) {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-features:not(.fit-contain):has(.feature-grid > article > img) .feature-grid > article {
+    flex: 0 0 82%;
+    min-width: 0;
+    min-height: 300px;
+    scroll-snap-align: start;
+  }
+  .composed-site.b2b-site.pack-precision .site-header .brand {
+    font-size: 17px;
+    letter-spacing: 0.08em;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery,
+  .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery:has(> .gallery-item:nth-child(2):last-child) {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-gallery .media-gallery > .gallery-item {
+    flex: 0 0 82%;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-gallery:not(.directed-section) .gallery-trigger img {
+    aspect-ratio: 4 / 3;
+  }
+  .composed-site.b2b-site.pack-precision main > section.block-metrics .metric-card,
+  .composed-site.b2b-site.pack-precision main > section.block-metrics .metric-card:first-child {
+    padding: 24px 16px 24px 0;
+    border-inline-start: 0;
+  }
+  .composed-site.b2b-site.pack-precision main > section .process-grid > li,
+  .composed-site.b2b-site.pack-precision main > section .process-grid > li + li {
+    padding: 26px 0 0;
+    border-inline-start: 0;
+  }
+  .composed-site.b2b-site.pack-precision main > section .process-grid > li + li {
+    margin-top: 26px;
+    border-top: 1px solid var(--line);
+  }
+  /* Home hero: photograph first, copy below on solid ink for legibility. */
+  .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) {
+    min-height: 0;
+    padding: 0 0 40px;
+  }
+  .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual {
+    position: relative;
+    inset: auto;
+    order: -1;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+  }
+  .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual::after,
+  [dir="rtl"] .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-visual::after {
+    inset: auto 0 0 0;
+    height: 45%;
+    background: linear-gradient(0deg, var(--pp-ink), rgba(19, 17, 16, 0));
+  }
+  .composed-site.b2b-site.pack-precision.page-home main > section.hero.has-visual:not(.fit-contain) .hero-copy {
+    padding: 12px var(--pp-pad) 0;
+  }
+  .composed-site.b2b-site.pack-precision main > section.hero .hero-copy .hero-actions .cta,
+  .composed-site.b2b-site.pack-precision main > section.hero .hero-copy .hero-actions .secondary-link {
+    flex: 1 1 100%;
+  }
+  .composed-site.b2b-site.pack-precision main > section .cta-band .cta {
+    width: 100%;
+  }
+  .composed-site.b2b-site.pack-precision footer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composed-site.b2b-site.pack-precision main img {
+    transition: none;
+  }
+  .composed-site.b2b-site.pack-precision main > section.catalog-section .product-card:hover .product-visual img,
+  .composed-site.b2b-site.pack-precision main > section.block-features .feature-grid > article:hover > img {
+    transform: none;
+  }
+}
+/* S37 §4.9-1 & §4.7-1: non-Latin script typography, RTL alignment, and non-b2b fallback. */
+html:is([lang^="zh"], [lang^="ja"], [lang^="ar"]) .composed-site.pack-precision :is(h1, h2, h3, h4, .desktop-nav a, .desktop-nav summary, .cta, .header-action, .section-kicker, .hero-eyebrow, .brand-wordmark text) {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.18;
+}
+html[dir="rtl"] .composed-site.pack-precision main > section.hero .hero-copy,
+html[dir="rtl"] .composed-site.pack-precision main > section {
+  text-align: start;
+}
+.composed-site:not(.b2b-site).pack-precision main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.composed-site:not(.b2b-site).pack-precision main > section {
+  max-width: none;
+  margin: 0;
+  padding: var(--pp-sec) var(--pp-pad);
+}
+/* S35 B2: wordmark in the precision pack typeface. */
+.composed-site.pack-precision .brand-wordmark text {
+  font-family: var(--pp-head);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.composed-site.pack-precision .brand-wordmark .wordmark-mark {
+  fill: transparent;
+  stroke: var(--pp-copper);
+  stroke-width: 2.5;
+}
+.composed-site.pack-precision .brand-wordmark .wordmark-cut {
+  fill: var(--pp-copper);
+}
+
+/* ---------------------------------------------------------------------------
+   S36 review fixes (precision pack only).
+   --------------------------------------------------------------------------- */
+/* Product card photos keep one 4:3 frame; the photo never stretches to the
+   height of the copy column (no 0.33 tall crops in rows layout). Explicit
+   portrait/natural/contain block intents keep their own rules. */
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-visual,
+.composed-site.b2b-site.pack-precision main > section.catalog-section .product-grid > .product-card:only-child:has(> .product-visual img) .product-visual,
+.composed-site.b2b-site.pack-precision.products-rows main > section.catalog-section .product-card:has(> .product-visual img) .product-visual {
+  align-self: start;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-portrait .product-visual {
+  aspect-ratio: 4 / 5;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section.media-natural .product-visual {
+  aspect-ratio: auto;
+}
+.composed-site.b2b-site.pack-precision main > section.catalog-section:not(.fit-contain) .product-visual img {
+  object-fit: cover;
+}
+/* Inner-page first-screen headings: one size step smaller, wider measure. */
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero .hero-copy h1 {
+  max-width: 14em;
+  font-size: clamp(2.1rem, 2.6vw + 0.9rem, 3.75rem);
+  line-height: 0.98;
+}
+.composed-site.b2b-site.pack-precision:not(.page-home) main > section.hero.hero-long .hero-copy h1 {
+  max-width: 16em;
+  font-size: clamp(1.9rem, 1.9vw + 0.9rem, 3.1rem);
+}
+/* Low-word sections (cta bands, one-paragraph notes) use tighter spacing. */
+.composed-site.b2b-site.pack-precision main > section.section-compact:not(#inquiry):not(.hero) {
+  padding-block: clamp(40px, 4.5vw, 72px);
+}
+.composed-site.b2b-site.pack-precision main > section.section-compact:not(#inquiry) .section-intro {
+  margin-bottom: clamp(20px, 2.5vw, 32px);
+}
+/* Merged purchasing terms: one definition list instead of one band per line. */
+.composed-site.b2b-site.pack-precision main > section.section-terms {
+  padding-block: clamp(48px, 5.5vw, 88px);
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0 clamp(20px, 2.4vw, 36px);
+  margin: clamp(24px, 3vw, 40px) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list > div {
+  min-width: 0;
+  padding: 20px 0 22px;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 96px;
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list dt {
+  margin: 0 0 8px;
+  font-family: var(--pp-head);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pp-copper);
+}
+.composed-site.b2b-site.pack-precision main > section.section-terms .terms-list dd {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}

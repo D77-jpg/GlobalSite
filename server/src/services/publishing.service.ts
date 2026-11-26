@@ -5,10 +5,12 @@ import {
   validateInquiryGateway,
 } from "./inquiry-settings.service";
 import mongoose from "mongoose";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
+import dns from "node:dns/promises";
 import sharp from "sharp";
 import { z } from "zod";
 import {
+  Asset,
   Product,
   Site,
   SitePage,
@@ -32,7 +34,7 @@ import {
   savePage,
 } from "./sites.service";
 import { sha } from "./catalog.service";
-import { validatePage } from "./page-validation.service";
+import { validatePage, validationIdentifiers } from "./page-validation.service";
 import { reserve, settle } from "./usage.service";
 import { readAsset, readArtifact, storeArtifact } from "./storage.service";
 import { encrypt, decrypt } from "./credential-crypto";
@@ -41,11 +43,79 @@ import { authorizeActor } from "./catalog-authority";
 import { buildStatic, unpack } from "./static-builder.service";
 import type { Snapshot } from "./static-template.service";
 import * as cf from "./cloudflare-pages.service";
-import { fetchWebsite } from "./website/public-web";
+import { fetchWebsite, publicUrl } from "./website/public-web";
 const safeHost = (s: string) =>
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,63}$/.test(s) &&
   !/(^|\.)(localhost|local|internal|test)$/.test(s);
 const host = z.string().toLowerCase().refine(safeHost);
+const redirectPath = z
+  .string()
+  .trim()
+  .min(1)
+  .max(240)
+  .refine((v) => v.startsWith("/") && !/[\r\n\s]/.test(v) && !v.includes(".."));
+const redirectTarget = z
+  .string()
+  .trim()
+  .min(1)
+  .max(300)
+  .refine(
+    (v) =>
+      !/[\r\n\s]/.test(v) &&
+      ((v.startsWith("/") && !v.includes("..")) ||
+        /^https:\/\/[^\s]+$/.test(v)),
+  );
+export const seoAnalyticsInput = z
+  .object({
+    ga4MeasurementId: z
+      .string()
+      .trim()
+      .regex(/^G-[A-Z0-9]{6,16}$/)
+      .nullable()
+      .optional(),
+    gtmContainerId: z
+      .string()
+      .trim()
+      .regex(/^GTM-[A-Z0-9]{4,12}$/)
+      .nullable()
+      .optional(),
+    metaPixelId: z
+      .string()
+      .trim()
+      .regex(/^[0-9]{8,20}$/)
+      .nullable()
+      .optional(),
+    googleSiteVerification: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9._-]{8,128}$/)
+      .nullable()
+      .optional(),
+    bingSiteVerification: z
+      .string()
+      .trim()
+      .regex(/^[A-Fa-f0-9]{16,64}$/)
+      .nullable()
+      .optional(),
+    ogImageAssetId: z
+      .string()
+      .regex(/^[a-f0-9]{24}$/)
+      .nullable()
+      .optional(),
+    redirects: z
+      .array(
+        z
+          .object({
+            from: redirectPath,
+            to: redirectTarget,
+            status: z.union([z.literal(301), z.literal(302)]),
+          })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
+  })
+  .strict();
 export const settingsInput = z
   .object({
     revision: z.number().int().min(0),
@@ -61,12 +131,27 @@ export const settingsInput = z
     productionBranch: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9/_-]{0,99}$/),
     domain: host.nullable(),
     token: z.string().min(20).max(1024).nullable().optional(),
+    deployWebhookUrl: z.string().url().max(400).nullable().optional(),
+    webhookSecret: z.string().min(12).max(256).nullable().optional(),
+    seoAnalytics: seoAnalyticsInput.optional(),
   })
   .strict();
 export const empty = z.object({}).strict();
 export const versionInput = z
   .object({ versionId: z.string().regex(/^[a-f0-9]{24}$/) })
   .strict();
+function cleanSeoAnalytics(raw: any) {
+  const s = raw ?? {};
+  return {
+    ga4MeasurementId: s.ga4MeasurementId ?? null,
+    gtmContainerId: s.gtmContainerId ?? null,
+    metaPixelId: s.metaPixelId ?? null,
+    googleSiteVerification: s.googleSiteVerification ?? null,
+    bingSiteVerification: s.bingSiteVerification ?? null,
+    ogImageAssetId: s.ogImageAssetId ?? null,
+    redirects: Array.isArray(s.redirects) ? s.redirects : [],
+  };
+}
 export function settingsDto(s: any) {
   return {
     revision: s?.revision ?? 0,
@@ -78,12 +163,17 @@ export function settingsDto(s: any) {
     configured: !!s?.secret,
     httpsStatus: s?.httpsStatus ?? null,
     checkedAt: s?.checkedAt?.toISOString() ?? null,
+    deployWebhookUrl: s?.deployWebhookUrl ?? null,
+    webhookConfigured: !!s?.webhookSecret,
+    seoAnalytics: cleanSeoAnalytics(s?.seoAnalytics),
   };
 }
 export async function settings(id: string) {
   await ownSite(id);
   return settingsDto(
-    await PublishingSettings.findOne({ siteId: id }).select("+secret"),
+    await PublishingSettings.findOne({ siteId: id }).select(
+      "+secret +webhookSecret",
+    ),
   );
 }
 export async function saveSettings(id: string, input: unknown, actor: string) {
@@ -104,6 +194,18 @@ export async function saveSettings(id: string, input: unknown, actor: string) {
     );
     v.canonicalBaseUrl = u.origin;
   }
+  if (v.deployWebhookUrl) {
+    const u = new URL(v.deployWebhookUrl);
+    ensure(
+      u.protocol === "https:" &&
+        safeHost(u.hostname) &&
+        !u.username &&
+        !u.password &&
+        !u.hash,
+      400,
+      "WEBHOOK_URL_INVALID",
+    );
+  }
   ensure(!!v.accountId === !!v.projectName, 400, "CLOUDFLARE_CONFIG_INVALID");
   if (v.domain)
     ensure(
@@ -120,6 +222,14 @@ export async function saveSettings(id: string, input: unknown, actor: string) {
   await mongoose.connection.transaction(async (session) => {
     const site = await ownSite(id, session);
     ensure(site.status !== "archived", 409, "SITE_ARCHIVED");
+    if (v.seoAnalytics?.ogImageAssetId) {
+      const ogAsset = await Asset.findOne({
+        _id: v.seoAnalytics.ogImageAssetId,
+        status: "ready",
+        mime: /^image\//,
+      }).session(session);
+      ensure(ogAsset, 400, "ASSET_NOT_FOUND");
+    }
     await Site.updateOne(
       { _id: id },
       { $inc: { lockVersion: 1 } },
@@ -130,10 +240,17 @@ export async function saveSettings(id: string, input: unknown, actor: string) {
       active: true,
     }).session(session);
     const old = await PublishingSettings.findOne({ siteId: id })
-      .select("+secret")
+      .select("+secret +webhookSecret")
       .session(session);
     ensure((old?.revision ?? 0) === v.revision, 409, "REVISION_CONFLICT");
-    const { token, revision, ...data } = v;
+    const {
+      token,
+      webhookSecret,
+      seoAnalytics,
+      deployWebhookUrl,
+      revision,
+      ...data
+    } = v;
     if (active) {
       ensure(
         old &&
@@ -168,6 +285,23 @@ export async function saveSettings(id: string, input: unknown, actor: string) {
       400,
       "CLOUDFLARE_CONFIG_INVALID",
     );
+    const nextWebhookUrl =
+      deployWebhookUrl !== undefined
+        ? deployWebhookUrl
+        : (old?.deployWebhookUrl ?? null);
+    const nextWebhookSecret =
+      typeof webhookSecret === "string"
+        ? encrypt(
+            webhookSecret,
+            "deploy-webhook:" + tenantContext()!.organizationId + ":" + id,
+          )
+        : webhookSecret === null || !nextWebhookUrl
+          ? null
+          : old?.webhookSecret;
+    const nextSeo =
+      seoAnalytics !== undefined
+        ? cleanSeoAnalytics(seoAnalytics)
+        : cleanSeoAnalytics(old?.seoAnalytics);
     // Credentials never leave the encrypted model; audit records only an action and target.
     await PublishingSettings.updateOne(
       { siteId: id },
@@ -175,6 +309,9 @@ export async function saveSettings(id: string, input: unknown, actor: string) {
         $set: {
           ...data,
           secret,
+          deployWebhookUrl: nextWebhookUrl,
+          webhookSecret: nextWebhookSecret,
+          seoAnalytics: nextSeo,
           revision: revision + 1,
           httpsStatus: null,
           checkedAt: null,
@@ -270,7 +407,12 @@ async function inspect(id: string, session?: mongoose.ClientSession) {
       continue;
     }
     const p = await pageView(row, site, session);
-    pages.push(p);
+    pages.push({
+      ...p,
+      ...(row.contentValidationVersion
+        ? { contentValidationVersion: row.contentValidationVersion }
+        : {}),
+    });
     if (p.status !== "approved") add("PAGE_NOT_APPROVED", p);
     for (const i of p.issues)
       add(
@@ -424,6 +566,7 @@ async function snapshot(
       settings: {
         canonicalBaseUrl: r.cfg.canonicalBaseUrl,
         revision: r.cfg.revision,
+        seoAnalytics: cleanSeoAnalytics(r.cfg.seoAnalytics),
       },
       assets: {},
       createdAt: new Date().toISOString(),
@@ -561,13 +704,27 @@ export async function validVersion(
   );
   for (const p of s.pages)
     ensure(
-      !validatePage(p, facts, {
+      !validatePage(p as unknown as Parameters<typeof validatePage>[0], facts, {
         productId: p.productId,
-        productIds: s.site.productIds,
+        productIds: s.site.productIds ?? [],
         type: p.type,
         brandName: s.site.name,
+        language: s.site.language,
+        navigationLabels:
+          p.type === "home"
+            ? s.site.plan?.strategy?.navigation?.map((g) => g.label)
+            : [],
+        requiredProductSections: s.site.plan?.strategy?.productSections,
         requireComposition: !!s.site.designDirection?.composition,
         paths: s.pages.map((p) => p.path),
+        legacyCopyRules: !p.contentValidationVersion,
+        // S36 review fix: identifiers come from the frozen version snapshot
+        // (product names, site name, plan titles), so the gate is deterministic.
+        identifiers: validationIdentifiers(
+          s.site.name,
+          s.products ?? [],
+          s.site.plan?.nodes,
+        ),
       }).length,
       409,
       "VERSION_FACTS_CHANGED",
@@ -586,7 +743,8 @@ export async function validVersion(
       ],
     }).session(session ?? null);
     ensure(
-      procurementCoverage(site, products, allFacts).canPublish,
+      procurementCoverage(site, products, allFacts, { allowDemoFacts: false })
+        .canPublish,
       409,
       "PROCUREMENT_INCOMPLETE",
     );
@@ -1103,6 +1261,72 @@ export async function previewFile(id: string, raw: string) {
   }
   return { body, mime: cf.mime(key) };
 }
+export const webhookClient = {
+  post: async (url: string, body: string, headers: Record<string, string>) => {
+    const resolved = await publicUrl(url);
+    const res = await fetch(resolved.href, {
+      method: "POST",
+      headers,
+      body,
+      redirect: "error",
+      signal: AbortSignal.timeout(15000),
+    });
+    return { ok: res.ok, status: res.status };
+  },
+};
+
+export async function triggerVersionWebhook(id: string, actor: string) {
+  const v = await ownVersion(id);
+  ensure(v.status === "ready", 409, "VERSION_NOT_READY");
+  await validVersion(v);
+  const cfg = await PublishingSettings.findOne({ siteId: v.siteId }).select(
+    "+webhookSecret",
+  );
+  ensure(cfg?.deployWebhookUrl, 409, "WEBHOOK_UNCONFIGURED");
+  const triggeredAt = new Date().toISOString();
+  const payload = JSON.stringify({
+    event: "site.version.ready",
+    siteId: String(v.siteId),
+    versionId: String(v._id),
+    versionNumber: v.number,
+    snapshotHash: v.snapshotHash,
+    artifactHash: v.artifactHash,
+    canonicalBaseUrl: v.snapshot?.settings?.canonicalBaseUrl ?? null,
+    triggeredAt,
+  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-GlobalSite-Event": "site.version.ready",
+  };
+  if (cfg.webhookSecret) {
+    const secret = decrypt(
+      cfg.webhookSecret,
+      "deploy-webhook:" + tenantContext()!.organizationId + ":" + v.siteId,
+    );
+    headers["X-GlobalSite-Signature"] =
+      "sha256=" + createHmac("sha256", secret).update(payload).digest("hex");
+  }
+  let res: { ok: boolean; status: number };
+  try {
+    res = await webhookClient.post(cfg.deployWebhookUrl, payload, headers);
+  } catch (e) {
+    if (e instanceof AppError) throw e;
+    throw new AppError(502, "WEBHOOK_DELIVERY_FAILED");
+  }
+  ensure(res.ok, 502, "WEBHOOK_DELIVERY_FAILED");
+  await AuditLog.create({
+    action: "site.version.webhook_triggered",
+    actorId: actor,
+    targetId: String(v._id),
+  });
+  return {
+    delivered: true,
+    statusCode: res.status,
+    versionId: String(v._id),
+    triggeredAt,
+  };
+}
+
 export async function domainCheck(id: string, actor: string) {
   await ownSite(id);
   const cfg = await PublishingSettings.findOne({ siteId: id }).select(
@@ -1110,6 +1334,50 @@ export async function domainCheck(id: string, actor: string) {
     ),
     checkedAt = new Date();
   let status = "unconfigured";
+  const diagnostics: Array<{
+    step: "dns" | "cloudflare" | "https";
+    ok: boolean;
+    detailCode: string;
+  }> = [];
+  const recommendedRecord =
+    cfg?.domain && cfg?.projectName
+      ? {
+          type: "CNAME",
+          name: cfg.domain,
+          target: cfg.projectName + ".pages.dev",
+        }
+      : null;
+  if (cfg?.domain) {
+    try {
+      const cnames = await dns
+        .resolveCname(cfg.domain)
+        .catch(() => [] as string[]);
+      const aRecords = cnames.length
+        ? []
+        : await dns.resolve4(cfg.domain).catch(() => [] as string[]);
+      const target = cfg.projectName ? cfg.projectName + ".pages.dev" : "";
+      if (
+        target &&
+        cnames.some((c) => c.toLowerCase().replace(/\.$/, "") === target)
+      ) {
+        diagnostics.push({
+          step: "dns",
+          ok: true,
+          detailCode: "DNS_CNAME_MATCH",
+        });
+      } else if (cnames.length || aRecords.length) {
+        diagnostics.push({ step: "dns", ok: true, detailCode: "DNS_RESOLVED" });
+      } else {
+        diagnostics.push({
+          step: "dns",
+          ok: false,
+          detailCode: "DNS_NOT_FOUND",
+        });
+      }
+    } catch {
+      diagnostics.push({ step: "dns", ok: false, detailCode: "DNS_NOT_FOUND" });
+    }
+  }
   if (cfg?.domain && cfg.secret) {
     try {
       const token = decrypt(
@@ -1120,16 +1388,31 @@ export async function domainCheck(id: string, actor: string) {
         token,
         cf.projectPath(cfg) + "/domains/" + cfg.domain,
       );
-      status = domain.status === "active" ? "pending" : "pending";
-      if (domain.status === "active") {
+      status = "pending";
+      const cfActive = domain.status === "active";
+      diagnostics.push({
+        step: "cloudflare",
+        ok: cfActive,
+        detailCode: cfActive ? "CF_DOMAIN_ACTIVE" : "CF_DOMAIN_PENDING",
+      });
+      if (cfActive) {
         const r = await fetchWebsite("https://" + cfg.domain + "/", "html");
-        status =
-          r.status === 200 && new URL(r.url).protocol === "https:"
-            ? "valid"
-            : "failed";
+        const httpsOk =
+          r.status === 200 && new URL(r.url).protocol === "https:";
+        status = httpsOk ? "valid" : "failed";
+        diagnostics.push({
+          step: "https",
+          ok: httpsOk,
+          detailCode: httpsOk ? "HTTPS_OK" : "HTTPS_FAILED",
+        });
       }
     } catch {
       status = "failed";
+      diagnostics.push({
+        step: "cloudflare",
+        ok: false,
+        detailCode: "CF_CHECK_FAILED",
+      });
     }
   }
   if (cfg) {
@@ -1147,6 +1430,8 @@ export async function domainCheck(id: string, actor: string) {
     status,
     domain: cfg?.domain ?? null,
     checkedAt: checkedAt.toISOString(),
+    diagnostics,
+    recommendedRecord,
   };
 }
 

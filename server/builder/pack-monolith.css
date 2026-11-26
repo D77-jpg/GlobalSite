@@ -1,0 +1,511 @@
+/* ============================================================================
+   S37 Monolith rendering pack (composition.pack = "monolith")
+   Architectural materials, building hardware & industrial surfaces (Webcor/Kuraray-inspired).
+   Scoped strictly to .composed-site.pack-monolith (works with or without .b2b-site).
+   Uses bundled local SIL OFL fonts (Space Grotesk / Plus Jakarta Sans / JetBrains Mono)
+   with non-Latin CJK/Arabic/Cyrillic fallbacks, RTL support, fit-contain preservation,
+   and compact 375px mobile scroll-snap strips.
+   ============================================================================ */
+
+.composed-site.pack-monolith {
+  --mn-stone: #f5f5f3;
+  --mn-ash: #e9e9e5;
+  --mn-slate: #15181c;
+  --mn-slate-2: #1f242b;
+  --mn-cobalt: #1d4e89;
+  --mn-cobalt-bright: #5ca4f6;
+  --mn-muted-l: #4f5660;
+  --mn-muted-d: #b7c0cc;
+  --mn-line-l: rgba(21, 24, 28, 0.16);
+  --mn-line-d: rgba(245, 245, 243, 0.18);
+  --mn-head: "Space Grotesk", "PingFang SC", "Noto Sans SC", "Hiragino Sans",
+    "Noto Sans Arabic", "Segoe UI", Arial, sans-serif;
+  --mn-body: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Noto Sans SC", "Hiragino Sans", "Noto Sans Arabic", "Segoe UI", sans-serif;
+  --mn-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --mn-wrap: 1340px;
+  --mn-gut: clamp(20px, 4vw, 56px);
+  --mn-pad: max(var(--mn-gut), calc((100vw - var(--mn-wrap)) / 2 + var(--mn-gut)));
+  --mn-sec: clamp(56px, 7.5vw, 108px);
+  --mn-hdr: 70px;
+  --paper: var(--mn-stone);
+  --surface: var(--mn-ash);
+  --surface-2: #dfdfd9;
+  --ink: var(--mn-slate);
+  --muted: var(--mn-muted-l);
+  --line: var(--mn-line-l);
+  --line-strong: rgba(21, 24, 28, 0.34);
+  --accent: var(--mn-cobalt);
+  --accent-ink: #ffffff;
+  --band-dark-bg: var(--mn-slate);
+  --band-dark-ink: var(--mn-stone);
+  --band-dark-muted: var(--mn-muted-d);
+  --input-bg: #ffffff;
+  --card-radius: 0px;
+  --btn-radius: 0px;
+  --media-radius: 0px;
+  --display: var(--mn-head);
+  --body: var(--mn-body);
+  --mono: var(--mn-mono);
+  font-family: var(--mn-body);
+  font-size: 16px;
+  line-height: 1.6;
+  background: var(--mn-stone);
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith :is(h1, h2, h3, h4) {
+  font-family: var(--mn-head);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  color: var(--ink);
+}
+
+.composed-site.pack-monolith .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(245, 245, 243, 0.96);
+  border-bottom: 1px solid var(--mn-line-l);
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith .header-inner {
+  max-width: none;
+  min-height: var(--mn-hdr);
+  padding-inline: var(--mn-pad);
+  gap: 24px;
+}
+
+.composed-site.pack-monolith .site-header .brand {
+  font-family: var(--mn-head);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith .brand-wordmark .wordmark-mark {
+  fill: var(--mn-slate);
+}
+
+.composed-site.pack-monolith .brand-wordmark .wordmark-cut {
+  fill: var(--mn-stone);
+}
+
+.composed-site.pack-monolith .brand-wordmark text {
+  font-family: var(--mn-head);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  fill: var(--mn-slate);
+}
+
+.composed-site.pack-monolith .desktop-nav :is(a, summary) {
+  font-family: var(--mn-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mn-slate);
+}
+
+html:is([lang^="zh"], [lang^="ja"], [lang^="ar"]) .composed-site.pack-monolith .desktop-nav :is(a, summary) {
+  font-family: var(--mn-body);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.composed-site.pack-monolith :is(.cta, .header-action) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 24px;
+  border-radius: 0;
+  border: 1.5px solid var(--mn-slate);
+  background: var(--mn-slate);
+  color: var(--mn-stone);
+  font-family: var(--mn-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.composed-site.pack-monolith :is(.cta, .header-action):hover {
+  background: var(--mn-cobalt);
+  border-color: var(--mn-cobalt);
+  color: #ffffff;
+}
+
+.composed-site.pack-monolith .secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 0;
+  border: 1.5px solid var(--line-strong);
+  color: var(--ink);
+  font-family: var(--mn-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.composed-site.pack-monolith main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.composed-site.pack-monolith main > :is(section, nav) {
+  max-width: none;
+  margin: 0;
+  padding: var(--mn-sec) var(--mn-pad);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.composed-site.pack-monolith main > nav.breadcrumbs {
+  padding: 16px var(--mn-pad) 0;
+  border-top: 0;
+  background: var(--mn-stone);
+  color: var(--mn-muted-l);
+  font-family: var(--mn-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.composed-site.pack-monolith main > nav.product-guide {
+  position: sticky;
+  top: var(--mn-hdr);
+  z-index: 30;
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  padding: 14px var(--mn-pad);
+  background: var(--mn-ash);
+  border-bottom: 1px solid var(--mn-line-l);
+}
+
+/* Architectural band cadence: stone -> ash -> deep slate */
+.composed-site.pack-monolith main > section:nth-of-type(3n + 1) {
+  background: var(--mn-stone);
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith main > section:nth-of-type(3n + 2) {
+  background: var(--mn-ash);
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith main > section:nth-of-type(3n):not(#inquiry) {
+  --paper: var(--mn-slate);
+  --surface: var(--mn-slate-2);
+  --ink: var(--mn-stone);
+  --muted: var(--mn-muted-d);
+  --line: var(--mn-line-d);
+  --accent: var(--mn-cobalt-bright);
+  background: var(--mn-slate);
+  color: var(--mn-stone);
+}
+
+.composed-site.pack-monolith main > section:nth-of-type(3n):not(#inquiry) :is(h2, h3, strong, dt, a) {
+  color: var(--mn-stone);
+}
+
+.composed-site.pack-monolith main > section:nth-of-type(3n):not(#inquiry) .cta {
+  background: var(--mn-stone);
+  border-color: var(--mn-stone);
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith main > section.hero,
+.composed-site.b2b-site.pack-monolith
+  main
+  > section.hero.has-visual:is(
+    .composition-hero-panorama,
+    .composition-hero-split,
+    .composition-hero-editorial,
+    .composition-hero-stacked
+  ) {
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  background: var(--mn-stone);
+  color: var(--mn-slate);
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.composed-site.pack-monolith main > section.hero .hero-copy,
+.composed-site.pack-monolith main > section.hero .hero-visual {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.composed-site.pack-monolith main > section.hero .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.composed-site.pack-monolith main > section.hero:not(.has-visual) {
+  grid-template-columns: minmax(0, 1fr);
+  padding: clamp(52px, 7vw, 96px) var(--mn-pad);
+}
+
+.composed-site.pack-monolith main > section.hero.has-visual .hero-copy {
+  align-self: center;
+  padding: clamp(48px, 6vw, 96px) clamp(24px, 4vw, 60px) clamp(48px, 6vw, 96px) var(--mn-pad);
+}
+
+[dir="rtl"] .composed-site.pack-monolith main > section.hero.has-visual .hero-copy {
+  padding: clamp(48px, 6vw, 96px) var(--mn-pad) clamp(48px, 6vw, 96px) clamp(24px, 4vw, 60px);
+}
+
+.composed-site.pack-monolith main > section.hero .hero-eyebrow {
+  font-family: var(--mn-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mn-cobalt);
+  margin: 0 0 14px;
+}
+
+.composed-site.pack-monolith main > section.hero .hero-copy h1 {
+  font-size: clamp(2.2rem, 4.2vw + 0.5rem, 4.4rem);
+  margin: 0 0 0.35em;
+  max-width: 13em;
+}
+
+.composed-site.pack-monolith main > section.hero .hero-lead {
+  font-size: clamp(1rem, 0.35vw + 0.95rem, 1.15rem);
+  color: var(--mn-muted-l);
+  max-width: 34em;
+  margin: 0 0 28px;
+}
+
+.composed-site.pack-monolith main > section.hero .hero-visual {
+  margin: 0;
+  border-inline-start: 1px solid var(--mn-line-l);
+  background: var(--mn-ash);
+  overflow: hidden;
+}
+
+.composed-site.pack-monolith main > section.hero:not(.fit-contain) .hero-visual img {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+  display: block;
+}
+
+.composed-site.pack-monolith main > section.hero.fit-contain .hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 3vw, 44px);
+}
+
+.composed-site.pack-monolith main > section.hero.fit-contain .hero-visual img {
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  display: block;
+}
+
+.composed-site.pack-monolith .section-kicker {
+  font-family: var(--mn-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.composed-site.pack-monolith main > section h2 {
+  font-size: clamp(1.8rem, 3vw + 0.45rem, 3.1rem);
+  margin: 0 0 0.45em;
+}
+
+.composed-site.pack-monolith .product-card,
+.composed-site.pack-monolith .feature-grid > article,
+.composed-site.pack-monolith .gallery-item,
+.composed-site.pack-monolith .metric-card {
+  border-radius: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.composed-site.pack-monolith .metric-card dt {
+  font-family: var(--mn-mono);
+}
+
+.composed-site.pack-monolith table {
+  border-collapse: collapse;
+  font-family: var(--mn-body);
+}
+
+.composed-site.pack-monolith th {
+  font-family: var(--mn-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.composed-site.pack-monolith .fit-contain img {
+  object-fit: contain;
+}
+
+.composed-site.pack-monolith main > section#inquiry {
+  background: var(--mn-ash);
+  color: var(--mn-slate);
+}
+
+.composed-site.pack-monolith footer {
+  padding: clamp(48px, 6vw, 80px) var(--mn-pad);
+  background: var(--mn-slate);
+  color: var(--mn-stone);
+  border-top: 1px solid var(--mn-line-d);
+}
+
+.composed-site.pack-monolith footer a,
+.composed-site.pack-monolith footer button {
+  color: var(--mn-stone);
+}
+
+.composed-site.pack-monolith footer .brand-wordmark .wordmark-mark {
+  fill: var(--mn-stone);
+}
+
+.composed-site.pack-monolith footer .brand-wordmark .wordmark-cut {
+  fill: var(--mn-slate);
+}
+
+.composed-site.pack-monolith footer .brand-wordmark text {
+  fill: var(--mn-stone);
+}
+
+@media (max-width: 1120px) {
+  .composed-site.pack-monolith .header-action {
+    display: none;
+  }
+}
+
+@media (max-width: 1050px) {
+  .composed-site.pack-monolith .header-inner {
+    position: relative;
+  }
+  .composed-site.pack-monolith .mobile-navigation {
+    display: block;
+    border: 0;
+    padding: 0;
+  }
+  .composed-site.pack-monolith .mobile-navigation > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 0;
+    list-style: none;
+    cursor: pointer;
+    font-family: var(--mn-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--mn-slate);
+  }
+  .composed-site.pack-monolith .mobile-navigation > summary::-webkit-details-marker {
+    display: none;
+  }
+  .composed-site.pack-monolith .mobile-navigation > nav {
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    z-index: 10;
+    max-height: 75vh;
+    overflow: auto;
+    padding: 12px var(--mn-pad) 24px;
+    background: var(--mn-stone);
+    border-top: 1px solid var(--mn-line-l);
+    box-shadow: 0 20px 36px -14px rgba(21, 24, 28, 0.22);
+  }
+}
+
+@media (max-width: 900px) {
+  .composed-site.pack-monolith main > section.hero,
+  .composed-site.b2b-site.pack-monolith
+    main
+    > section.hero.has-visual:is(
+      .composition-hero-panorama,
+      .composition-hero-split,
+      .composition-hero-editorial,
+      .composition-hero-stacked
+    ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composed-site.pack-monolith main > section.hero .hero-visual {
+    order: -1;
+    border-inline-start: 0;
+    border-bottom: 1px solid var(--mn-line-l);
+  }
+  .composed-site.pack-monolith main > section.hero.has-visual .hero-copy {
+    padding: clamp(32px, 6vw, 56px) var(--mn-pad);
+  }
+  .composed-site.pack-monolith footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .composed-site.pack-monolith {
+    --mn-sec: clamp(40px, 8vw, 60px);
+  }
+  .composed-site.pack-monolith .site-header .brand {
+    min-width: 0;
+    max-width: 72vw;
+    overflow: hidden;
+  }
+  .composed-site.pack-monolith .site-header .brand svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .composed-site.pack-monolith main > section {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  .composed-site.pack-monolith main > section.block-features .feature-grid,
+  .composed-site.pack-monolith main > section.block-gallery .media-gallery {
+    display: flex;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .composed-site.pack-monolith main > section.block-features .feature-grid > article,
+  .composed-site.pack-monolith main > section.block-gallery .media-gallery > .gallery-item {
+    flex: 0 0 82%;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+}

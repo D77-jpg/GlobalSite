@@ -5,7 +5,6 @@ import { Check, Sparkles, ArrowUpRight } from "lucide-react";
 import { api, ApiError } from "./api";
 import { st } from "./sites-i18n";
 import type { Locale } from "./i18n";
-import "./site-design.css";
 type Row = Record<string, any>;
 const text = {
   zh: {

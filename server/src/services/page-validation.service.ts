@@ -7,6 +7,7 @@ export type Issue = {
   blockKey: string | null;
   token: string;
 };
+export const CONTENT_VALIDATION_VERSION = "s35-review-fixes";
 const normalize = (s: string) =>
   s
     .normalize("NFKC")
@@ -15,6 +16,131 @@ const normalize = (s: string) =>
     .replace(/[\s:-]+/g, "");
 const numbers = (s: string) =>
   s.match(/\d+(?:[.,]\d+)*/g)?.map((x) => x.replace(/,/g, "")) ?? [];
+/** Units read after a figure; a cited fact must carry the same unit. */
+export const NUMBER_UNIT =
+  "kg|mm|cm|ml|tons?|tonnes?|units?|pieces?|pcs|days?|weeks?|years?|hours?|percent|kw|sqm|%";
+const explicitUnit = new RegExp(
+  "^\\s*(?:[-\\u2010\\u2011]\\s*)?(" + NUMBER_UNIT + ")(?![a-z])",
+  "i",
+);
+const legacyUnit = new RegExp("^\\s*(" + NUMBER_UNIT + ")(?![a-z])", "i");
+// S36 review fix: model codes such as "VB-2G" or "VG-83" are identifiers, not
+// numeric claims, when the same letter-digit token appears in a product name,
+// the site name or a planned page title. Plain figures with units ("83 mm",
+// "25 days") and codes that are not identifiers ("X-500") stay fact-gated.
+const JOIN = /[-\u2010\u2011]/;
+const IDENTIFIER_TOKEN = /[\p{L}\p{N}]+(?:[-\u2010\u2011][\p{L}\p{N}]+)*/gu;
+const wordChar = (c: string | undefined) => !!c && /[\p{L}\p{N}]/u.test(c);
+const mixedToken = (s: string) => /\p{L}/u.test(s) && /\p{N}/u.test(s);
+const identifierKey = (s: string) =>
+  s
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[-\u2010\u2011\s]+/g, "");
+/** Normalized letter-digit tokens of the given names (and their hyphen prefixes). */
+export function identifierKeys(values: ReadonlyArray<unknown>): Set<string> {
+  const keys = new Set<string>();
+  for (const value of values)
+    for (const token of String(value ?? "")
+      .normalize("NFKC")
+      .match(IDENTIFIER_TOKEN) ?? []) {
+      const parts = token.split(JOIN);
+      for (let i = 1; i <= parts.length; i++) {
+        const prefix = parts.slice(0, i).join("");
+        if (mixedToken(prefix)) keys.add(identifierKey(prefix));
+      }
+    }
+  return keys;
+}
+/** The letter/digit token (inner hyphens included) around text[start, end). */
+export function tokenAround(text: string, start: number, end: number) {
+  let a = start,
+    b = end;
+  for (;;) {
+    if (wordChar(text[a - 1])) a--;
+    else if (JOIN.test(text[a - 1] ?? "") && wordChar(text[a - 2])) a -= 2;
+    else break;
+  }
+  for (;;) {
+    if (wordChar(text[b])) b++;
+    else if (JOIN.test(text[b] ?? "") && wordChar(text[b + 1])) b += 2;
+    else break;
+  }
+  return text.slice(a, b);
+}
+/** True when a figure at text[start, end) belongs to a known model identifier. */
+export function isIdentifierFigure(
+  text: string,
+  start: number,
+  end: number,
+  keys: ReadonlySet<string>,
+) {
+  if (!keys.size) return false;
+  const token = tokenAround(text, start, end);
+  return mixedToken(token) && keys.has(identifierKey(token));
+}
+/**
+ * Identifier sources for validatePage: the site name, product names and plan
+ * node titles. Accepts strings and {name}/{title} objects (or arrays of them).
+ */
+export function validationIdentifiers(...groups: unknown[]): string[] {
+  const out = new Set<string>();
+  const visit = (v: unknown, depth: number) => {
+    if (depth > 3 || out.size >= 500) return;
+    if (typeof v === "string") {
+      if (v.trim()) out.add(v.trim().slice(0, 200));
+    } else if (Array.isArray(v)) for (const x of v) visit(x, depth + 1);
+    else if (v && typeof v === "object") {
+      const o = v as { name?: unknown; title?: unknown };
+      if (typeof o.name === "string") visit(o.name, depth + 1);
+      if (typeof o.title === "string") visit(o.title, depth + 1);
+    }
+  };
+  for (const g of groups) visit(g, 0);
+  return [...out];
+}
+const STOPWORDS = new Set(
+  "a an and or the of for to in on with by from at as is are be your our we you it its this that these those per each any all into via can will".split(
+    " ",
+  ),
+);
+/** Lower-case content words for overlap checks (stopwords out, plural s trimmed). */
+export function contentTokens(s: string): string[] {
+  return (
+    String(s ?? "")
+      .normalize("NFKC")
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) ?? []
+  )
+    .filter((w) => !STOPWORDS.has(w) && (w.length > 1 || /\d/.test(w)))
+    .map((w) => (w.length > 3 && /[^s]s$/.test(w) ? w.slice(0, -1) : w));
+}
+/**
+ * S36 review fix: an item is supported by a cited fact when the full value is
+ * quoted, or when the item shares at least `threshold` of the content words of
+ * the value or of one listed option in it ("powder-coat colors, wood trim and
+ * branded panels"). Figures in the item are still checked by the number gate.
+ */
+export function supportsText(value: unknown, text: string, threshold: number) {
+  const v = String(value ?? "");
+  if (!v.trim()) return false;
+  if (normalize(text).includes(normalize(v))) return true;
+  const have = new Set(contentTokens(text));
+  return [v, ...v.split(/[,;/]|\band\b|\bor\b/i)].some((part) => {
+    const want = [...new Set(contentTokens(part))];
+    if (!want.length) return false;
+    const shared = want.filter((w) => have.has(w)).length;
+    return (
+      shared >= Math.min(2, want.length) && shared / want.length >= threshold
+    );
+  });
+}
+const jaccard = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
+  let shared = 0;
+  for (const w of a) if (b.has(w)) shared++;
+  const union = a.size + b.size - shared;
+  return union ? shared / union : 0;
+};
 const words: Record<string, string> = {
   one: "1",
   two: "2",
@@ -48,28 +174,139 @@ const words: Record<string, string> = {
   eighty: "80",
   ninety: "90",
 };
-function group(text: string) {
+function group(text: string, legacy: boolean) {
   return /\b(capacity|annual output|production output|produce)\b/i.test(text)
     ? "capacity"
     : /\b(founded|established|since|founding)\b/i.test(text)
       ? "founded"
       : /\b(moq|minimum order)\b/i.test(text)
         ? "moq"
-        : /\b(lead time|delivery|sample)\b/i.test(text)
+        : (legacy
+              ? /\b(lead time|delivery|sample)\b/i
+              : /\b(lead time|delivery)\b/i
+            ).test(text)
           ? "lead"
-          : "";
+          : // S36 review fix: sample terms are their own group, so a lead time
+            // can no longer stand in for sample availability.
+            !legacy && /\bsamples?\b/i.test(text)
+            ? "samples"
+            : "";
 }
-const matchesGroup = (f: any, g: string) =>
-  !g ||
-  {
-    capacity: /capacity|output|production/i,
-    founded: /founded|founding|year|establish/i,
-    moq: /moq|minimum|order/i,
-    lead: /lead|delivery|sample/i,
-  }[g]!.test(f.type);
+function sentenceGroups(text: string, legacy: boolean): string[] {
+  const found: string[] = [];
+  if (/\b(capacity|annual output|production output|produce)\b/i.test(text))
+    found.push("capacity");
+  if (/\b(founded|established|since|founding)\b/i.test(text))
+    found.push("founded");
+  if (/\b(moq|minimum order)\b/i.test(text)) found.push("moq");
+  if (
+    (legacy ? /\b(lead time|delivery|sample)\b/i : /\b(lead time|delivery)\b/i).test(
+      text,
+    )
+  )
+    found.push("lead");
+  if (!legacy && /\bsamples?\b/i.test(text)) found.push("samples");
+  return found;
+}
+/** Tight clause around text[start, end) bounded by punctuation or conjunctions. */
+export function localClause(text: string, start: number, end: number) {
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+  const leftSplit = Math.max(
+    before.lastIndexOf("."),
+    before.lastIndexOf("!"),
+    before.lastIndexOf("?"),
+    before.lastIndexOf(","),
+    before.lastIndexOf(";"),
+    before.lastIndexOf(":"),
+    before.lastIndexOf("\n"),
+  );
+  let left = leftSplit + 1;
+  const conjBefore = [...before.slice(left).matchAll(/\s+(?:and|or|with|plus)\s+/gi)];
+  if (conjBefore.length) {
+    const last = conjBefore[conjBefore.length - 1];
+    left += (last.index ?? 0) + last[0].length;
+  }
+  const rightPunct = after.search(/[.!?,;:\n]/);
+  let right = rightPunct < 0 ? after.length : rightPunct;
+  const conjAfter = after.slice(0, right).search(/\s+(?:and|or|with|plus)\s+/i);
+  if (conjAfter >= 0) right = conjAfter;
+  return text.slice(left, end + right).trim();
+}
+const PHYSICAL_UNIT = /^(?:mm|cm|kg|ml|kw|sqm|%)$/i;
+/** Fact group a figure in this sentence/section must match ("" = any group). */
+export function numberGroup(
+  sentence: string,
+  blockKey: string | null,
+  legacy = false,
+  clause?: string,
+  unit?: string,
+) {
+  if (blockKey === "samples") return legacy ? "lead" : "samples";
+  if (blockKey === "moq") {
+    if (!legacy && clause && group(clause, false) === "lead") return "lead";
+    if (!legacy && group(sentence, false) === "lead" && !/\b(moq|minimum order)\b/i.test(sentence))
+      return "lead";
+    return "moq";
+  }
+  if (!legacy && clause) {
+    const local = group(clause, false);
+    if (local) return local;
+    // Physical measurement units (mm, kg, kw, ...) are never hijacked by
+    // unrelated MOQ/lead-time/capacity words elsewhere in the same sentence.
+    if (unit && PHYSICAL_UNIT.test(unit)) return "";
+    const all = sentenceGroups(sentence, false);
+    if (all.length === 1) return all[0];
+    return "";
+  }
+  return group(sentence, legacy);
+}
+export type ValidationFact = {
+  _id?: unknown;
+  id?: unknown;
+  status?: string;
+  revision?: number;
+  subjectType?: string;
+  subjectId?: unknown;
+  type?: string;
+  value?: unknown;
+  unit?: unknown;
+  source?: { kind?: string } | null;
+};
+// S37 §1.1: in demo mode, any candidate fact (AI-suggested or manually entered)
+// is citable in previews and readiness prompts. Real candidate status is kept;
+// approval, version and publication gates still require confirmed facts.
+export const isDemoFact = (f: ValidationFact | null | undefined) =>
+  !!f && f.status === "candidate";
+const GROUP_TYPES: Record<string, RegExp> = {
+  capacity: /capacity|output|production/i,
+  founded: /founded|founding|year|establish/i,
+  moq: /moq|minimum|order/i,
+  lead: /lead|delivery|sample/i,
+  samples: /sample/i,
+};
+export const matchesGroup = (f: ValidationFact | null | undefined, g: string) =>
+  !g || !!GROUP_TYPES[g]?.test(String(f?.type ?? ""));
+/** S36 review fix: English FAQ direct-answer window (was 40–60 words). */
+export const FAQ_MIN_WORDS = 30,
+  FAQ_MAX_WORDS = 80;
+const buyerAuditLanguage =
+  /\b(?:is|are) (?:confirmed|listed|verified) (?:with|as|at)\b|\bconfirmed (?:labels?|details?|facts?|specifications?)\b|\b(?:ask|contact) (?:our|the) team to confirm\b|\baccording to (?:our|the) records\b|\bconfirmed (?:grinder |machine |product )?(?:moq|lead time)\b/i;
+const internalFactLanguage =
+  /\bsupplied (?:facts?|data|evidence|information)\b|\bthe facts? (?:confirms?|shows?|states?|lists?|indicates?|says?)\b|\bno \w+(?: \w+)? facts? (?:is|are|was|were|has been|have been) (?:supplied|provided|available|listed|given)\b|\bconfirmed (?:product |company |supplier |model )?facts?\b|\bfact (?:library|refs?|references?|sheets?|base)\b/i;
+// S37 §4.6-3: internal-fact/audit phrasing checks for non-English storefronts.
+const localizedAuditLanguage: Record<string, RegExp> = {
+  zh: /已确认事实|事实库|根据(?:我们的)?记录|未提供.{0,8}事实|待确认事实/,
+  ja: /確認済みファクト|事実ライブラリ|記録によると|提供された事実/,
+  es: /\b(?:hechos confirmados|biblioteca de hechos|según nuestros registros|datos confirmados en el sistema)\b/i,
+  fr: /\b(?:faits confirmés|bibliothèque de faits|selon nos dossiers|données confirmées dans le système)\b/i,
+  de: /\b(?:bestätigte fakten|faktenbibliothek|laut unseren unterlagen|im system bestätigte daten)\b/i,
+  ru: /(?:подтвержд[её]нные факты|база фактов|согласно нашим записям)/i,
+  ar: /(?:الحقائق المؤكدة|مكتبة الحقائق|وفقاً لسجلاتنا)/,
+};
 export function validatePage(
   data: PageInput,
-  facts: any[],
+  facts: ValidationFact[],
   context: {
     navigationLabels?: string[];
     requiredProductSections?: string[];
@@ -77,12 +314,31 @@ export function validatePage(
     productIds: string[];
     type: string;
     brandName?: string;
+    language?: string;
     paths?: string[];
     requireComposition?: boolean;
+    allowDemoFacts?: boolean;
+    /** S36: product names, site name and plan titles (model codes are not claims). */
+    identifiers?: string[];
+    /** Preserve the copy rules of an unchanged approval made before this revision. */
+    legacyCopyRules?: boolean;
   },
 ): Issue[] {
-  const issues: Issue[] = [],
-    factMap = new Map(facts.map((f) => [String(f._id ?? f.id), f]));
+  const legacy = !!context.legacyCopyRules,
+    issues: Issue[] = [],
+    factMap = new Map(facts.map((f) => [String(f._id ?? f.id), f])),
+    identifiers = identifierKeys(legacy ? [] : (context.identifiers ?? []));
+  const citable = (f: ValidationFact | null | undefined) =>
+    !!f &&
+    (f.status === "confirmed" || (!!context.allowDemoFacts && isDemoFact(f)));
+  const hasBuyerCopy =
+    data.presentation?.inquiryHeading || data.presentation?.inquiryLead;
+  // S36 review fix: designed pages (composition) also get the buyer-copy check;
+  // older pages without either keep their former rules.
+  const auditCopy = !!(
+    hasBuyerCopy ||
+    (!legacy && data.presentation?.composition)
+  );
   const add = (code: string, field: string, key: string | null, token = "") => {
     if (
       issues.length < 500 &&
@@ -98,10 +354,10 @@ export function validatePage(
     field: string,
     key: string | null,
   ) {
-    const candidates: any[] = [];
+    const candidates: ValidationFact[] = [];
     for (const ref of refs) {
       const f = factMap.get(ref.factId);
-      if (!f || f.status !== "confirmed" || f.revision !== ref.revision) {
+      if (!f || !citable(f) || f.revision !== ref.revision) {
         add("FACT_REFERENCE_STALE", field, key, ref.factId);
         continue;
       }
@@ -121,12 +377,13 @@ export function validatePage(
       if (
         !candidates.some(
           (f) =>
-            /^company\.(email|privacyEmail)$/.test(f.type) &&
+            /^company\.(email|privacyEmail)$/.test(String(f.type ?? "")) &&
             String(f.value).toLowerCase().includes(email.toLowerCase()),
         )
       )
         add("UNSOURCED_CONTACT", field, key, email);
-    if (/\p{Script=Han}/u.test(value)) add("CONTENT_NOT_ENGLISH", field, key);
+    if ((context.language ?? "en") === "en" && /\p{Script=Han}/u.test(value))
+      add("CONTENT_NOT_ENGLISH", field, key);
     const sanitized = value
       .normalize("NFKC")
       .replace(/\bB2[BC]\b/gi, "business")
@@ -142,18 +399,27 @@ export function validatePage(
         "gi",
       ),
     )) {
+      const unit = sanitized
+        .slice(match.index + match[0].length)
+        .match(legacy ? legacyUnit : explicitUnit)?.[1]
+        .toLowerCase();
+      if (
+        !unit &&
+        /\d/.test(match[0]) &&
+        isIdentifierFigure(
+          sanitized,
+          match.index,
+          match.index + match[0].length,
+          identifiers,
+        )
+      )
+        continue;
       const token = words[match[0].toLowerCase()] ?? match[0].replace(/,/g, ""),
         start = Math.max(0, sanitized.lastIndexOf(".", match.index) + 1),
         end = sanitized.indexOf(".", match.index + match[0].length),
         sentence = sanitized.slice(start, end < 0 ? undefined : end),
-        g =
-          key === "moq" ? "moq" : key === "samples" ? "lead" : group(sentence);
-      const unit = sanitized
-        .slice(match.index + match[0].length)
-        .match(
-          /^\s*(kg|mm|cm|ml|tons?|tonnes?|units?|pieces?|pcs|days?|weeks?|years?|hours?|percent|kw|sqm|%)(?![a-z])/i,
-        )?.[1]
-        .toLowerCase();
+        clause = localClause(sanitized, match.index, match.index + match[0].length),
+        g = numberGroup(sentence, key, legacy, clause, unit);
       const supported = candidates.some(
         (f) =>
           matchesGroup(f, g) &&
@@ -179,7 +445,7 @@ export function validatePage(
       if (
         !candidates.some(
           (f) =>
-            /cert|compliance|standard/i.test(f.type) &&
+            /cert|compliance|standard/i.test(String(f.type ?? "")) &&
             normalize(String(f.value)).includes(normalize(m[0])),
         )
       )
@@ -194,9 +460,29 @@ export function validatePage(
       )
     )
       add("UNSOURCED_YEAR", field, key, "year");
+    // Pages using the buyer-copy fields (or a design composition) opt into
+    // the editorial check. S37 §4.6-3 extends internal-audit checks to all 8 languages.
+    if (auditCopy) {
+      const lang = context.language ?? "en";
+      if (lang === "en") {
+        // The documented safe placeholders for missing product details are exempt.
+        const copy = value.replace(
+          /Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?/gi,
+          "",
+        );
+        const audit =
+          copy.match(buyerAuditLanguage) ??
+          (legacy ? null : copy.match(internalFactLanguage));
+        if (audit) add("COPY_AUDIT_LANGUAGE", field, key, audit[0]);
+      } else if (!legacy) {
+        const localized = localizedAuditLanguage[lang];
+        const hit = localized ? value.match(localized) : null;
+        if (hit) add("COPY_AUDIT_LANGUAGE", field, key, hit[0]);
+      }
+    }
     if (
       /\bcertified\b/i.test(value) &&
-      !candidates.some((f) => /cert|compliance|standard/i.test(f.type))
+      !candidates.some((f) => /cert|compliance|standard/i.test(String(f.type ?? "")))
     )
       add("UNSOURCED_CERTIFICATION", field, key, "certified");
     if (
@@ -218,8 +504,16 @@ export function validatePage(
       "headline",
       "summary",
       "primaryActionLabel",
+      "inquiryHeading",
+      "inquiryLead",
     ] as const)
-      text(data.presentation[field], data.refs, "presentation." + field, null);
+      if (data.presentation[field])
+        text(
+          data.presentation[field]!,
+          data.refs,
+          "presentation." + field,
+          null,
+        );
   }
   for (const label of context.navigationLabels ?? [])
     text(label, data.refs, "navigation", null);
@@ -230,9 +524,9 @@ export function validatePage(
       const known = b.refs
         .map((r) => factMap.get(r.factId))
         .filter(
-          (f) =>
-            f &&
-            f.status === "confirmed" &&
+          (f): f is ValidationFact =>
+            !!f &&
+            citable(f) &&
             b.refs.some(
               (r) =>
                 r.factId === String(f._id ?? f.id) && r.revision === f.revision,
@@ -262,10 +556,12 @@ export function validatePage(
                 : b.key === "certifications"
                   ? "cert|compliance|standard"
                   : b.key === "samples"
-                    ? "sample|lead|delivery"
+                    ? legacy
+                      ? "sample|lead|delivery"
+                      : "sample"
                     : b.key,
               "i",
-            ).test(f.type) &&
+            ).test(String(f.type ?? "")) &&
             normalize(b.body).includes(normalize(String(f.value))),
         )
       )
@@ -316,21 +612,35 @@ export function validatePage(
       if (item.assetId && b.type !== "downloads" && !item.alt.trim())
         add("IMAGE_ALT_REQUIRED", "blocks." + b.key + ".items." + i, b.key);
       if (
-        ["evidence", "case-study", "customization"].includes(b.type) &&
+        [
+          "evidence",
+          "case-study",
+          "customization",
+          "metrics",
+          "certifications",
+        ].includes(b.type) &&
         !refs.length
       )
         add("UNSOURCED_DETAIL", "blocks." + b.key + ".items." + i, b.key);
+      // S36 review fix: word overlap with the cited value (50% for
+      // customization, 60% otherwise) also counts, so items no longer need the
+      // literal value pasted onto their end.
       if (
-        ["evidence", "case-study", "customization"].includes(b.type) &&
+        [
+          "evidence",
+          "case-study",
+          "customization",
+          "metrics",
+          "certifications",
+        ].includes(b.type) &&
         refs.length &&
         !refs.some((r) => {
           const f = factMap.get(r.factId);
-          return (
-            f &&
-            normalize(item.body + " " + item.title).includes(
-              normalize(String(f.value)),
-            )
-          );
+          if (!f) return false;
+          const itemText = item.body + " " + item.title;
+          return !legacy && b.type === "customization"
+            ? supportsText(f.value, itemText, 0.5)
+            : normalize(itemText).includes(normalize(String(f.value)));
         })
       )
         add("UNSOURCED_DETAIL", "blocks." + b.key + ".items." + i, b.key);
@@ -342,18 +652,47 @@ export function validatePage(
         (r, i) => [r, i] as const,
       ))
         text(row.join(" "), b.refs, "blocks." + b.key + ".table." + i, b.key);
+    const answers = legacy
+      ? []
+      : b.faq.map((f) => ({
+          plain: f.answer
+            .normalize("NFKC")
+            .toLowerCase()
+            .replace(/\s+/g, " ")
+            .trim(),
+          tokens: new Set(contentTokens(f.answer)),
+        }));
     for (const [f, i] of b.faq.map((f, i) => [f, i] as const)) {
+      // S36 review fix: answers repeated across questions in one block.
+      const twin = legacy
+        ? -1
+        : answers
+            .slice(0, i)
+            .findIndex(
+              (a) =>
+                a.plain === answers[i].plain ||
+                jaccard(a.tokens, answers[i].tokens) >= 0.8,
+            );
+      if (twin >= 0)
+        add(
+          "FAQ_DUPLICATE_ANSWER",
+          "blocks." + b.key + ".faq." + i,
+          b.key,
+          String(twin),
+        );
       text(
         f.question + " " + f.answer + " " + f.detail,
         b.refs,
         "blocks." + b.key + ".faq." + i,
         b.key,
       );
+      const lang = context.language ?? "en";
       const count = f.answer.trim().split(/\s+/).filter(Boolean).length;
       if (
-        count < 40 ||
-        count > 60 ||
-        /^(in this (article|guide)|let us|let's|it depends)/i.test(f.answer)
+        lang === "en" &&
+        (count < (legacy ? 40 : FAQ_MIN_WORDS) ||
+          count > (legacy ? 60 : FAQ_MAX_WORDS) ||
+          /^(in this (article|guide)|let us|let's|it depends)/i.test(f.answer))
       )
         add(
           "FAQ_DIRECT_ANSWER_REQUIRED",
@@ -361,6 +700,24 @@ export function validatePage(
           b.key,
           String(count),
         );
+      else if (!legacy && (lang === "zh" || lang === "ja")) {
+        const cjkLen = f.answer.replace(/\s+/g, "").length;
+        if (cjkLen < 40 || cjkLen > 240)
+          add(
+            "FAQ_DIRECT_ANSWER_REQUIRED",
+            "blocks." + b.key + ".faq." + i,
+            b.key,
+            String(cjkLen),
+          );
+      } else if (!legacy && lang !== "en") {
+        if (count < 20 || count > 100)
+          add(
+            "FAQ_DIRECT_ANSWER_REQUIRED",
+            "blocks." + b.key + ".faq." + i,
+            b.key,
+            String(count),
+          );
+      }
     }
     if (b.type === "image" && (!b.assetId || !b.alt.trim()))
       add("IMAGE_ALT_REQUIRED", "blocks." + b.key, b.key);
@@ -386,7 +743,10 @@ export function escapeHtml(value: unknown) {
       ]!,
   );
 }
-export function renderPage(data: PageInput, site: any) {
+export function renderPage(
+  data: PageInput,
+  site: { name: string; brandColor: string; logoId?: string | null },
+) {
   const esc = escapeHtml;
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +

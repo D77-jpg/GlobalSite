@@ -76,6 +76,49 @@ const compositions = {
     hero: "panorama",
     subject: "Glass collections",
   },
+  // S35 precision rendering pack (scoped pack-precision.css).
+  "composition-precision": {
+    typography: "technical",
+    palette: "obsidian",
+    navigation: "catalogue",
+    productLayout: "cards",
+    radius: "sharp",
+    pack: "precision",
+    hero: "panorama",
+    subject: "Espresso equipment",
+  },
+  // S37 §3.2 second & third rendering packs (atelier & monolith) + §4.9-1 RTL precision.
+  "composition-atelier": {
+    typography: "editorial",
+    palette: "ivory",
+    navigation: "catalogue",
+    productLayout: "cards",
+    radius: "rounded",
+    pack: "atelier",
+    hero: "editorial",
+    subject: "Brewing vessels",
+  },
+  "composition-monolith": {
+    typography: "technical",
+    palette: "graphite",
+    navigation: "capabilities",
+    productLayout: "rows",
+    radius: "sharp",
+    pack: "monolith",
+    hero: "split",
+    subject: "Architectural facades",
+  },
+  "composition-precision-ar": {
+    typography: "technical",
+    palette: "obsidian",
+    navigation: "catalogue",
+    productLayout: "cards",
+    radius: "sharp",
+    pack: "precision",
+    hero: "panorama",
+    subject: "Commercial equipment",
+    language: "ar",
+  },
 };
 const businessCases = {
   "business-art": {
@@ -366,7 +409,8 @@ try {
       });
     }
     if (compositions[testCase]) {
-      const { hero, subject, ...axes } = compositions[testCase];
+      const { hero, subject, language, ...axes } = compositions[testCase];
+      if (language) snapshot.site.language = language;
       const composition = { version: "v1", ...axes };
       snapshot.site.designDirection = { composition };
       for (const row of snapshot.pages) {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Check,
   MoreHorizontal,
   Download,
   ScanText,
@@ -10,7 +11,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { catalogText } from "./catalog-i18n";
-import "./asset-library.css";
 type Item = Record<string, any>;
 type T = ReturnType<typeof catalogText>;
 export function assetSize(bytes: number) {
@@ -18,11 +18,19 @@ export function assetSize(bytes: number) {
     ? (bytes / 1024 / 1024).toFixed(1) + " MB"
     : Math.max(1, Math.ceil(bytes / 1024)) + " KB";
 }
+function formatTag(mime: string) {
+  if (mime === "image/jpeg") return "JPG";
+  if (mime === "image/png") return "PNG";
+  if (mime === "image/webp") return "WEBP";
+  if (mime === "application/pdf") return "PDF";
+  return mime.split("/")[1]?.toUpperCase() || "FILE";
+}
 export function AssetTile({
   asset,
   t,
   canEdit,
   busy,
+  selected = false,
   onPreview,
   onExtract,
   onDelete,
@@ -31,6 +39,7 @@ export function AssetTile({
   t: T;
   canEdit: boolean;
   busy: boolean;
+  selected?: boolean;
   onPreview: () => void;
   onExtract: () => void;
   onDelete: () => void;
@@ -59,7 +68,7 @@ export function AssetTile({
     };
   }, [menu]);
   return (
-    <article className="asset-tile">
+    <article className={"asset-tile" + (selected ? " is-selected" : "")}>
       <button
         type="button"
         className="asset-thumbnail"
@@ -89,7 +98,12 @@ export function AssetTile({
             </span>
           </span>
         )}
-        <span className="asset-type">{t(asset.kind)}</span>
+        <span className="asset-type">{formatTag(asset.mime)}</span>
+        {selected && (
+          <span className="asset-selected-check" aria-hidden="true">
+            <Check size={12} />
+          </span>
+        )}
       </button>
       <div className="asset-tile-info">
         <h3>

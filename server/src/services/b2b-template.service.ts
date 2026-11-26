@@ -1,5 +1,13 @@
 import { sectionClasses } from "./section-design.service";
-import type { Snapshot } from "./static-template.service";
+import { getStorefrontCopy } from "./storefront-i18n.service";
+import { intactSentences } from "./copy-integrity";
+import type {
+  Snapshot,
+  SnapshotBlock,
+  SnapshotBlockItem,
+  SnapshotPage,
+} from "./static-template.service";
+
 const e = (v: unknown) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -8,15 +16,282 @@ const e = (v: unknown) =>
         c
       ]!,
   );
+
 export const pendingDetail = (v: string) =>
   /^(Contact our team for confirmed details\.|Details available on request\.|Information to be confirmed\.|Not yet confirmed\.?)$/i.test(
     v?.trim() ?? "",
   );
-function productImage(s: Snapshot, v: any) {
+
+// S35 acceptance fix: product-card copy never shows a sentence whose figures
+// were cut out ("Specify the VG- for …"). Intact summaries are returned as-is;
+// otherwise only intact sentences, then the intact SEO description, else "".
+export function cardSummary(v: SnapshotPage | null | undefined): string {
+  const summary = v?.presentation?.summary;
+  if (typeof summary !== "string" || !summary) return "";
+  const kept = intactSentences(summary);
+  if (kept) return kept;
+  const meta = intactSentences(v?.metaDescription ?? "");
+  return meta && !pendingDetail(meta) ? meta : "";
+}
+
+// S35 acceptance fix: card spec values skip placeholders and buying notes
+// ("Confirm exact model code … on the quote") and Model/Name rows that only
+// repeat the card title. On rendering-pack pages rows with figures come first.
+const NOTE_VALUE =
+  /^(?:confirm|review|check|verify|ask|contact|discuss|request|specify|share|tell us|please|subject to)\b|\b(?:on|in|with|via) (?:the|your|a|each) (?:quote|quotation|inquiry|enquiry|order)\b|\b(?:to be confirmed|tbc|tbd|on request|upon request)\b/i;
+// Imperative guidance sentences ("Map the three-grouphead layout to …").
+// Only whole sentences of four or more words ending in a full stop count, so
+// spec values such as "Matte black" or "Plan view 600 mm" are not notes.
+const INSTRUCTION_START =
+  /^(?:map|plan|match|choose|select|share|include|send|ask|confirm|check|discuss|specify|review|use|tell|verify|contact|request|provide|compare|consider|attach|prepare|mention|align|agree|define)\b/i;
+export function instructionNote(value: unknown) {
+  const t = String(value ?? "").trim();
+  return (
+    INSTRUCTION_START.test(t) &&
+    /[.!?]$/.test(t) &&
+    t.split(/\s+/).length >= 4
+  );
+}
+export function specNote(value: unknown) {
+  const t = String(value ?? "").trim();
+  return (
+    !t ||
+    /^[-–—·]+$/.test(t) ||
+    pendingDetail(t) ||
+    NOTE_VALUE.test(t) ||
+    instructionNote(t) ||
+    (t.split(/\s+/).length > 8 && /[.!?]$/.test(t))
+  );
+}
+const IDENTITY_LABEL =
+  /^(?:model|model name|model no\.?|model number|name|product|product name|item)$/i;
+const plainText = (x: string) =>
+  x
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+const modelCodes = (x: string) =>
+  (
+    x
+      .normalize("NFKC")
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*/gu) ?? []
+  ).filter((w) => /\p{N}/u.test(w) && /\p{L}/u.test(w));
+function repeatsTitle(label: string, value: string, titles: string[]) {
+  if (!IDENTITY_LABEL.test(label.trim())) return false;
+  const v = plainText(value),
+    raw = value.normalize("NFKC").toLowerCase();
+  return titles.some((title) => {
+    const t = plainText(title);
+    if (!t || !v) return false;
+    return (
+      v.includes(t) ||
+      t.includes(v) ||
+      modelCodes(title).some((code) => raw.includes(code))
+    );
+  });
+}
+
+// S35 acceptance fix (spec tables): buying-note columns and cells never reach
+// public spec, comparison or catalogue tables. A column is a note column when
+// its heading names notes/guidance, or when every filled cell is a note. The
+// first column is the row label and is always kept.
+const NOTE_COLUMN =
+  /\b(?:notes?|remarks?|comments?|guidance|buyers?|buying|purchas\w*|planning|how to|tips?)\b/i;
+const dashCell = (x: string) => /^[-–—·]+$/.test(x.trim());
+const placeholderCell = (x: string) => dashCell(x) || pendingDetail(x);
+const noteCell = (x: string) => {
+  const t = x.trim();
+  return (
+    !!t && !placeholderCell(t) && (NOTE_VALUE.test(t) || instructionNote(t))
+  );
+};
+const realCell = (x: string) =>
+  !!x.trim() && !placeholderCell(x) && !noteCell(x);
+function cellRows(rows: unknown): string[][] {
+  return Array.isArray(rows)
+    ? rows.map((r) =>
+        Array.isArray(r) ? r.map((x) => String(x ?? "")) : [String(r ?? "")],
+      )
+    : [];
+}
+function valueColumns(heads: string[], rows: string[][]): number[] {
+  const width = Math.max(heads.length, 0, ...rows.map((r) => r.length));
+  const all: number[] = [];
+  for (let i = 1; i < width; i++) all.push(i);
+  const byContent = new Set(
+    all.filter((i) => {
+      const filled = rows
+        .map((r) => (r[i] ?? "").trim())
+        .filter((x) => x && !placeholderCell(x));
+      return filled.length > 0 && filled.every(noteCell);
+    }),
+  );
+  const content = all.filter((i) => !byContent.has(i));
+  const kept = content.filter((i) => !NOTE_COLUMN.test(heads[i] ?? ""));
+  // A heading alone never removes every value column.
+  return kept.length ? kept : content;
+}
+/** Titles a Model/Name row may repeat on this page (card, headline, product). */
+export function pageTitles(s: Snapshot, p?: SnapshotPage | null): string[] {
+  return [
+    p?.presentation?.navigationLabel,
+    p?.presentation?.headline,
+    String(p?.title ?? "").split("|")[0].trim(),
+    s.products?.find((x) => x.id === p?.productId)?.name,
+  ].filter((x): x is string => typeof x === "string" && !!x.trim());
+}
+/**
+ * Public view of a spec/comparison table: note columns removed, single note
+ * cells blanked, rows with neither a value nor a pending placeholder dropped
+ * and, when titles are given, Model/Name rows repeating the page title
+ * dropped. A table whose rows hold no real value returns no rows, so callers
+ * fall back to the "information on request" summary instead of an empty table.
+ */
+export type PublicTable = { columns: string[]; rows: string[][] };
+export function publicTable(
+  table: unknown,
+  titles: string[] = [],
+): PublicTable {
+  const t = (table ?? {}) as { columns?: unknown; rows?: unknown };
+  const heads = Array.isArray(t.columns)
+    ? t.columns.map((c) => String(c ?? ""))
+    : [];
+  const rows = cellRows(t.rows);
+  if (Math.max(heads.length, 0, ...rows.map((r) => r.length)) <= 1) {
+    // Single-column table: the only column carries the values.
+    const single = rows.filter((r) => realCell(r[0] ?? ""));
+    return {
+      columns: heads.slice(0, 1),
+      rows: single.map((r) => r.slice(0, 1)),
+    };
+  }
+  const values = valueColumns(heads, rows);
+  // Every value column holds only buying notes: nothing public remains.
+  if (!values.length) return { columns: [], rows: [] };
+  const keep = [0, ...values];
+  const informative = (r: string[]) =>
+    values.some((i) => realCell(r[i] ?? "") || placeholderCell(r[i] ?? ""));
+  let kept = rows.filter(
+    (r) =>
+      informative(r) &&
+      !(titles.length && repeatsTitle(r[0] ?? "", r[values[0]] ?? "", titles)),
+  );
+  if (!kept.some((r) => values.some((i) => realCell(r[i] ?? "")))) kept = [];
+  return {
+    columns: keep.map((i) => heads[i] ?? ""),
+    rows: kept.map((r) =>
+      keep.map((i) => {
+        const x = r[i] ?? "";
+        return i > 0 && noteCell(x) ? "" : x;
+      }),
+    ),
+  };
+}
+export function cardSpecs(
+  v: SnapshotPage,
+  titles: string[],
+  preferFigures = false,
+) {
+  const table = v.blocks.find(
+    (b) => b.type === "specs" && b.table?.rows?.length,
+  )?.table;
+  const rows = cellRows(table?.rows);
+  const heads: string[] = Array.isArray(table?.columns)
+    ? table.columns.map((c: unknown) => String(c ?? ""))
+    : [];
+  // Only the first value column (the specification value) is shown on cards.
+  const column = valueColumns(heads, rows)[0];
+  if (column === undefined) return [];
+  const specs = rows
+    .map((r) => ({ label: r[0] ?? "", value: (r[column] ?? "").trim() }))
+    .filter(
+      (r) =>
+        r.value &&
+        !specNote(r.value) &&
+        !repeatsTitle(r.label, r.value, titles),
+    );
+  if (preferFigures)
+    specs.sort((a, b) => Number(/\d/.test(b.value)) - Number(/\d/.test(a.value)));
+  return specs.slice(0, 2);
+}
+const packOf = (s: Snapshot, p?: SnapshotPage | null): string | undefined => {
+  const home = s.pages.find((v) => v.path === "/");
+  const comp = (s.site.designDirection?.composition ??
+    home?.presentation?.composition ??
+    p?.presentation?.composition) as { pack?: string } | undefined;
+  return comp?.pack;
+};
+
+/**
+ * S36 review fix (rendering pack only): later specs blocks whose public rows
+ * are all covered by the first public spec table are not rendered (and not
+ * linked from the product guide). Every value cell must already appear in the
+ * first table; labels may differ ("Specification" vs "Burr size").
+ */
+export function redundantSpecKeys(
+  s: Snapshot,
+  p?: SnapshotPage | null,
+): Set<string> {
+  const out = new Set<string>();
+  if (!packOf(s, p) || !Array.isArray(p?.blocks)) return out;
+  const titles = pageTitles(s, p);
+  const specs = p.blocks
+    .filter((b) => b.type === "specs" && b.table)
+    .map((b) => ({ key: String(b.key), rows: publicTable(b.table, titles).rows }))
+    .filter((x) => x.rows.length);
+  const first = specs[0];
+  if (!first) return out;
+  const cells = first.rows
+    .flatMap((r) => r.slice(1))
+    .map(plainText)
+    .filter(Boolean);
+  const known = (x: string) =>
+    !x ||
+    cells.includes(x) ||
+    (x.length >= 4 && cells.some((c) => c.includes(x)));
+  for (const x of specs.slice(1))
+    if (x.rows.every((r) => r.slice(1).map(plainText).every(known)))
+      out.add(x.key);
+  return out;
+}
+
+// S35 acceptance fix: href of the action a cta block renders (same rule as below).
+export function ctaTarget(b: SnapshotBlock): string {
+  return (
+    (b.items ?? []).filter((i) => !pendingDetail(i.body))[0]?.href ??
+    "#inquiry"
+  );
+}
+
+// S35: localized "Illustrative" label for generated concept images.
+const ILLUSTRATIVE: Record<string, string> = {
+  en: "Illustrative",
+  es: "Ilustrativa",
+  fr: "Illustration",
+  de: "Illustrativ",
+  ja: "イメージ",
+  ar: "صورة توضيحية",
+  ru: "Иллюстрация",
+  zh: "示意图",
+};
+export function conceptNote(s: Snapshot, id?: string | null) {
+  return id && s.assets[id]?.concept
+    ? '<small class="concept-note">' +
+        e(ILLUSTRATIVE[s.site.language ?? "en"] ?? ILLUSTRATIVE.en) +
+        "</small>"
+    : "";
+}
+
+function productImage(s: Snapshot, v: SnapshotPage, fallbackId?: string | null) {
   const source = s.products?.find((x) => x.id === v.productId);
   const id =
-    v.blocks.find((b: any) => b.type === "image" && s.assets[b.assetId])
-      ?.assetId ?? source?.assetIds.filter((id) => s.assets[id]).at(-1);
+    v.blocks.find((b) => b.type === "image" && b.assetId && s.assets[b.assetId])
+      ?.assetId ??
+    source?.assetIds.filter((id) => s.assets[id]).at(-1) ??
+    // S35: grid item illustration is used only when the product has no image.
+    (fallbackId && s.assets[fallbackId] ? fallbackId : undefined);
   const a = id ? s.assets[id] : null;
   return a
     ? '<img loading="lazy" src="' +
@@ -27,41 +302,60 @@ function productImage(s: Snapshot, v: any) {
         a.width +
         '" height="' +
         a.height +
-        '">'
+        '">' +
+        conceptNote(s, id)
     : "";
 }
-export function productGuide(s: Snapshot, p: any) {
+
+export function productGuide(s: Snapshot, p: SnapshotPage) {
+  const copy = getStorefrontCopy(s.site.language);
+  const redundant = redundantSpecKeys(s, p);
   const links = p.blocks.filter(
-    (b: any) =>
-      (b.type === "specs" && b.table?.rows?.length) ||
+    (b) =>
+      (b.type === "specs" &&
+        !redundant.has(b.key) &&
+        publicTable(b.table, pageTitles(s, p)).rows.length > 0) ||
       (b.type === "faq" && b.faq?.length) ||
+      (b.type === "gallery" &&
+        b.items?.some((i) => i.assetId && s.assets[i.assetId])) ||
       (b.type === "downloads" &&
-        b.items?.some((i: any) => s.assets[i.assetId]?.path.endsWith(".pdf"))),
+        b.items?.some((i) => i.assetId && s.assets[i.assetId]?.path.endsWith(".pdf"))),
   );
   if (!links.length) return "";
   return (
-    '<nav class="product-guide" aria-label="Product information">' +
+    '<nav class="product-guide" aria-label="' +
+    e(copy.productInfoNav) +
+    '">' +
     links
       .map(
-        (b: any) =>
+        (b) =>
           '<a href="#block-' +
           e(b.key) +
           '">' +
-          e(b.heading || (b.type === "faq" ? "Questions" : "Specifications")) +
+          e(
+            b.heading ||
+              (b.type === "faq" ? copy.questions : copy.specifications),
+          ) +
           "</a>",
       )
       .join("") +
-    '<a href="#inquiry">Inquire about this product</a></nav>'
+    '<a href="#inquiry">' +
+    e(copy.inquireAboutProduct) +
+    "</a></nav>"
   );
 }
+
 export function productCards(
   s: Snapshot,
-  p: any,
-  heading = "Explore the product range",
+  p: SnapshotPage,
+  heading?: string,
   body = "",
   design?: unknown,
   selection?: string[],
+  itemAssets?: Record<string, string>,
 ) {
+  const copy = getStorefrontCopy(s.site.language);
+  const resolvedHeading = heading || copy.exploreRangeHeading;
   const products = s.pages.filter((v) => v.type === "product"),
     categories = s.pages.filter((v) => v.type === "category");
   const selected =
@@ -74,24 +368,35 @@ export function productCards(
   const rows = selection?.length
     ? selection
         .map((path) => available.find((v) => v.path === path))
-        .filter(Boolean)
+        .filter((v): v is SnapshotPage => !!v)
     : available;
   if (!rows.length) return "";
   const lineSheet =
     p.type === "home" &&
     !s.site.designDirection?.composition &&
     !p.presentation?.composition &&
-    p.blocks.some((b: any) => b.type === "category-grid");
+    p.blocks.some((b) => b.type === "category-grid");
   return (
     '<section class="b2b-section catalog-section' +
     (lineSheet ? " line-sheet" : "") +
     sectionClasses(design) +
-    '" id="collection"><div class="section-heading"><div><p class="section-kicker">PRODUCT RANGE</p><h2>' +
-    e(heading) +
+    '" id="collection"><div class="section-heading"><div><p class="section-kicker">' +
+    e(copy.productRangeKicker) +
+    "</p><h2>" +
+    e(resolvedHeading) +
     "</h2>" +
     (body && !pendingDetail(body) ? "<p>" + e(body) + "</p>" : "") +
-    '</div><a class="text-link" href="/catalogue.html" download>Download catalogue ↗</a></div>' +
-    '<div class="catalog-tools" data-catalog-tools hidden><label>Find a product<input type="search" data-product-search placeholder="Search product names"></label><label>Category<select data-category-filter><option value="">All categories</option>' +
+    '</div><a class="text-link" href="/catalogue.html" download>' +
+    e(copy.downloadCatalogue) +
+    '</a></div><div class="catalog-tools" data-catalog-tools hidden><label>' +
+    e(copy.findProduct) +
+    '<input type="search" data-product-search placeholder="' +
+    e(copy.searchPlaceholder) +
+    '"></label><label>' +
+    e(copy.categoryLabel) +
+    '<select data-category-filter><option value="">' +
+    e(copy.allCategories) +
+    "</option>" +
     categories
       .map(
         (c) =>
@@ -108,10 +413,18 @@ export function productCards(
         const category = categories.find((c) =>
           v.path.startsWith(c.path.replace(/\/$/, "") + "/"),
         );
-        const specs =
-          v.blocks
-            .find((b: any) => b.type === "specs" && b.table?.rows.length)
-            ?.table?.rows.slice(0, 2) ?? [];
+        const cardTitle =
+          v.presentation?.navigationLabel ?? v.title.split("|")[0].trim();
+        const specs = cardSpecs(
+          v,
+          [
+            cardTitle,
+            v.title.split("|")[0].trim(),
+            s.products?.find((x) => x.id === v.productId)?.name ?? "",
+          ],
+          !!packOf(s, p),
+        );
+        const summary = cardSummary(v);
         return (
           '<article class="product-card" data-product-card data-category="' +
           e(category?.path ?? "") +
@@ -120,30 +433,28 @@ export function productCards(
           '"><a class="product-visual" href="' +
           e(v.path) +
           '" tabindex="-1" aria-hidden="true">' +
-          productImage(s, v) +
+          productImage(s, v, itemAssets?.[v.path]) +
           '</a><div class="product-copy"><p class="product-category">' +
           e(
             category?.presentation?.navigationLabel ??
               category?.title.split("|")[0] ??
-              "Collection",
+              copy.navDefaults.category,
           ) +
           '</p><h3><a href="' +
           e(v.path) +
           '">' +
-          e(v.presentation?.navigationLabel ?? v.title.split("|")[0].trim()) +
+          e(cardTitle) +
           "</a></h3>" +
-          (v.presentation?.summary
-            ? "<p>" + e(v.presentation.summary) + "</p>"
-            : "") +
+          (summary ? "<p>" + e(summary) + "</p>" : "") +
           (specs.length
             ? '<dl class="card-specs">' +
               specs
                 .map(
-                  (r: string[]) =>
+                  (r) =>
                     "<div><dt>" +
-                    e(r[0]) +
+                    e(r.label) +
                     "</dt><dd>" +
-                    e(r.slice(1).join(" · ")) +
+                    e(r.value) +
                     "</dd></div>",
                 )
                 .join("") +
@@ -151,34 +462,57 @@ export function productCards(
             : "") +
           '<div class="card-actions"><a class="text-link" href="' +
           e(v.path) +
-          '">View details ↗</a><button type="button" class="quote-add" data-quote-add="' +
+          '">' +
+          e(copy.viewDetails) +
+          '</a><button type="button" class="quote-add" data-quote-add="' +
           e(v.productId) +
-          '">Add to inquiry</button></div></div></article>'
+          '">' +
+          e(copy.addToInquiry) +
+          "</button></div></div></article>"
         );
       })
       .join("") +
-    "</div><p data-no-products hidden>No matching products. Try another category or search.</p></section>"
+    '</div><p data-no-products hidden>' +
+    e(copy.noMatchingProducts) +
+    "</p></section>"
   );
 }
-export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
+
+export function renderB2BBlock(
+  s: Snapshot,
+  p: SnapshotPage | undefined,
+  b: SnapshotBlock,
+): string | null {
   if (["text", "image", "specs", "faq"].includes(b.type)) return null;
+  const copy = getStorefrontCopy(s.site.language);
   if (b.type === "product-grid")
-    return productCards(
-      s,
-      p,
-      b.heading,
-      b.body,
-      b.design,
-      b.design
-        ? b.items
-            ?.map((i: any) => i.href)
-            .filter(
-              (href: any) => typeof href === "string" && href.startsWith("/"),
-            )
-        : undefined,
-    );
+    return p
+      ? productCards(
+          s,
+          p,
+          b.heading,
+          b.body,
+          b.design,
+          b.design
+            ? (b.items ?? [])
+                .map((i) => i.href)
+                .filter(
+                  (href): href is string =>
+                    typeof href === "string" && href.startsWith("/"),
+                )
+            : undefined,
+          Object.fromEntries(
+            (b.items ?? [])
+              .filter(
+                (i): i is SnapshotBlockItem & { href: string; assetId: string } =>
+                  typeof i.href === "string" && typeof i.assetId === "string",
+              )
+              .map((i) => [i.href, i.assetId]),
+          ),
+        )
+      : "";
   const a = b.assetId ? s.assets[b.assetId] : null,
-    items = (b.items ?? []).filter((i: any) => !pendingDetail(i.body));
+    items = (b.items ?? []).filter((i) => !pendingDetail(i.body));
   const picture = (id: string, alt: string) =>
     s.assets[id]
       ? '<img loading="lazy" src="' +
@@ -189,26 +523,12 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         s.assets[id].width +
         '" height="' +
         s.assets[id].height +
-        '">'
+        '">' +
+        conceptNote(s, id)
       : "";
   const heading =
     '<div class="section-intro"><p class="section-kicker">' +
-    e(
-      (
-        {
-          process: "HOW TO WORK WITH US",
-          customization: "YOUR PRODUCT BRIEF",
-          evidence: "DOCUMENTED DETAILS",
-          "case-study": "PROJECT STORY",
-          downloads: "BUYING RESOURCES",
-          comparison: "COMPARE OPTIONS",
-          "category-grid": "EXPLORE BY CATEGORY",
-          features: "PRODUCT CONSIDERATIONS",
-          split: "A CLOSER LOOK",
-          cta: "NEXT STEP",
-        } as Record<string, string>
-      )[b.type] ?? "",
-    ) +
+    e(copy.blockKickers[b.type] ?? "") +
     "</p><h2>" +
     e(b.heading) +
     "</h2>" +
@@ -221,12 +541,12 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
     const available =
       categories.length < 2 && products.length ? products : categories;
     const listed = (b.items ?? [])
-      .filter((i: any) => i.href)
-      .map((i: any) => available.find((v) => v.path === i.href))
-      .filter(Boolean);
-    const destinations =
+      .filter((i) => i.href)
+      .map((i) => available.find((v) => v.path === i.href))
+      .filter((v): v is SnapshotPage => !!v);
+    const destinations: SnapshotPage[] =
       b.design && listed.length
-        ? ([...new Map(listed.map((p: any) => [p.path, p])).values()] as any[])
+        ? [...new Map(listed.map((pg) => [pg.path, pg])).values()]
         : available;
     if (!destinations.length) return "";
     content =
@@ -236,11 +556,9 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
           const child = products.find((product) =>
             product.path.startsWith(v.path.replace(/\/$/, "") + "/"),
           );
-          const card = (b.items ?? []).find(
-            (item: any) => item.href === v.path,
-          );
+          const card = (b.items ?? []).find((item) => item.href === v.path);
           const visual =
-            (card?.assetId ? picture(card.assetId, card.alt) : "") ||
+            (card?.assetId ? picture(card.assetId, card.alt ?? "") : "") ||
             productImage(s, v) ||
             (child ? productImage(s, child) : "");
           const title =
@@ -265,13 +583,147 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
         })
         .join("") +
       "</div>";
+  } else if (b.type === "gallery") {
+    const photos = items.filter(
+      (i): i is SnapshotBlockItem & { assetId: string } =>
+        !!i.assetId &&
+        !!s.assets[i.assetId] &&
+        !s.assets[i.assetId].path.endsWith(".pdf"),
+    );
+    if (!photos.length) return "";
+    content =
+      '<div class="media-gallery" data-lightbox-group="' +
+      e(b.key) +
+      '">' +
+      photos
+        .map((i, idx) => {
+          const asset = s.assets[i.assetId];
+          const alt = i.alt || i.title || b.heading || "";
+          const caption = [i.title, i.body].filter(Boolean).join(" — ");
+          return (
+            '<figure class="gallery-item"><button type="button" class="gallery-trigger" data-lightbox-trigger data-lightbox-group="' +
+            e(b.key) +
+            '" data-lightbox-index="' +
+            idx +
+            '" data-lightbox-src="' +
+            e(asset.path) +
+            '" data-lightbox-alt="' +
+            e(alt) +
+            '" data-lightbox-caption="' +
+            e(caption) +
+            '" aria-label="' +
+            e(copy.inspectImage + ": " + alt) +
+            '">' +
+            picture(i.assetId, alt) +
+            "</button>" +
+            (i.title || i.body
+              ? "<figcaption>" +
+                (i.title ? "<strong>" + e(i.title) + "</strong>" : "") +
+                (i.body ? "<span>" + e(i.body) + "</span>" : "") +
+                "</figcaption>"
+              : "") +
+            "</figure>"
+          );
+        })
+        .join("") +
+      "</div>";
+  } else if (b.type === "metrics") {
+    const verified = items.filter((i) => i.refs?.length || b.refs?.length);
+    if (!verified.length) return "";
+    content =
+      '<dl class="metrics-strip">' +
+      verified
+        .map(
+          (i) =>
+            '<div class="metric-card"><dt>' +
+            e(i.title) +
+            "</dt><dd>" +
+            e(i.body) +
+            "</dd></div>",
+        )
+        .join("") +
+      "</dl>";
+  } else if (b.type === "certifications") {
+    const verified = items.filter((i) => i.refs?.length || b.refs?.length);
+    if (!verified.length) return "";
+    content =
+      '<div class="cert-wall">' +
+      verified
+        .map((i) => {
+          const asset = i.assetId ? s.assets[i.assetId] : null;
+          const isPdf =
+            asset &&
+            (asset.path.endsWith(".pdf") || asset.mime === "application/pdf");
+          return (
+            '<article class="cert-card">' +
+            (asset && !isPdf && i.assetId
+              ? '<div class="cert-media">' +
+                picture(i.assetId, i.alt || i.title) +
+                "</div>"
+              : "") +
+            '<div class="cert-copy"><span class="cert-badge">' +
+            e(copy.verifiedFactBadge) +
+            "</span><h3>" +
+            e(i.title) +
+            "</h3><p>" +
+            e(i.body) +
+            "</p>" +
+            (isPdf
+              ? '<a class="text-link" download href="' +
+                e(asset.path) +
+                '">' +
+                e(copy.downloadDocument) +
+                "</a>"
+              : i.href
+                ? '<a class="text-link" href="' +
+                  e(i.href) +
+                  '">' +
+                  e(copy.exploreDetails) +
+                  "</a>"
+                : "") +
+            "</div></article>"
+          );
+        })
+        .join("") +
+      "</div>";
+  } else if (b.type === "showcase") {
+    if (!items.length) return "";
+    content =
+      '<div class="showcase-grid">' +
+      items
+        .map(
+          (i, idx) =>
+            '<article class="showcase-card' +
+            (idx === 0 ? " showcase-lead" : "") +
+            '">' +
+            (i.assetId && s.assets[i.assetId]
+              ? '<div class="showcase-visual">' +
+                picture(i.assetId, i.alt || i.title) +
+                "</div>"
+              : "") +
+            '<div class="showcase-copy"><h3>' +
+            e(i.title) +
+            "</h3><p>" +
+            e(i.body) +
+            "</p>" +
+            (i.href
+              ? '<a class="text-link" href="' +
+                e(i.href) +
+                '">' +
+                e(copy.exploreDetails) +
+                "</a>"
+              : "") +
+            "</div></article>",
+        )
+        .join("") +
+      "</div>";
   } else if (b.type === "split")
     content =
-      (a ? "<figure>" + picture(b.assetId, b.alt) + "</figure>" : "") +
+      (a && b.assetId ? "<figure>" + picture(b.assetId, b.alt ?? "") + "</figure>" : "") +
       '<div class="split-copy">' +
       heading +
       items
-        .map((i: any) => "<h3>" + e(i.title) + "</h3><p>" + e(i.body) + "</p>")
+        .map((i) => "<h3>" + e(i.title) + "</h3><p>" + e(i.body) + "</p>")
         .join("") +
       "</div>";
   else if (b.type === "cta")
@@ -281,46 +733,61 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '<a class="cta" href="' +
       e(items[0]?.href ?? "#inquiry") +
       '">' +
-      e(items[0]?.title ?? "Discuss your requirements") +
+      e(items[0]?.title ?? copy.discussRequirements) +
       "</a></div>";
-  else if (b.type === "comparison")
-    content =
-      '<div class="table-scroll"><table><caption>' +
-      e(b.heading) +
-      "</caption><thead><tr>" +
-      (b.table?.columns ?? [])
-        .map((v: string) => '<th scope="col">' + e(v) + "</th>")
-        .join("") +
-      "</tr></thead><tbody>" +
-      (b.table?.rows ?? [])
-        .map(
-          (r: string[]) =>
-            "<tr>" + r.map((v) => "<td>" + e(v) + "</td>").join("") + "</tr>",
-        )
-        .join("") +
-      "</tbody></table></div>";
-  else if (b.type === "downloads")
+  else if (b.type === "comparison") {
+    // S35 acceptance fix: no buying-note columns/cells, and no empty table.
+    const table = publicTable(b.table);
+    content = table.rows.length
+      ? '<div class="table-scroll"><table><caption>' +
+        e(b.heading) +
+        "</caption><thead><tr>" +
+        table.columns
+          .map((v) => '<th scope="col">' + e(v) + "</th>")
+          .join("") +
+        "</tr></thead><tbody>" +
+        table.rows
+          .map(
+            (r) =>
+              "<tr>" + r.map((v) => "<td>" + e(v) + "</td>").join("") + "</tr>",
+          )
+          .join("") +
+        "</tbody></table></div>"
+      : "";
+  } else if (b.type === "downloads")
     content =
       '<div class="resource-grid">' +
       items
         .filter(
-          (i: any) =>
-            i.assetId &&
-            (s.assets[i.assetId]?.path.endsWith(".pdf") ||
+          (i): i is SnapshotBlockItem & { assetId: string } =>
+            !!i.assetId &&
+            (!!s.assets[i.assetId]?.path.endsWith(".pdf") ||
               s.assets[i.assetId]?.mime === "application/pdf"),
         )
         .map(
-          (i: any) =>
-            '<article><span class="resource-type">PDF DOCUMENT</span><h3>' +
+          (i) =>
+            '<article><span class="resource-type">' +
+            e(copy.pdfDocument) +
+            "</span><h3>" +
             e(i.title) +
             "</h3><p>" +
             e(i.body) +
             '</p><a class="text-link" download href="' +
             e(s.assets[i.assetId].path) +
-            '">Download document ↗</a></article>',
+            '">' +
+            e(copy.downloadDocument) +
+            "</a></article>",
         )
         .join("") +
-      '<article><span class="resource-type">PRODUCT CATALOGUE</span><h3>Browse the current range</h3><p>Save the product catalogue for your purchasing brief.</p><a class="text-link" href="/catalogue.html" download>Download catalogue ↗</a></article></div>';
+      '<article><span class="resource-type">' +
+      e(copy.productCatalogueTag) +
+      "</span><h3>" +
+      e(copy.browseCurrentRange) +
+      "</h3><p>" +
+      e(copy.saveCatalogueNote) +
+      '</p><a class="text-link" href="/catalogue.html" download>' +
+      e(copy.downloadCatalogue) +
+      "</a></article></div>";
   else
     content =
       "<" +
@@ -330,17 +797,17 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       '">' +
       items
         .filter(
-          (i: any) =>
+          (i) =>
             !["evidence", "case-study", "customization"].includes(b.type) ||
             i.refs?.length ||
             b.refs?.length,
         )
         .map(
-          (i: any) =>
+          (i) =>
             "<" +
             (b.type === "process" ? "li" : "article") +
             ">" +
-            (i.assetId ? picture(i.assetId, i.alt) : "") +
+            (i.assetId ? picture(i.assetId, i.alt ?? "") : "") +
             "<h3>" +
             e(i.title) +
             "</h3><p>" +
@@ -349,7 +816,9 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
             (i.href
               ? '<a class="text-link" href="' +
                 e(i.href) +
-                '">Explore details ↗</a>'
+                '">' +
+                e(copy.exploreDetails) +
+                "</a>"
               : "") +
             "</" +
             (b.type === "process" ? "li" : "article") +
@@ -361,8 +830,14 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
       ">";
   if (
     !content ||
-    (["evidence", "case-study", "customization"].includes(b.type) &&
-      !items.some((i: any) => i.refs?.length || b.refs?.length))
+    ([
+      "evidence",
+      "case-study",
+      "customization",
+      "metrics",
+      "certifications",
+    ].includes(b.type) &&
+      !items.some((i) => i.refs?.length || b.refs?.length))
   )
     return "";
   return (
@@ -381,13 +856,79 @@ export function renderB2BBlock(s: Snapshot, p: any, b: any): string | null {
     "</section>"
   );
 }
-export function catalogueHtml(s: Snapshot) {
+
+export function brandDock(s: Snapshot) {
+  const ch = s.site.brandChannels;
+  if (!ch) return "";
+  const copy = getStorefrontCopy(s.site.language);
+  const actions: string[] = [];
+  if (ch.whatsapp) {
+    const digits = String(ch.whatsapp).replace(/[^\d]/g, "");
+    if (digits.length >= 7) {
+      actions.push(
+        '<a class="dock-btn dock-whatsapp" href="https://wa.me/' +
+          e(digits) +
+          '" target="_blank" rel="noopener noreferrer">' +
+          e(copy.chatWhatsapp) +
+          "</a>",
+      );
+    }
+  }
+  if (ch.wechat) {
+    actions.push(
+      '<details class="dock-wechat"><summary class="dock-btn">' +
+        e(copy.wechatLabel) +
+        '</summary><div class="dock-popover"><strong>' +
+        e(copy.wechatLabel) +
+        "</strong><code>" +
+        e(ch.wechat) +
+        "</code></div></details>",
+    );
+  }
+  if (ch.phone) {
+    actions.push(
+      '<a class="dock-btn" href="tel:' +
+        e(String(ch.phone).replace(/\s+/g, "")) +
+        '">' +
+        e(copy.callUs) +
+        "</a>",
+    );
+  }
+  if (ch.email) {
+    actions.push(
+      '<a class="dock-btn" href="mailto:' +
+        e(ch.email) +
+        '">' +
+        e(copy.emailUs) +
+        "</a>",
+    );
+  }
+  if (!actions.length) return "";
   return (
-    '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
-    e(s.site.name) +
-    ' product catalogue</title><meta name="description" content="Product range and confirmed purchasing information."><link rel="stylesheet" href="/assets/site.css"></head><body class="b2b-site"><main><header class="catalogue-header"><h1>' +
-    e(s.site.name) +
-    " product catalogue</h1><p>Use product names and links when preparing an inquiry. Commercial terms require written confirmation.</p></header>" +
+    '<aside class="brand-dock" aria-label="' +
+    e(copy.quickContact) +
+    '">' +
+    actions.join("") +
+    "</aside>"
+  );
+}
+
+export function catalogueHtml(s: Snapshot) {
+  const copy = getStorefrontCopy(s.site.language);
+  return (
+    '<!DOCTYPE html><html lang="' +
+    e(copy.lang) +
+    '" dir="' +
+    e(copy.dir) +
+    '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
+    e(s.site.name + " " + copy.catalogueTitleSuffix) +
+    '</title><meta name="description" content="' +
+    e(copy.catalogueSubtitle) +
+    '"><link rel="stylesheet" href="/assets/site.css"></head><body class="b2b-site"><main><header class="catalogue-header"><h1>' +
+    e(s.site.name + " " + copy.catalogueTitleSuffix) +
+    "</h1><p>" +
+    e(copy.catalogueSubtitle) +
+    "</p></header>" +
     s.pages
       .filter((p) => p.type === "product")
       .map(
@@ -397,18 +938,28 @@ export function catalogueHtml(s: Snapshot) {
           '">' +
           e(p.title.split("|")[0]) +
           "</a></h2><p>" +
-          e(p.presentation?.summary ?? p.metaDescription) +
+          e(
+            p.presentation?.summary
+              ? cardSummary(p)
+              : intactSentences(p.metaDescription ?? ""),
+          ) +
           "</p>" +
           p.blocks
-            .filter((b: any) => b.type === "specs" && b.table?.rows.length)
+            .filter((b) => b.type === "specs" && b.table?.rows.length)
             .map(
-              (b: any) =>
-                "<table><caption>Confirmed specifications</caption><tbody>" +
-                b.table.rows
+              (b): PublicTable => publicTable(b.table, pageTitles(s, p)),
+            )
+            .filter((table: PublicTable) => table.rows.length > 0)
+            .map(
+              (table: PublicTable) =>
+                "<table><caption>" +
+                e(copy.confirmedSpecsCaption) +
+                "</caption><tbody>" +
+                table.rows
                   .map(
                     (r: string[]) =>
                       "<tr>" +
-                      r.map((x) => "<td>" + e(x) + "</td>").join("") +
+                      r.map((x: string) => "<td>" + e(x) + "</td>").join("") +
                       "</tr>",
                   )
                   .join("") +
@@ -421,17 +972,29 @@ export function catalogueHtml(s: Snapshot) {
     "</main></body></html>"
   );
 }
-export function quoteBar(s: Snapshot, p: any) {
+
+export function quoteBar(s: Snapshot, p: SnapshotPage) {
   if (!s.site.buyerProfile) return "";
+  const copy = getStorefrontCopy(s.site.language);
   return (
     '<aside class="quote-bar" ' +
     (p.productId ? "" : "hidden ") +
-    'aria-label="Inquiry shortlist"><a href="#inquiry">Inquiry list <span data-quote-count>0</span></a><span data-quote-status role="status"></span>' +
+    'aria-label="' +
+    e(copy.inquiryShortlist) +
+    '"><a href="#inquiry">' +
+    e(copy.inquiryList) +
+    ' <span data-quote-count>0</span></a><span data-quote-status role="status"></span>' +
     (p.productId
       ? '<button type="button" data-quote-add="' +
         e(p.productId) +
-        '">Add this product</button>'
+        '">' +
+        e(copy.addThisProduct) +
+        "</button>"
       : "") +
-    '<button type="button" data-quote-review>Review inquiry</button><button type="button" data-quote-clear>Clear list</button></aside>'
+    '<button type="button" data-quote-review>' +
+    e(copy.reviewInquiry) +
+    '</button><button type="button" data-quote-clear>' +
+    e(copy.clearList) +
+    "</button></aside>"
   );
 }

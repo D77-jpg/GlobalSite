@@ -6,8 +6,6 @@ import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import { inquiryMessages } from "./inquiry-i18n";
 import type { Locale } from "./i18n";
-import "./inquiries.css";
-import "./operations.css";
 type Row = Record<string, any>;
 type Props = { locale: Locale; role: string };
 const translator = (locale: Locale) => (key: string) =>
@@ -30,13 +28,14 @@ function Status({ value, t }: { value: string; t: (key: string) => string }) {
 }
 const fmt = (s: string, locale: Locale) =>
   new Date(s).toLocaleString(locale === "zh" ? "zh-CN" : "en");
-export function InquiriesPage({ locale }: Props) {
+export function InquiriesPage({ locale, role }: Props) {
   const [params] = useSearchParams();
   const initialSiteId = params.get("siteId") ?? "";
   return (
     <InquiryInbox
       key={initialSiteId}
       locale={locale}
+      role={role}
       initialSiteId={initialSiteId}
     />
   );
@@ -138,12 +137,17 @@ function InquirySitePicker({
 }
 function InquiryInbox({
   locale,
+  role,
   initialSiteId,
 }: {
   locale: Locale;
+  role: string;
   initialSiteId: string;
 }) {
   const t = translator(locale),
+    edit = role !== "viewer",
+    [selectedId, setSelectedId] = useState(""),
+    [updating, setUpdating] = useState(false),
     [filters, setFilters] = useState<Row>({
       siteId: initialSiteId,
       status: "",
@@ -160,6 +164,18 @@ function InquiryInbox({
     ),
     [cursor, setCursor] = useState(""),
     form = useForm<Row>({ defaultValues: filters }),
+    summaryQuery = new URLSearchParams(
+      Object.entries({
+        siteId: filters.siteId,
+        from: filters.from
+          ? new Date(filters.from + "T00:00:00").toISOString()
+          : "",
+        to: filters.to
+          ? new Date(filters.to + "T23:59:59.999").toISOString()
+          : "",
+      }).filter(([, v]) => Boolean(v)),
+    ).toString(),
+    summary = useLoad("/inquiries/summary" + (summaryQuery ? "?" + summaryQuery : "")),
     load = useLoad("/inquiries?" + query + (cursor ? "&cursor=" + cursor : ""));
   function filter(d: Row) {
     setFilters(d);
@@ -187,6 +203,37 @@ function InquiryInbox({
         </a>
       </header>
       <Notice error={load.error} t={t} />
+      {summary.data && (
+        <section className="funnel-strip" aria-label={t("inbox")}>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summaryTotal")}</span>
+            <strong className="funnel-value">{summary.data.nonDuplicate}</strong>
+          </div>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summaryNew")}</span>
+            <strong className="funnel-value">{summary.data.byStatus?.new ?? 0}</strong>
+          </div>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summaryResponseRate")}</span>
+            <strong className="funnel-value">{summary.data.responseRate}%</strong>
+          </div>
+          <div className="funnel-card">
+            <span className="funnel-label">{t("summarySpam")}</span>
+            <strong className="funnel-value">{summary.data.byStatus?.spam ?? 0}</strong>
+          </div>
+          {!!summary.data.topSources?.length && (
+            <div className="funnel-card funnel-sources">
+              <span className="funnel-label">{t("summaryTopSources")}</span>
+              <span className="funnel-source-list">
+                {summary.data.topSources
+                  .slice(0, 3)
+                  .map((s: Row) => `${s.source} (${s.count})`)
+                  .join(" · ")}
+              </span>
+            </div>
+          )}
+        </section>
+      )}
       <form
         className="catalog-panel inquiry-filters"
         onSubmit={form.handleSubmit(filter)}
@@ -277,66 +324,125 @@ function InquiryInbox({
           )}
         </div>
       </form>
-      <section className="catalog-panel inquiry-table">
-        <div className="ops-panel-title">
-          <h2>{t("inbox")}</h2>
-          {load.data && (
-            <span>
-              {load.data.items.length} {t("thisPage")}
-            </span>
-          )}
-        </div>
+      <section className="gs-stack">
         {!load.data && !load.error && (
           <p role="status" className="ops-loading">
             {t("loading")}
           </p>
         )}
-        <table>
-          <thead>
-            <tr>
-              <th>{t("received")}</th>
-              <th>{t("contact")}</th>
-              <th>{t("status")}</th>
-              <th>{t("score")}</th>
-              <th>{t("notification")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {load.data?.items.map((r: Row) => (
-              <tr key={r.id}>
-                <td data-label={t("received")}>{fmt(r.receivedAt, locale)}</td>
-                <td data-label={t("contact")}>
-                  <Link to={"/inquiries/" + r.id}>{r.contact.name}</Link>
-                  <div>{r.contact.company}</div>
-                  <div>{r.contact.email}</div>
-                </td>
-                <td data-label={t("status")}>
-                  <Status value={r.status} t={t} />
-                  {r.duplicateOf && (
-                    <p>
-                      <Link to={"/inquiries/" + r.duplicateOf}>
-                        {t("duplicateOf")}
-                      </Link>
-                    </p>
-                  )}
-                </td>
-                <td data-label={t("score")}>
-                  {r.spamScore ?? "—"}
-                  <div>
-                    {t(
-                      r.classification === "ai" ? "aiState" : r.classification,
-                    )}
-                  </div>
-                </td>
-                <td data-label={t("notification")}>
-                  {t(r.notificationStatus)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {load.data && !load.data.items.length && (
+        {load.data && !load.data.items.length ? (
           <p className="catalog-empty">{t("empty")}</p>
+        ) : (
+          load.data && (() => {
+            const activeItem =
+              load.data.items.find((r: Row) => r.id === selectedId) ??
+              load.data.items[0];
+            return (
+              <div className="gs-inbox-split">
+                <div className="gs-inbox-list" aria-label={t("inbox")}>
+                  <div className="gs-row-between">
+                    <strong>{t("inbox")}</strong>
+                    <small className="muted">
+                      {load.data.items.length} {t("thisPage")}
+                    </small>
+                  </div>
+                  {load.data.items.map((r: Row) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="gs-inbox-item"
+                      aria-pressed={activeItem?.id === r.id}
+                      onClick={() => setSelectedId(r.id)}
+                    >
+                      <div className="gs-inbox-item-top">
+                        <strong>{r.contact.name}</strong>
+                        <Status value={r.status} t={t} />
+                      </div>
+                      <small className="muted">
+                        {[r.contact.company, r.contact.country, fmt(r.receivedAt, locale)]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                      <span className="gs-inbox-item-msg">{r.message}</span>
+                    </button>
+                  ))}
+                </div>
+                {activeItem && (
+                  <article className="gs-inbox-detail gs-stack">
+                    <div className="gs-row-between">
+                      <div>
+                        <h2>{activeItem.contact.name}</h2>
+                        <p className="muted">
+                          {[
+                            activeItem.contact.company,
+                            activeItem.contact.email,
+                            activeItem.contact.phone,
+                            activeItem.contact.country,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      <div className="gs-row">
+                        <Status value={activeItem.status} t={t} />
+                        <Link
+                          className="gs-btn gs-btn-sm gs-btn-primary"
+                          to={"/inquiries/" + activeItem.id}
+                        >
+                          {t("open")}
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="gs-card-well">
+                      <p className="inquiry-message">{activeItem.message}</p>
+                    </div>
+                    <div className="gs-row-between">
+                      <small className="muted">
+                        {t("received")}: {fmt(activeItem.receivedAt, locale)} ·{" "}
+                        {t("score")}: {activeItem.spamScore ?? "—"} ·{" "}
+                        {t("notification")}: {t(activeItem.notificationStatus)}
+                      </small>
+                      {edit && (
+                        <div className="gs-row">
+                          {(["new", "following", "resolved", "spam"] as const).map(
+                            (stVal) => (
+                              <button
+                                key={stVal}
+                                type="button"
+                                className={
+                                  "gs-btn gs-btn-sm" +
+                                  (activeItem.status === stVal
+                                    ? " gs-btn-primary"
+                                    : "")
+                                }
+                                disabled={
+                                  updating || activeItem.status === stVal
+                                }
+                                onClick={() => {
+                                  setUpdating(true);
+                                  void api("/inquiries/" + activeItem.id, "PATCH", {
+                                    revision: activeItem.revision,
+                                    status: stVal,
+                                  })
+                                    .then(() => {
+                                      load.reload();
+                                      summary.reload();
+                                    })
+                                    .finally(() => setUpdating(false));
+                                }}
+                              >
+                                {t(stVal)}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                )}
+              </div>
+            );
+          })()
         )}
       </section>
       <div className="catalog-actions">
@@ -698,6 +804,9 @@ function InquirySettingsPageBody({ locale, role, id }: Props & { id: string }) {
                   : d.turnstileSecret
                     ? { turnstileSecret: d.turnstileSecret }
                     : {}),
+                autoReplyEnabled: !!d.autoReplyEnabled,
+                autoReplySubject: d.autoReplySubject?.trim() || null,
+                autoReplyBody: d.autoReplyBody?.trim() || null,
               },
             );
             setData(next);
@@ -767,6 +876,28 @@ function InquirySettingsPageBody({ locale, role, id }: Props & { id: string }) {
               onChange={(e) => setDisable(e.target.checked)}
             />
             {t("disableTurnstile")}
+          </label>
+          <h2>{t("autoReplySection")}</h2>
+          <p>{t("autoReplyHint")}</p>
+          <label className="inquiry-check">
+            <input type="checkbox" {...form.register("autoReplyEnabled")} />
+            {t("autoReplyEnable")}
+          </label>
+          <label>
+            {t("autoReplySubject")}
+            <input
+              maxLength={140}
+              {...form.register("autoReplySubject")}
+              autoComplete="off"
+            />
+          </label>
+          <label>
+            {t("autoReplyBody")}
+            <textarea
+              rows={3}
+              maxLength={2000}
+              {...form.register("autoReplyBody")}
+            />
           </label>
           <button disabled={busy || !data}>{t("save")}</button>
         </fieldset>

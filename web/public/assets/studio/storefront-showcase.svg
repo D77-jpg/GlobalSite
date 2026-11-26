@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="room" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#181314"/>
+      <stop offset="50%" stop-color="#2D2320"/>
+      <stop offset="100%" stop-color="#120F12"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="76%" cy="38%" r="52%">
+      <stop offset="0%" stop-color="#F2DFC6" stop-opacity="0.62"/>
+      <stop offset="42%" stop-color="#B08968" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#120F12" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="slats" width="16" height="460" patternUnits="userSpaceOnUse">
+      <rect width="7" height="460" fill="#B68B66" fill-opacity="0.14"/>
+      <rect x="7" width="9" height="460" fill="#000000" fill-opacity="0.24"/>
+    </pattern>
+    <linearGradient id="vignette" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0E0B0E" stop-opacity="0.88"/>
+      <stop offset="55%" stop-color="#0E0B0E" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#0E0B0E" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="460" fill="url(#room)"/>
+  <rect width="800" height="460" fill="url(#slats)"/>
+  <!-- Architectural window light beam -->
+  <polygon points="560,0 800,0 800,360 470,460" fill="url(#sun)"/>
+  <!-- Minimalist gallery sofa & travertine coffee table silhouette -->
+  <rect x="465" y="295" width="260" height="72" rx="22" fill="#D5C7B8" fill-opacity="0.24"/>
+  <rect x="485" y="328" width="220" height="46" rx="14" fill="#E8DDD0" fill-opacity="0.22"/>
+  <ellipse cx="520" cy="396" rx="76" ry="20" fill="#9A7E66" fill-opacity="0.28"/>
+  <!-- Left editorial shadow for crisp white typography -->
+  <rect width="800" height="460" fill="url(#vignette)"/>
+</svg>

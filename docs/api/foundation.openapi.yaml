@@ -2028,6 +2028,11 @@ paths:
     get:
       operationId: foundation27
       summary: Provider settings with secret omitted
+      description: >-
+        S36: when the platform provides AI (complete PLATFORM_AI_* configuration), or in production without
+        ALLOW_ORG_AI_KEYS=true, the response is ManagedAiService ({ managed: true, enabled, configured }) and never
+        contains a model name, service URL or key. Otherwise the organization's own settings (Provider) are returned
+        unchanged.
       x-roles:
         - admin
       security:
@@ -2045,7 +2050,9 @@ paths:
                     enum:
                       - true
                   data:
-                    $ref: "#/components/schemas/Provider"
+                    anyOf:
+                      - $ref: "#/components/schemas/ManagedAiService"
+                      - $ref: "#/components/schemas/Provider"
                 required:
                   - success
                   - data
@@ -2092,6 +2099,7 @@ paths:
     put:
       operationId: foundation28
       summary: Save independent encrypted organization provider
+      description: 409 PLATFORM_MANAGED while AI is platform-managed (see GET); nothing is stored.
       x-roles:
         - admin
       security:
@@ -2166,6 +2174,7 @@ paths:
     post:
       operationId: foundation29
       summary: Bounded paid test; unknown outcome stays reserved
+      description: 409 PLATFORM_MANAGED while AI is platform-managed; no provider call and no reservation.
       x-roles:
         - admin
       security:
@@ -2255,9 +2264,12 @@ paths:
   /assets/image-provider:
     get:
       summary: Image generation status for the current organization (editor or admin)
+      description: >-
+        S36: while image generation is platform-managed (complete PLATFORM_IMAGE_* configuration, or production
+        without ALLOW_ORG_AI_KEYS=true) data is { managed: true, enabled, configured } without model or URL.
       responses:
         "200":
-          description: "data contains configured (boolean) and model (string)."
+          description: "data contains configured (boolean) and model (string), or the managed status."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ImageProviderResult" }
@@ -2279,20 +2291,29 @@ paths:
     put:
       security: [ { cookieAuth: [], csrfHeader: [] } ]
       summary: Set or disconnect the organization's image provider (admin)
+      description: 409 PLATFORM_MANAGED while image generation is platform-managed; nothing is stored.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [ apiKey ]
+              additionalProperties: false
               properties:
-                apiKey: { type: string, maxLength: 512, writeOnly: true, description: Empty disconnects. }
+                apiKey: { type: string, maxLength: 512, writeOnly: true, description: Empty disconnects; omit to keep existing key when updating model, baseUrl or mode. }
+                baseUrl: { type: string, format: uri, maxLength: 500, description: Public HTTPS OpenAI-compatible base URL or exact non-production AI_LOCAL_BASE_URL. }
                 model:
                   {
                     type: string,
-                    default: gemini-3.1-flash-image,
-                    enum: [ gemini-3.1-flash-image, gpt-image-2, gpt-image-2.5-sunburst, gpt-image-2.6-sunburst ]
+                    minLength: 1,
+                    maxLength: 120,
+                    default: gpt-image-1
+                  }
+                mode:
+                  {
+                    type: string,
+                    enum: [ auto, images, chat ],
+                    default: auto
                   }
       responses:
         "200":
@@ -2315,6 +2336,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "PLATFORM_MANAGED: image generation is provided by the platform"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /assets/generate-image:
     post:
       security: [ { cookieAuth: [], csrfHeader: [] } ]
@@ -2330,7 +2356,8 @@ paths:
               required: [ subject, composition ]
               properties:
                 subject: { type: string, minLength: 3, maxLength: 600 }
-                composition: { type: string, enum: [ campaign, still-life, detail ] }
+                composition: { type: string, enum: [ campaign, still-life, detail, logo ] }
+                palette: { type: string, enum: [ obsidian, ivory, clay, graphite, cobalt, forest, ocean, violet, brand ] }
       responses:
         "201":
           description: "data.id identifies the new image Asset."
@@ -3755,6 +3782,13 @@ paths:
           schema:
             type: string
           description: Organization-scoped filter
+        - name: source
+          in: query
+          required: false
+          schema:
+            enum:
+              - ai-suggested
+          description: S35 filter for AI-suggested facts (source.kind)
       responses:
         "200":
           description: 成功；私有资料，不可作为已确认事实公开。
@@ -3977,6 +4011,81 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CatalogFactPatch"
+  /facts/batch-confirm:
+    post:
+      operationId: s26postfactsbatchconfirm
+      summary: Batch confirm candidate facts; admin only, revision guarded and audited per item.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, revision]
+                    properties:
+                      id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      revision: { type: integer, minimum: 1 }
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        "200":
+          description: Batch confirmation summary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [confirmed, skipped]
+                    properties:
+                      confirmed:
+                        type: array
+                        items: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      skipped:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          required: [id, code]
+                          properties:
+                            id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                            code: { type: string, minLength: 1, maxLength: 80 }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Insufficient role or CSRF rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /facts/{id}/confirm:
     post:
       operationId: catalogpostfactsidconfirm
@@ -5233,6 +5342,433 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SitePatch"
+  /sites/{id}/options:
+    patch:
+      operationId: s35patchsiteoptions
+      summary: >-
+        S35 admin switches. demoMode lets previews and Agent snapshots cite ai-suggested candidate
+        facts (all number/year/certification/wording checks still run); demo data can never be
+        approved, built or published (DEMO_FACTS_UNCONFIRMED / SITE_NOT_READY / VERSION_FACTS_CHANGED).
+        autoImages opts the site into AI illustration of missing images (billed per image). Does not
+        bump the site revision; rejected while an Agent run is active (STEP_BUSY).
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteOptionsInput"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, busy, publication, configuration or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /sites/{id}/fact-suggestions:
+    post:
+      operationId: s35postfactsuggestions
+      summary: >-
+        S35 queue one billed AI call (Worker task catalog.suggest) that proposes values for missing
+        fact types. Values are stored verbatim as FactSheet candidates with source.kind ai-suggested,
+        deduplicated by originKey, and must be confirmed through the existing fact review endpoints.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactSuggestionInput"
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, busy, publication, configuration or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /fact-suggestions/{id}:
+    get:
+      operationId: s35getfactsuggestion
+      summary: S35 AI fact suggestion run status (tenant scoped)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogRunResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, busy, publication, configuration or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /sites/{id}/logo:
+    get:
+      operationId: s35getsitelogo
+      summary: "S35 B2 logo view (selected logo, private logo brief, AI candidates and image service status)"
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteLogoView"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, busy, publication, configuration or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: s35putsitelogo
+      summary: >-
+        S35 B2 select or clear the site logo (uploaded or generated image asset of this organization).
+        Increments the site revision, so page approvals are withdrawn.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteLogoSelect"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteLogoView"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, busy, publication, configuration or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /sites/{id}/logo/generate:
+    post:
+      operationId: s35postsitelogogenerate
+      summary: >-
+        S35 B2 queue AI logo candidates (Worker task catalog.logo, 2-3 images billed per image).
+        Candidates are generatedConcept assets in square and wide PNG variants and always require a
+        spelling check. 409 IMAGE_PROVIDER_MISSING when no image service is configured.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteLogoGenerate"
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/SiteLogoView"
+                required:
+                  - success
+                  - data
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Revision, busy, publication, configuration or quota conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /sites/{id}/logo/wordmark.svg:
+    get:
+      operationId: s35getsitewordmark
+      summary: S35 B2 deterministic SVG wordmark of the exact site name (always correctly spelled fallback)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      responses:
+        "200":
+          description: SVG image
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role or CSRF rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unavailable in this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /sites/{id}/plan:
     put:
       operationId: s4putsitesidplan
@@ -5678,6 +6214,61 @@ paths:
         - admin
         - editor
         - viewer
+  /sites/{id}/agent-runs/stream:
+    get:
+      operationId: s24getsitesidagentrunsstream
+      summary: Authenticated SSE stream pushing live agent run status updates for a site
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: Server-Sent Events stream with event=runs JSON snapshots
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Membership rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Site not found within current organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-roles:
+        - admin
+        - editor
+        - viewer
   /agent-runs/{id}:
     get:
       operationId: s4getagentrunsid
@@ -5832,6 +6423,12 @@ paths:
     post:
       operationId: s4postagentrunsidretry
       summary: S4 /agent-runs/{id}/retry; tenant scoped editor
+      description: >-
+        Retries a failed or paused run. S35: a run paused with AI_USAGE_UNKNOWN
+        (monthly automatic absorption limit reached) can be retried directly;
+        the open reservation of the unknown operation is released and marked
+        absorbed for platform reconciliation, so the organization is not
+        charged. A step with a saved result settles its known usage instead.
       security:
         - cookieAuth: []
           csrfHeader: []
@@ -6489,6 +7086,157 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SiteReviewInput"
+  /sites/{id}/pages/batch-approve:
+    post:
+      operationId: s26postsitesidpagesbatchapprove
+      summary: Batch approve valid pages belonging to a site; admin only, runs full fact and composition gate per page.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, revision]
+                    properties:
+                      id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      revision: { type: integer, minimum: 1 }
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        "200":
+          description: Batch approval summary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [approved, skipped]
+                    properties:
+                      approved:
+                        type: array
+                        items: { type: string, pattern: "^[a-f0-9]{24}$" }
+                      skipped:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          required: [id, code]
+                          properties:
+                            id: { type: string, pattern: "^[a-f0-9]{24}$" }
+                            code: { type: string, minLength: 1, maxLength: 80 }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Insufficient role or CSRF rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Site not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /pages/{id}/preview-draft:
+    post:
+      operationId: s26postpagesidpreviewdraft
+      summary: Render an unsaved page draft in memory with live fact and composition validation without mutating state.
+      security:
+        - cookieAuth: []
+          csrfHeader: []
+      x-roles:
+        - admin
+        - editor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SitePageInput"
+      responses:
+        "200":
+          description: Live preview HTML and current validation issues
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [success, data]
+                properties:
+                  success: { const: true }
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [html, hash, issues]
+                    properties:
+                      html: { type: string }
+                      hash: { type: string }
+                      issues:
+                        type: array
+                        items: { $ref: "#/components/schemas/SiteIssue" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Session expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Insufficient role or CSRF rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /pages/{id}/preview:
     get:
       operationId: s4getpagesidpreview
@@ -7985,6 +8733,83 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DeploymentInput'
+  /site-versions/{id}/webhook:
+    post:
+      tags:
+        - S5 Build and Publish
+      summary: POST /site-versions/{id}/webhook
+      description: 管理员触发已配置的可信 HTTPS 部署 Webhook，携带 HMAC-SHA256 签名与不可变版本元数据。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      delivered:
+                        type: boolean
+                      statusCode:
+                        type: integer
+                      versionId:
+                        type: string
+                      triggeredAt:
+                        type: string
+                    required:
+                      - delivered
+                      - statusCode
+                      - versionId
+                      - triggeredAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: 错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /sites/{id}/domain-check:
     post:
       tags:
@@ -8437,6 +9262,58 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InquirySettingsInput'
+  /inquiries/summary:
+    get:
+      tags:
+        - S6 Inquiries
+      summary: GET /inquiries/summary
+      description: 返回当前组织（可选按 siteId / 时间范围筛选）的询盘状态漏斗、近 30 日趋势与脱敏来源统计。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/InquirySummary'
+                required:
+                  - success
+                  - data
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /inquiries:
     get:
       tags:
@@ -10915,6 +11792,16 @@ components:
           type: boolean
         gatewayUrl:
           type: string
+        autoReplyEnabled:
+          type: boolean
+        autoReplySubject:
+          type:
+            - string
+            - 'null'
+        autoReplyBody:
+          type:
+            - string
+            - 'null'
       required:
         - revision
         - publicId
@@ -10959,6 +11846,76 @@ components:
           type:
             - string
             - 'null'
+        autoReplyEnabled:
+          type: boolean
+        autoReplySubject:
+          type:
+            - string
+            - 'null'
+        autoReplyBody:
+          type:
+            - string
+            - 'null'
+    InquirySummary:
+      type: object
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+        nonDuplicate:
+          type: integer
+        responseRate:
+          type: number
+        byStatus:
+          type: object
+          additionalProperties: false
+          properties:
+            new:
+              type: integer
+            following:
+              type: integer
+            resolved:
+              type: integer
+            spam:
+              type: integer
+          required:
+            - new
+            - following
+            - resolved
+            - spam
+        byDay:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+            required:
+              - date
+              - count
+        topSources:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              source:
+                type: string
+              count:
+                type: integer
+            required:
+              - source
+              - count
+      required:
+        - total
+        - nonDuplicate
+        - responseRate
+        - byStatus
+        - byDay
+        - topSources
     InquirySource:
       type: object
       additionalProperties: false
@@ -11343,6 +12300,54 @@ components:
       additionalProperties: false
       properties: {}
       required: []
+    SeoAnalyticsConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        ga4MeasurementId:
+          type:
+            - string
+            - 'null'
+        gtmContainerId:
+          type:
+            - string
+            - 'null'
+        metaPixelId:
+          type:
+            - string
+            - 'null'
+        googleSiteVerification:
+          type:
+            - string
+            - 'null'
+        bingSiteVerification:
+          type:
+            - string
+            - 'null'
+        ogImageAssetId:
+          type:
+            - string
+            - 'null'
+          pattern: ^[a-f0-9]{24}$
+        redirects:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              status:
+                enum:
+                  - 301
+                  - 302
+            required:
+              - from
+              - to
+              - status
     PublishSettings:
       type: object
       additionalProperties: false
@@ -11377,6 +12382,14 @@ components:
           type:
             - string
             - 'null'
+        deployWebhookUrl:
+          type:
+            - string
+            - 'null'
+        webhookConfigured:
+          type: boolean
+        seoAnalytics:
+          $ref: '#/components/schemas/SeoAnalyticsConfig'
       required:
         - revision
         - canonicalBaseUrl
@@ -11423,6 +12436,16 @@ components:
           type:
             - string
             - 'null'
+        deployWebhookUrl:
+          type:
+            - string
+            - 'null'
+        webhookSecret:
+          type:
+            - string
+            - 'null'
+        seoAnalytics:
+          $ref: '#/components/schemas/SeoAnalyticsConfig'
     BuildIssue:
       type: object
       additionalProperties: false
@@ -11596,6 +12619,41 @@ components:
             - 'null'
         checkedAt:
           type: string
+        diagnostics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              step:
+                enum:
+                  - dns
+                  - cloudflare
+                  - https
+              ok:
+                type: boolean
+              detailCode:
+                type: string
+            required:
+              - step
+              - ok
+              - detailCode
+        recommendedRecord:
+          type:
+            - object
+            - 'null'
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+            name:
+              type: string
+            target:
+              type: string
+          required:
+            - type
+            - name
+            - target
       required:
         - status
         - domain
@@ -11817,6 +12875,16 @@ components:
           type: string
           minLength: 1
           maxLength: 7
+        resetsAt:
+          type: string
+          format: date-time
+          description: S36 start of the next monthly period (first day of the next UTC month).
+        upgradeUrl:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+          description: S36 optional PLATFORM_UPGRADE_URL (https or mailto); null shows "contact us to upgrade".
         limits:
           $ref: '#/components/schemas/Limits'
         items:
@@ -11858,7 +12926,74 @@ components:
           type: string
           format: uri
           maxLength: 500
-          description: Official OpenAI or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+          description: Public HTTPS OpenAI-compatible base URL (SSRF-verified) or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+        visionModelName:
+          type: string
+          minLength: 0
+          maxLength: 120
+          description: Optional dedicated vision model used when supportsVision is enabled and image inputs are attached.
+        outputMode:
+          type: string
+          enum:
+            - json_object
+            - json_schema
+          description: Structured output mode for site agent JSON calls. Defaults to json_object; json_schema falls back to json_object once on HTTP 400.
+        taskModels:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: string
+              minLength: 0
+              maxLength: 120
+            interview:
+              type: string
+              minLength: 0
+              maxLength: 120
+            design:
+              type: string
+              minLength: 0
+              maxLength: 120
+            content:
+              type: string
+              minLength: 0
+              maxLength: 120
+            review:
+              type: string
+              minLength: 0
+              maxLength: 120
+            rewrite:
+              type: string
+              minLength: 0
+              maxLength: 120
+        temperatureByTask:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: number
+              minimum: 0
+              maximum: 2
+            interview:
+              type: number
+              minimum: 0
+              maximum: 2
+            design:
+              type: number
+              minimum: 0
+              maximum: 2
+            content:
+              type: number
+              minimum: 0
+              maximum: 2
+            review:
+              type: number
+              minimum: 0
+              maximum: 2
+            rewrite:
+              type: number
+              minimum: 0
+              maximum: 2
         enabled:
           type: boolean
         configured:
@@ -12165,7 +13300,73 @@ components:
           type: string
           format: uri
           maxLength: 500
-          description: Official OpenAI or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+          description: Public HTTPS OpenAI-compatible base URL (SSRF-verified) or exact non-production AI_LOCAL_BASE_URL approved by deployment configuration.
+        visionModelName:
+          type: string
+          minLength: 0
+          maxLength: 120
+          description: Optional dedicated vision model used when supportsVision is enabled and image inputs are attached.
+        outputMode:
+          type: string
+          enum:
+            - json_object
+            - json_schema
+        taskModels:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: string
+              minLength: 0
+              maxLength: 120
+            interview:
+              type: string
+              minLength: 0
+              maxLength: 120
+            design:
+              type: string
+              minLength: 0
+              maxLength: 120
+            content:
+              type: string
+              minLength: 0
+              maxLength: 120
+            review:
+              type: string
+              minLength: 0
+              maxLength: 120
+            rewrite:
+              type: string
+              minLength: 0
+              maxLength: 120
+        temperatureByTask:
+          type: object
+          additionalProperties: false
+          properties:
+            research:
+              type: number
+              minimum: 0
+              maximum: 2
+            interview:
+              type: number
+              minimum: 0
+              maximum: 2
+            design:
+              type: number
+              minimum: 0
+              maximum: 2
+            content:
+              type: number
+              minimum: 0
+              maximum: 2
+            review:
+              type: number
+              minimum: 0
+              maximum: 2
+            rewrite:
+              type: number
+              minimum: 0
+              maximum: 2
         enabled:
           type: boolean
         apiKey:
@@ -12339,12 +13540,22 @@ components:
         - quote
       properties:
         kind:
+          description: >-
+            ai-suggested (S35) is written only by the fact-suggestion Worker; it may be kept when
+            editing such a fact but cannot be used to create one.
           enum:
             - manual
             - asset
             - product
             - website
             - globalcrm
+            - ai-suggested
+        runId:
+          type: string
+          pattern: ^[a-f0-9]{24}$
+        editedAt:
+          type: string
+          format: date-time
         refId:
           type: string
           pattern: ^[a-f0-9]{24}$
@@ -12468,12 +13679,27 @@ components:
       properties:
         success: { type: boolean, enum: [ true ] }
         data:
-          type: object
-          required: [ configured, model ]
-          additionalProperties: false
-          properties:
-            configured: { type: boolean }
-            model: { type: string }
+          anyOf:
+            - $ref: "#/components/schemas/ManagedAiService"
+            - type: object
+              required: [ configured, model, baseUrl, mode ]
+              additionalProperties: false
+              properties:
+                configured: { type: boolean }
+                model: { type: string, maxLength: 120 }
+                baseUrl: { type: string, format: uri, maxLength: 500 }
+                mode: { type: string, enum: [ auto, images, chat ] }
+    ManagedAiService:
+      type: object
+      description: >-
+        S36 platform-managed AI status. Billed on the organization's plan allowance; never includes model names,
+        service URLs, keys or raw usage units.
+      required: [ managed, enabled, configured ]
+      additionalProperties: false
+      properties:
+        managed: { type: boolean, enum: [ true ] }
+        enabled: { type: boolean, description: The platform service is available for this deployment. }
+        configured: { type: boolean, description: Same as enabled; kept for older clients. }
     GeneratedImageResult:
       type: object
       required: [ success, data ]
@@ -13070,6 +14296,7 @@ components:
                 - asset
                 - website
                 - globalcrm
+                - ai-suggested
             refId:
               type: string
               pattern: ^[a-f0-9]{24}$
@@ -13098,6 +14325,12 @@ components:
                 ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
             textVerified:
               type: boolean
+            runId:
+              type: string
+              pattern: ^[a-f0-9]{24}$
+            editedAt:
+              type: string
+              format: date-time
           required:
             - kind
             - quote
@@ -13150,6 +14383,7 @@ components:
                     - asset
                     - website
                     - globalcrm
+                    - ai-suggested
                 refId:
                   type: string
                   pattern: ^[a-f0-9]{24}$
@@ -13178,6 +14412,12 @@ components:
                     ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
                 textVerified:
                   type: boolean
+                runId:
+                  type: string
+                  pattern: ^[a-f0-9]{24}$
+                editedAt:
+                  type: string
+                  format: date-time
               required:
                 - kind
                 - quote
@@ -13471,7 +14711,15 @@ components:
           maxItems: 10
           minItems: 1
         language:
-          const: en
+          enum:
+            - en
+            - es
+            - fr
+            - de
+            - ja
+            - ar
+            - ru
+            - zh
         brandColor:
           type: string
           pattern: ^#[a-fA-F0-9]{6}$
@@ -13492,6 +14740,8 @@ components:
             - archived
         buyerProfile:
           $ref: "#/components/schemas/SiteBuyerProfile"
+        brandChannels:
+          $ref: "#/components/schemas/SiteBrandChannels"
         businessBrief:
           type: string
           maxLength: 2000
@@ -13587,6 +14837,10 @@ components:
             - downloads
             - cta
             - comparison
+            - gallery
+            - metrics
+            - certifications
+            - showcase
         heading:
           type: string
           maxLength: 160
@@ -13643,6 +14897,35 @@ components:
         - alt
         - refs
       additionalProperties: false
+    SiteBrandChannels:
+      type: object
+      description: Optional admin-configured direct contact and social channels rendered in footer and floating quick-contact dock. Never AI-invented.
+      additionalProperties: false
+      properties:
+        whatsapp:
+          type: string
+          pattern: ^\+?[1-9]\d{6,15}$
+          maxLength: 20
+        phone:
+          type: string
+          pattern: ^[+0-9()\s.-]{6,32}$
+          maxLength: 32
+        email:
+          type: string
+          format: email
+          maxLength: 160
+        wechat:
+          type: string
+          minLength: 2
+          maxLength: 60
+        linkedin:
+          type: string
+          format: uri
+          maxLength: 240
+        youtube:
+          type: string
+          format: uri
+          maxLength: 240
     SiteComposition:
       type: object
       description: >-
@@ -13655,13 +14938,26 @@ components:
         version:
           enum: [v1]
         typography:
-          enum: [sans, editorial, technical]
+          enum: [sans, editorial, technical, luxury, geometric]
         palette:
-          enum: [graphite, cobalt, clay, forest, violet]
+          enum: [graphite, cobalt, clay, forest, violet, obsidian, ivory, ocean, brand]
         navigation:
           enum: [catalogue, capabilities, solutions]
         productLayout:
           enum: [cards, rows, gallery]
+        surface:
+          enum: [light, warm, contrast]
+        headerStyle:
+          enum: [classic, editorial, minimal]
+        radius:
+          enum: [sharp, subtle, rounded]
+        pack:
+          description: >-
+            Optional S35/S37 trusted rendering pack. "precision" (equipment/machinery),
+            "atelier" (lifestyle/design goods) or "monolith" (architectural materials)
+            adds the scoped body class pack-<name> and bundles pack-<name>.css. Omit for the
+            unchanged composition renderer. No generated code is accepted.
+          enum: [precision, atelier, monolith]
     SitePresentation:
       type: object
       description: >-
@@ -13685,6 +14981,14 @@ components:
           type: string
           minLength: 1
           maxLength: 32
+        inquiryHeading:
+          type: string
+          minLength: 1
+          maxLength: 80
+        inquiryLead:
+          type: string
+          minLength: 1
+          maxLength: 240
         visualStyle:
           enum:
             - organic
@@ -13885,7 +15189,15 @@ components:
             maxLength: 200
           maxItems: 50
         language:
-          const: en
+          enum:
+            - en
+            - es
+            - fr
+            - de
+            - ja
+            - ar
+            - ru
+            - zh
         brandColor:
           type: string
           minLength: 1
@@ -13943,6 +15255,8 @@ components:
           type: string
         buyerProfile:
           $ref: "#/components/schemas/SiteBuyerProfile"
+        brandChannels:
+          $ref: "#/components/schemas/SiteBrandChannels"
         designDirection:
           type: object
           additionalProperties: false
@@ -13989,6 +15303,12 @@ components:
           type: string
           maxLength: 2000
           description: Private user business description and goals, not confirmed factual evidence
+        demoMode:
+          type: boolean
+          description: S35 demo preview mode; omitted when off. Demo data is never publishable.
+        autoImages:
+          type: boolean
+          description: S35 AI illustration opt-in; omitted when off.
       required:
         - id
         - revision
@@ -14006,6 +15326,189 @@ components:
         - createdAt
         - updatedAt
       additionalProperties: false
+    SiteOptionsInput:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+      minProperties: 2
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        demoMode:
+          type: boolean
+        autoImages:
+          type: boolean
+    FactSuggestionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - consent
+      properties:
+        consent:
+          const: true
+    SiteLogoDesign:
+      type: object
+      description: Private logo brief; never rendered on the public site.
+      additionalProperties: false
+      required:
+        - name
+        - keywords
+        - colors
+        - concept
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        keywords:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+        colors:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            type: string
+            pattern: ^#[a-fA-F0-9]{6}$
+        concept:
+          type: string
+          maxLength: 240
+    SiteLogoSelect:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - assetId
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        assetId:
+          type:
+            - string
+            - "null"
+          pattern: ^[a-f0-9]{24}$
+    SiteLogoGenerate:
+      type: object
+      additionalProperties: false
+      required:
+        - consent
+      properties:
+        consent:
+          const: true
+        logoDesign:
+          $ref: "#/components/schemas/SiteLogoDesign"
+        candidates:
+          type: integer
+          minimum: 2
+          maximum: 3
+    SiteLogoView:
+      type: object
+      required:
+        - siteId
+        - revision
+        - logoId
+        - logoDesign
+        - imagesConfigured
+        - wordmarkSvg
+        - runs
+      properties:
+        siteId:
+          type: string
+        revision:
+          type: integer
+        logoId:
+          type:
+            - string
+            - "null"
+        logoDesign:
+          $ref: "#/components/schemas/SiteLogoDesign"
+        imagesConfigured:
+          type: boolean
+        wordmarkSvg:
+          type: string
+          description: Deterministic SVG wordmark markup (also served at /sites/{id}/logo/wordmark.svg)
+        runId:
+          type: string
+        runs:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              status:
+                type: string
+              errorCode:
+                type:
+                  - string
+                  - "null"
+              createdAt:
+                type: string
+              candidates:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    index:
+                      type: integer
+                    sourceAssetId:
+                      type: string
+                    squareAssetId:
+                      type: string
+                    wideAssetId:
+                      type: string
+                    spellingCheckRequired:
+                      const: true
+    SiteQualityBaseline:
+      type: object
+      description: >-
+        S35 baseline scores (1-5). method "structural" means deterministic page/browser rules only;
+        "structural+visual" means a vision model also scored the screenshots (visualInput=true).
+        signals.images ({rendered, broken, illustrative}, null for older captures) counts the images the
+        isolated browser actually loaded; labelled AI illustrations count as rendered and are reported
+        separately (signals.heroIllustrative for the first screen).
+      properties:
+        version:
+          const: s35-v1
+        method:
+          enum:
+            - structural
+            - structural+visual
+        threshold:
+          type: number
+        total:
+          type: number
+        belowThreshold:
+          type: boolean
+        structural:
+          type: object
+        visual:
+          type:
+            - object
+            - "null"
+        scores:
+          type: object
+        signals:
+          type: object
+        improvements:
+          type: array
+          items:
+            type: object
+            properties:
+              dimension:
+                type: string
+              code:
+                type: string
+              recommendation:
+                type: string
     SitePage:
       type: object
       properties:
@@ -14118,6 +15621,24 @@ components:
           type:
             - string
             - "null"
+        usageUnknownReason:
+          description: >-
+            S35. Fixed reason code of the step's last AI_USAGE_UNKNOWN outcome
+            (never model text). Present only when recorded. The platform
+            absorbs unknown outcomes: the organization's reservation is
+            released (not charged) and the step retries within its three
+            attempts; above AI_UNKNOWN_ABSORB_LIMIT per month the run pauses
+            and an explicit retry is absorbed as well.
+          enum:
+            - timeout
+            - network
+            - body_too_large
+            - usage_missing
+            - usage_over_budget
+            - parse
+            - persist
+            - interrupted
+            - unrecorded
         history:
           type: array
           items:
@@ -14138,6 +15659,21 @@ components:
                 type:
                   - string
                   - "null"
+              invalidReason:
+                type:
+                  - string
+                  - "null"
+                enum:
+                  - truncated
+                  - non_json
+                  - null
+              repaired:
+                type: boolean
+              modelName:
+                type:
+                  - string
+                  - "null"
+                maxLength: 120
             required:
               - attempt
               - status
@@ -14245,6 +15781,33 @@ components:
             - string
             - 'null'
           pattern: ^[a-f0-9]{24}$
+        diagnostics:
+          type: object
+          properties:
+            attempts:
+              type: integer
+              minimum: 0
+            repairedCount:
+              type: integer
+              minimum: 0
+            truncatedCount:
+              type: integer
+              minimum: 0
+            nonJsonCount:
+              type: integer
+              minimum: 0
+            modelsUsed:
+              type: array
+              items:
+                type: string
+                maxLength: 120
+          required:
+            - attempts
+            - repairedCount
+            - truncatedCount
+            - nonJsonCount
+            - modelsUsed
+          additionalProperties: false
       required:
         - id
         - siteId
@@ -14456,6 +16019,28 @@ components:
               - severity
             additionalProperties: false
           maxItems: 500
+        enrichmentGaps:
+          type: array
+          description: Optional S37 §4.6-2 enrichment facts that strengthen metrics, proof and credibility sections without blocking publication.
+          items:
+            type: object
+            properties:
+              subjectId:
+                type:
+                  - string
+                  - "null"
+              type:
+                type: string
+                maxLength: 80
+              severity:
+                enum:
+                  - recommended
+            required:
+              - subjectId
+              - type
+              - severity
+            additionalProperties: false
+          maxItems: 500
         pageBriefs:
           type: array
           items:
@@ -14579,6 +16164,8 @@ components:
             - structural
             - text
             - visual
+        baseline:
+          $ref: "#/components/schemas/SiteQualityBaseline"
         screenshots:
           type: array
           minItems: 3
@@ -14749,7 +16336,9 @@ x-s4-agents:
       retry/cancel. Quota pauses instead of discarding work.
     - >-
       Product pages require specs/material/application/certifications/oem/moq/samples/packaging blocks; FAQ
-      answers begin with a 40–60 word lead.
+      answers begin with a 30–80 word lead (S36; was 40–60) and must not repeat another answer in the same block
+      (FAQ_DUPLICATE_ANSWER). Model codes contained in product names, the site name or plan titles are identifiers,
+      not numeric claims.
     - >-
       All hard claims require valid same-tenant confirmed fact references. Editing, new plans or withdrawn
       facts invalidate approval.

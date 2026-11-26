@@ -47,13 +47,23 @@ test("workspace navigation, agent handoff and responsive screens", async ({
   const siteId = (await created.json()).data.id;
   await page.reload();
   await expect(page.locator(".agent-picker select")).toHaveValue(siteId);
-  await page.locator(".agent-handoffs a").first().click();
-  await expect(page).toHaveURL(new RegExp(siteId + "\\?tab=planning"));
-
+  await page
+    .locator(".agent-mast-actions")
+    .getByRole("link", { name: "站点工作台", exact: true })
+    .click();
+  await expect(page).toHaveURL(new RegExp("/sites/" + siteId + "$"));
+  await page
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /页面结构/ })
+    .click();
+  await page.getByText("编辑栏目、路径与策略字段", { exact: true }).click();
   await page.getByRole("button", { name: "保存站点地图", exact: true }).click();
   await page.getByRole("button", { name: "确认站点地图", exact: true }).click();
   await expect(page.getByText("站点地图已确认", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "内容与审核", exact: true }).click();
+  await page
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /内容创意/ })
+    .click();
   await page
     .getByRole("button", { name: "手工创建页面", exact: true })
     .first()
@@ -81,6 +91,21 @@ test("workspace navigation, agent handoff and responsive screens", async ({
       apiErrors.push(response.status() + " " + pathname);
     }
   });
+  const palettePaths = new Set([
+    "/",
+    "/agent",
+    "/products",
+    "/assets",
+    "/facts",
+    "/website-reads",
+    "/inquiries",
+    "/organization",
+    "/members",
+    "/security",
+    "/usage",
+    "/ai",
+    "/crm",
+  ]);
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 940 });
     for (const path of [
@@ -101,22 +126,30 @@ test("workspace navigation, agent handoff and responsive screens", async ({
       "/ai",
       "/crm",
     ]) {
-      await page.keyboard.press("Control+k");
-      const dialog = page.getByRole("dialog");
-      await dialog.locator('a[href="' + path + '"]').click();
+      if (palettePaths.has(path)) {
+        await page.keyboard.press("Control+k");
+        const dialog = page.getByRole("dialog");
+        await dialog.locator('button[data-path="' + path + '"]').click();
+      } else {
+        await page.goto(path);
+      }
       await expect(page).toHaveURL((url) => url.pathname === path);
       await expect(page.locator("main h1").first()).toBeVisible();
       await page.waitForLoadState("networkidle");
       expect(apiErrors, path + " at " + width).toEqual([]);
       if (path === "/") {
-        await expect(page.locator(".mission-context select")).toHaveValue(
-          siteId,
-        );
-        await expect(page.locator(".mission-jobs li").first()).toBeVisible();
+        await expect(
+          page.getByRole("heading", { name: /Atlas Supply/ }),
+        ).toBeVisible();
+        await expect(page.locator(".gs-list-row").first()).toBeVisible();
       }
       if (path === "/agent") {
         await expect(page.locator(".agent-picker select")).toHaveValue(siteId);
-        await expect(page.locator(".studio-run").first()).toBeVisible();
+        await expect(
+          page
+            .locator(width >= 1024 ? ".task-index-item" : ".task-detail")
+            .first(),
+        ).toBeVisible();
       }
       if (path === "/inquiries") {
         await expect(

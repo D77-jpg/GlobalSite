@@ -16,6 +16,7 @@
     "lint": "eslint server web e2e playwright.config.ts scripts/s5-quality.mjs",
     "test": "npm test -w server && npm test -w web",
     "migrate": "npm run migrate -w server",
+    "ops:usage": "npm run ops:usage -w server --",
     "format": "prettier --write server/src server/tests web/src web/tests docs/api",
     "test:e2e": "playwright test",
     "test:quality": "npm run build -w server && node scripts/s5-quality.mjs"

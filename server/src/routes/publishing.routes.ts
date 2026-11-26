@@ -150,6 +150,14 @@ for (const kind of ["publish", "rollback"] as const)
     }),
   );
 r.post(
+  "/site-versions/:id/webhook",
+  admin,
+  wrap(async (req, res) => {
+    p.empty.parse(req.body);
+    ok(res, await p.triggerVersionWebhook(id(req), actor(req)));
+  }),
+);
+r.post(
   "/sites/:id/domain-check",
   admin,
   wrap(async (req, res) => {

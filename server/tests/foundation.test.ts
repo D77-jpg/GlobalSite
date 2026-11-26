@@ -815,12 +815,16 @@ test("AI configuration is tenant scoped, redacted and metered once per operation
     const key = "fixture-" + randomBytes(24).toString("hex");
     const saved = await a.client.request("PUT", "/ai/provider", {
       modelName: "fixture-model",
-      baseUrl: "https://api.openai.com/v1",
+      visionModelName: "fixture-vision-model",
+      baseUrl: "https://openrouter.ai/api/v1",
       enabled: true,
+      supportsVision: true,
       apiKey: key,
     });
     assert.equal(saved.status, 200);
     assert.equal(saved.body.data.configured, true);
+    assert.equal(saved.body.data.baseUrl, "https://openrouter.ai/api/v1");
+    assert.equal(saved.body.data.visionModelName, "fixture-vision-model");
     assert(!JSON.stringify(saved.body).includes(key));
     assert.equal(
       (await b.client.request("GET", "/ai/provider")).body.data.configured,

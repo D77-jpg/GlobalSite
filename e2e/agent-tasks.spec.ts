@@ -107,6 +107,10 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
   let historyRequests = 0,
     retryCalls = 0;
   // Recorded UI states only. Real retry/cancel and Worker persistence are covered by sites/server tests.
+  await page.route(
+    "**/api/v1/sites/" + siteId + "/agent-runs/stream",
+    (route) => route.fulfill({ status: 503, body: "" }),
+  );
   await page.route("**/api/v1/sites/" + siteId + "/agent-runs*", (route) => {
     const older = new URL(route.request().url()).searchParams.has("cursor");
     if (older) historyRequests++;
@@ -178,8 +182,10 @@ test("task center prioritizes outcomes, recovery, history and responsive diagnos
     fullPage: true,
     animations: "disabled",
   });
-  await detail.getByText("执行详情与用量", { exact: true }).click();
-  await expect(detail.getByText("117,774", { exact: true })).toBeVisible();
+  await detail.getByText("执行详情", { exact: true }).click();
+  // S35: diagnostics no longer show raw model units to customers.
+  await expect(detail.getByText("117,774", { exact: true })).toHaveCount(0);
+  await expect(detail.getByText(/token/i)).toHaveCount(0);
   await detail
     .locator(".task-diagnostics > details")
     .first()

@@ -30,11 +30,18 @@ export function BuyerWorkspace({
     [coverage, setCoverage] = useState<Row>(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [saved, setSaved] = useState(false);
-  useEffect(() => {
+    [saved, setSaved] = useState(false),
+    [fillingGap, setFillingGap] = useState<string | null>(null),
+    [gapValue, setGapValue] = useState(""),
+    [gapQuote, setGapQuote] = useState(""),
+    [gapSaved, setGapSaved] = useState("");
+  function reloadCoverage() {
     void api<Row>("/sites/" + site.id + "/buyer-readiness")
       .then(setCoverage)
       .catch(() => setError(t("failedGeneric")));
+  }
+  useEffect(() => {
+    reloadCoverage();
   }, [site.id, site.revision, site.planRevision]);
   async function save() {
     setBusy(true);
@@ -58,6 +65,7 @@ export function BuyerWorkspace({
         revision: site.revision,
         data: {
           ...data,
+          ...(site.brandChannels ? { brandChannels: site.brandChannels } : {}),
           buyerProfile: {
             ...profile,
             ...Object.fromEntries(
@@ -172,26 +180,109 @@ export function BuyerWorkspace({
               <Link to="/facts">{t("facts")}</Link>
               <Link to="/products">{t("products")}</Link>
             </div>
+            {gapSaved && <p role="status">{gapSaved}</p>}
             <ul className="b2b-gap-list">
-              {coverage.gaps.map((g: Row, i: number) => (
-                <li key={i}>
-                  <span
-                    className={
-                      "catalog-badge " +
-                      (g.severity === "required" ? "blocked" : "draft")
-                    }
-                  >
-                    {t(g.severity)}
-                  </span>
-                  <strong>{t(g.type)}</strong>
-                  <small>
-                    {g.subjectId
-                      ? (products.find((p) => p.id === g.subjectId)?.name ??
-                        t("products"))
-                      : t("organizationFact")}
-                  </small>
-                </li>
-              ))}
+              {coverage.gaps.map((g: Row, i: number) => {
+                const gapKey = `${g.type}:${g.subjectId ?? "org"}`;
+                const open = fillingGap === gapKey;
+                return (
+                  <li key={i}>
+                    <span
+                      className={
+                        "catalog-badge " +
+                        (g.severity === "required" ? "blocked" : "draft")
+                      }
+                    >
+                      {t(g.severity)}
+                    </span>
+                    <strong>{t(g.type)}</strong>
+                    <small>
+                      {g.subjectId
+                        ? (products.find((p) => p.id === g.subjectId)?.name ??
+                          t("products"))
+                        : t("organizationFact")}
+                    </small>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          setFillingGap(open ? null : gapKey);
+                          setGapValue("");
+                          setGapQuote("");
+                          setGapSaved("");
+                        }}
+                      >
+                        {t("quickFillFact")}
+                      </button>
+                    )}
+                    {open && canEdit && (
+                      <div className="gap-quick-form">
+                        <label>
+                          {t("factValueLabel")}
+                          <input
+                            maxLength={1200}
+                            value={gapValue}
+                            onChange={(e) => setGapValue(e.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {t("factQuoteLabel")}
+                          <input
+                            maxLength={1200}
+                            value={gapQuote}
+                            onChange={(e) => setGapQuote(e.target.value)}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            busy || !gapValue.trim() || !gapQuote.trim()
+                          }
+                          onClick={() => {
+                            setBusy(true);
+                            setError("");
+                            void api("/facts", "POST", {
+                              subjectType: g.subjectId
+                                ? "product"
+                                : "organization",
+                              ...(g.subjectId
+                                ? { subjectId: g.subjectId }
+                                : {}),
+                              type: g.type,
+                              value: gapValue.trim(),
+                              source: {
+                                kind: "manual",
+                                quote: gapQuote.trim(),
+                                label: "Buyer readiness quick fill",
+                              },
+                            })
+                              .then(() => {
+                                setFillingGap(null);
+                                setGapValue("");
+                                setGapQuote("");
+                                setGapSaved(t("gapFilled"));
+                                reloadCoverage();
+                              })
+                              .catch((e) =>
+                                setError(
+                                  t(
+                                    e instanceof ApiError
+                                      ? e.code
+                                      : "failedGeneric",
+                                  ),
+                                ),
+                              )
+                              .finally(() => setBusy(false));
+                          }}
+                        >
+                          {t("saveCandidateFact")}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <h3>{t("pageBriefs")}</h3>
             {coverage.pageBriefs.map((b: Row) => (

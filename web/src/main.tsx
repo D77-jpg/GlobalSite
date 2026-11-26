@@ -1,30 +1,71 @@
-import { SiteCreation } from "./site-journey";
 import { WorkspaceFrame } from "./workspace-frame";
-import { AgentWorkbench } from "./agent-workbench";
-import { CrmConnectionPage } from "./crm";
-import {
-  InquiriesPage,
-  InquiryDetailPage,
-  InquirySettingsPage,
-} from "./inquiries";
-import { PublishPage } from "./publishing";
-import {
-  LatestSitePreview,
-  SitesPage,
-  SiteWorkspace,
-  PageReview,
-} from "./sites";
-import {
-  ProductsPage,
-  ProductEditor,
-  ImportPage,
-  AssetsPage,
-  FactsPage,
-  WebsitePage,
-} from "./catalog";
+import { KnowledgeShell } from "./knowledge-hub";
+import { SettingsShell } from "./settings-hub";
 import "./catalog.css";
 import { safeReturnTo } from "./navigation";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  Suspense,
+  createContext,
+  lazy,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+const SiteCreation = lazy(() =>
+  import("./site-journey").then((m) => ({ default: m.SiteCreation })),
+);
+const AgentWorkbench = lazy(() =>
+  import("./agent-workbench").then((m) => ({ default: m.AgentWorkbench })),
+);
+const CrmConnectionPage = lazy(() =>
+  import("./crm").then((m) => ({ default: m.CrmConnectionPage })),
+);
+const InquiriesPage = lazy(() =>
+  import("./inquiries").then((m) => ({ default: m.InquiriesPage })),
+);
+const InquiryDetailPage = lazy(() =>
+  import("./inquiries").then((m) => ({ default: m.InquiryDetailPage })),
+);
+const InquirySettingsPage = lazy(() =>
+  import("./inquiries").then((m) => ({ default: m.InquirySettingsPage })),
+);
+const PublishPage = lazy(() =>
+  import("./publishing").then((m) => ({ default: m.PublishPage })),
+);
+const LatestSitePreview = lazy(() =>
+  import("./sites").then((m) => ({ default: m.LatestSitePreview })),
+);
+const SitesPage = lazy(() =>
+  import("./sites").then((m) => ({ default: m.SitesPage })),
+);
+const SiteWorkspace = lazy(() =>
+  import("./sites").then((m) => ({ default: m.SiteWorkspace })),
+);
+const PageReview = lazy(() =>
+  import("./sites").then((m) => ({ default: m.PageReview })),
+);
+const ProductsPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.ProductsPage })),
+);
+const ProductEditor = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.ProductEditor })),
+);
+const ImportPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.ImportPage })),
+);
+const AssetsPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.AssetsPage })),
+);
+const FactsPage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.FactsPage })),
+);
+const WebsitePage = lazy(() =>
+  import("./catalog").then((m) => ({ default: m.WebsitePage })),
+);
+const MissionOverview = lazy(() =>
+  import("./overview").then((m) => ({ default: m.MissionOverview })),
+);
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -49,16 +90,40 @@ import {
   Mail,
   Monitor,
   KeyRound,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { api, ApiError } from "./api";
 import { messages, errors, type Locale, type Key } from "./i18n";
+import {
+  formatResetDate,
+  isPlatformManaged,
+  nearPlanLimit,
+  safeUpgradeUrl,
+} from "./ai-service-status";
 import "./style.css";
 import "./workspace.css";
 import "./account-workspace.css";
+import "./operations.css";
+import "./asset-library.css";
+import "./inquiries.css";
+import "./crm.css";
+import "./sites.css";
+import "./studio.css";
+import "./site-design.css";
+import "./site-journey.css";
+import "./agent-tasks.css";
 import "./product-ui.css";
 import "./workspace-layouts.css";
 import "./surface.css";
-import { MissionOverview } from "./overview";
+import "./obsidian-studio.css";
+import "./ui/design-system.css";
+type Theme = "dark" | "light";
+const ThemeCtx = createContext<{
+  theme: Theme;
+  toggleTheme: () => void;
+}>({ theme: "dark", toggleTheme: () => {} });
+const useTheme = () => useContext(ThemeCtx);
 type Me = {
   user: { id: string; name: string; email: string; twoFactorEnabled: boolean };
   organizationId: string;
@@ -81,6 +146,9 @@ function Notice({ error, success }: { error?: unknown; success?: string }) {
     return (
       <div className="notice error" role="alert">
         {errors[code]?.[locale === "zh" ? 0 : 1] ?? t("failed")}
+        {code === "QUOTA_EXCEEDED" && (
+          <Link to="/usage#upgrade">{t("upgradePlan")}</Link>
+        )}
       </div>
     );
   }
@@ -246,6 +314,26 @@ function DevMail({ receipt }: { receipt?: string }) {
     </aside>
   );
 }
+function ThemeButton() {
+  const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
+  const label = theme === "dark" ? t("switchToLight") : t("switchToDark");
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      aria-label={label}
+      title={label}
+      onClick={toggleTheme}
+    >
+      {theme === "dark" ? (
+        <Sun size={16} aria-hidden="true" />
+      ) : (
+        <Moon size={16} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
 function LocaleButton() {
   const { locale, setLocale, t } = useI18n();
   return (
@@ -266,7 +354,7 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
       <section className="auth-story">
         <Link to="/login" className="brand">
           <span className="brand-icon">
-            <Globe2 size={25} aria-hidden="true" />
+            <Globe2 size={22} aria-hidden="true" />
           </span>
           GlobalSite
           <span className="brand-dot" aria-hidden="true">
@@ -274,6 +362,9 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
         <div className="story-content">
+          <p className="eyebrow">{t("builtForGlobal")}</p>
+          <h1>{t("tagline")}</h1>
+          <p className="story-lead">{t("workspaceSub")}</p>
           <h2>{t("accountWorkflow")}</h2>
           <ol className="auth-workflow">
             {(["authCapture", "authPlan", "authReview"] as const).map(
@@ -283,15 +374,19 @@ function AuthFrame({ children }: { children: React.ReactNode }) {
             )}
           </ol>
         </div>
+        <div className="story-footer">GlobalSite · B2B AI Site Studio</div>
       </section>
       <main className="auth-main">
+        <div className="auth-controls">
+          <ThemeButton />
+          <LocaleButton />
+        </div>
         <Link to="/login" className="brand auth-mark">
           <span className="brand-icon">
-            <Globe2 size={21} />
+            <Globe2 size={20} />
           </span>
           GlobalSite
         </Link>
-        <LocaleButton />
         <div className="auth-form">{children}</div>
         <footer>© {new Date().getFullYear()} GlobalSite</footer>
       </main>
@@ -980,11 +1075,25 @@ function UsagePage() {
         <Loading error={error} retry={reload} />
       ) : (
         <>
+          {nearPlanLimit(data) && (
+            <div className="notice warning" role="status">
+              {t("usageNearLimit")}
+              <a href="#upgrade">{t("upgradePlan")}</a>
+            </div>
+          )}
           <div className="section-heading">
             <h2>
               {t("currentPeriod")} · {data.period}
             </h2>
             <p>{t("quotaNotice")}</p>
+            {formatResetDate(data.resetsAt, locale) && (
+              <p>
+                {t("usageResetsOn").replace(
+                  "{date}",
+                  formatResetDate(data.resetsAt, locale),
+                )}
+              </p>
+            )}
           </div>
           <div className="usage-ledger">
             {(
@@ -1007,6 +1116,51 @@ function UsagePage() {
                   ? 0
                   : (100 * (row.consumed + row.reserved)) / data.limits[key],
               );
+              // S35: the AI allowance is shown as a share of the plan only,
+              // never as raw model units.
+              if (key === "ai_tokens") {
+                const used = Math.round(percent);
+                return (
+                  <section className="usage-line" key={key}>
+                    <span className="eyebrow">{t(key)}</span>
+                    {data.limits[key] === null ? (
+                      <h2>{t("unlimited")}</h2>
+                    ) : (
+                      <>
+                        <h2>{used}%</h2>
+                        <p>
+                          {t("aiUsedPercent")
+                            .replace("{used}", String(used))
+                            .replace("{left}", String(Math.max(0, 100 - used)))}
+                        </p>
+                        <progress
+                          max={100}
+                          value={percent}
+                          aria-label={t(key)}
+                        />
+                      </>
+                    )}
+                  </section>
+                );
+              }
+              // S36: AI images are shown as "used N / limit".
+              if (key === "images" && data.limits[key] !== null) {
+                return (
+                  <section className="usage-line" key={key}>
+                    <span className="eyebrow">{t(key)}</span>
+                    <h2>
+                      {fmt(row.consumed + row.reserved, key)} /{" "}
+                      {fmt(data.limits[key], key)}
+                    </h2>
+                    <p>
+                      {t("imagesUsedOf")
+                        .replace("{used}", fmt(row.consumed + row.reserved, key))
+                        .replace("{limit}", fmt(data.limits[key], key))}
+                    </p>
+                    <progress max={100} value={percent} aria-label={t(key)} />
+                  </section>
+                );
+              }
               return (
                 <section className="usage-line" key={key}>
                   <span className="eyebrow">{t(key)}</span>
@@ -1027,17 +1181,61 @@ function UsagePage() {
               );
             })}
           </div>
+          <section className="usage-line usage-upgrade" id="upgrade">
+            <span className="eyebrow">{t("upgradeTitle")}</span>
+            {safeUpgradeUrl(data.upgradeUrl) ? (
+              <a
+                className="button primary"
+                href={safeUpgradeUrl(data.upgradeUrl)!}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("upgradePlan")}
+                <ArrowUpRight size={15} />
+              </a>
+            ) : (
+              <p>{t("upgradeContact")}</p>
+            )}
+          </section>
         </>
       )}
     </div>
   );
 }
+const AI_PRESETS = [
+  { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1", vision: "gpt-4.1" },
+  { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", vision: "" },
+  { id: "openrouter", label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", vision: "anthropic/claude-sonnet-4" },
+  { id: "gemini", label: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-pro", vision: "gemini-2.5-flash" },
+  { id: "dashscope", label: "DashScope", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-max", vision: "qwen-vl-max" },
+  { id: "siliconflow", label: "SiliconFlow", baseUrl: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", vision: "Qwen/Qwen2.5-VL-72B-Instruct" },
+] as const;
+const AI_TASK_ROUTES = [
+  { key: "research", label: "taskResearch" },
+  { key: "interview", label: "taskInterview" },
+  { key: "design", label: "taskDesign" },
+  { key: "content", label: "taskContent" },
+  { key: "review", label: "taskReview" },
+  { key: "rewrite", label: "taskRewrite" },
+] as const;
+
 function AiPage() {
   const { t } = useI18n();
   const { me } = useContext(Auth);
   const { data, error, reload } = useData("/ai/provider");
   const [enabled, setEnabled] = useState(false);
   const [supportsVision, setSupportsVision] = useState(false);
+  const [outputMode, setOutputMode] = useState<"json_object" | "json_schema">(
+    "json_object",
+  );
+  const [taskModels, setTaskModels] = useState<Record<string, string>>({});
+  const [taskTemps, setTaskTemps] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<{
+    modelName: string;
+    visionModelName: string;
+    baseUrl: string;
+    rev: number;
+  }>();
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>();
@@ -1045,18 +1243,53 @@ function AiPage() {
     if (data) {
       setEnabled(data.enabled);
       setSupportsVision(!!data.supportsVision);
+      setOutputMode(
+        data.outputMode === "json_schema" ? "json_schema" : "json_object",
+      );
+      setTaskModels(data.taskModels ?? {});
+      const temps: Record<string, string> = {};
+      for (const [k, v] of Object.entries(data.temperatureByTask ?? {})) {
+        if (typeof v === "number") temps[k] = String(v);
+      }
+      setTaskTemps(temps);
+      setDraft({
+        modelName: data.modelName ?? "",
+        visionModelName: data.visionModelName ?? "",
+        baseUrl: data.baseUrl ?? "https://api.openai.com/v1",
+        rev: Date.now(),
+      });
     }
   }, [data]);
   return (
     <div className="account-page account-provider">
       <PageHeader
         title="ai"
-        sub="aiSub"
-        tag={<span className="badge">{t("optional")}</span>}
+        sub={isPlatformManaged(data) ? "aiManagedSub" : "aiSub"}
+        tag={
+          <span className="badge">
+            {t(isPlatformManaged(data) ? "aiManagedBadge" : "optional")}
+          </span>
+        }
       />
       {me.role !== "admin" ? (
         <Notice error={new ApiError("FORBIDDEN", 403)} />
-      ) : !data ? (
+      ) : isPlatformManaged(data) ? (
+        // S36: platform-provided AI; no model, service URL or key fields.
+        <SettingsSection className="panel provider-managed">
+          <div className="panel-title">
+            <Sparkles size={20} />
+            <h2>{t("aiManagedTitle")}</h2>
+            <span className={"badge " + (data.enabled ? "active" : "")}>
+              {t("aiManagedBadge")}
+            </span>
+          </div>
+          <p>{t(data.enabled ? "aiManagedNotice" : "aiManagedUnavailable")}</p>
+          <Link to="/usage" className="button secondary">
+            {t("usage")}
+            <ArrowUpRight size={15} />
+          </Link>
+        </SettingsSection>
+      ) : !data || !draft ? (
         <Loading error={error} retry={reload} />
       ) : (
         <SettingsSection>
@@ -1068,12 +1301,41 @@ function AiPage() {
             </span>
           </div>
           <p>{t("aiNotice")}</p>
+          <div className="field">
+            <label>{t("providerPreset")}</label>
+            <div className="provider-presets">
+              {AI_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setDraft({
+                      modelName: preset.model,
+                      visionModelName: preset.vision,
+                      baseUrl: preset.baseUrl,
+                      rev: Date.now(),
+                    });
+                    setSupportsVision(Boolean(preset.vision));
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <Notice error={actionError} success={success} />
           <Form
-            key={data.modelName + data.configured}
+            key={draft.rev}
             fields={[
+              { key: "baseUrl", label: "baseUrl" },
               { key: "modelName", label: "modelName" },
-              { key: "baseUrl", label: "baseUrl", readOnly: true },
+              {
+                key: "visionModelName",
+                label: "visionModelName",
+                optional: true,
+                placeholder: t("visionModelHint"),
+              },
               {
                 key: "apiKey",
                 label: "apiKey",
@@ -1082,13 +1344,34 @@ function AiPage() {
                 placeholder: data.configured ? t("keepKey") : undefined,
               },
             ]}
-            initial={{ modelName: data.modelName, baseUrl: data.baseUrl }}
+            initial={{
+              modelName: draft.modelName,
+              visionModelName: draft.visionModelName,
+              baseUrl: draft.baseUrl,
+            }}
             onSubmit={async (value) => {
+              const cleanedModels: Record<string, string> = {};
+              const cleanedTemps: Record<string, number> = {};
+              for (const row of AI_TASK_ROUTES) {
+                const m = (taskModels[row.key] ?? "").trim();
+                if (m) cleanedModels[row.key] = m;
+                const rawT = (taskTemps[row.key] ?? "").trim();
+                if (rawT !== "") {
+                  const n = Number(rawT);
+                  if (Number.isFinite(n) && n >= 0 && n <= 2) {
+                    cleanedTemps[row.key] = n;
+                  }
+                }
+              }
               await api("/ai/provider", "PUT", {
                 modelName: value.modelName,
+                visionModelName: value.visionModelName ?? "",
                 baseUrl: value.baseUrl,
                 enabled,
                 supportsVision,
+                outputMode,
+                taskModels: cleanedModels,
+                temperatureByTask: cleanedTemps,
                 ...(value.apiKey ? { apiKey: value.apiKey } : {}),
               });
               setSuccess(t("saved"));
@@ -1111,6 +1394,66 @@ function AiPage() {
               />
               {t("supportsVision")}
             </label>
+            <details className="provider-routing-panel">
+              <summary>{t("aiAdvancedRouting")}</summary>
+              <div className="field">
+                <label htmlFor="ai-output-mode">{t("outputMode")}</label>
+                <select
+                  id="ai-output-mode"
+                  value={outputMode}
+                  onChange={(e) =>
+                    setOutputMode(
+                      e.target.value === "json_schema"
+                        ? "json_schema"
+                        : "json_object",
+                    )
+                  }
+                >
+                  <option value="json_object">{t("outputModeJsonObject")}</option>
+                  <option value="json_schema">{t("outputModeJsonSchema")}</option>
+                </select>
+                <small>{t("outputModeHint")}</small>
+              </div>
+              <p className="muted">{t("taskModelsHint")}</p>
+              <div className="provider-routing-grid">
+                {AI_TASK_ROUTES.map((row) => (
+                  <div key={row.key} className="provider-route-row">
+                    <label>
+                      {t(row.label)}
+                      <input
+                        type="text"
+                        maxLength={120}
+                        placeholder={t("taskModelPlaceholder")}
+                        value={taskModels[row.key] ?? ""}
+                        onChange={(e) =>
+                          setTaskModels((old) => ({
+                            ...old,
+                            [row.key]: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="provider-temp-field">
+                      {t("temperatureLabel")}
+                      <input
+                        type="number"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        placeholder="—"
+                        value={taskTemps[row.key] ?? ""}
+                        onChange={(e) =>
+                          setTaskTemps((old) => ({
+                            ...old,
+                            [row.key]: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </details>
           </Form>
           <button
             className="button secondary test-button"
@@ -1130,7 +1473,7 @@ function AiPage() {
           </button>
         </SettingsSection>
       )}
-      {me.role === "admin" && (
+      {me.role === "admin" && !isPlatformManaged(data) && (
         <SettingsSection className="panel provider-imagery">
           <div className="panel-title">
             <Sparkles size={20} />
@@ -1219,7 +1562,7 @@ function Workspace() {
   );
 }
 function WorkspaceRoutes({ me }: { me: Me }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const org = useData<OrganizationSummary>("/organization");
   return (
     <WorkspaceFrame
@@ -1227,9 +1570,11 @@ function WorkspaceRoutes({ me }: { me: Me }) {
       userName={me.user.name}
       role={me.role}
       organizationName={org.data?.name}
+      themeButton={<ThemeButton />}
       languageButton={<LocaleButton />}
     >
-      <Routes>
+      <Suspense fallback={<p role="status">{t("loading")}</p>}>
+        <Routes>
         <Route index element={<Overview org={org} />} />
         <Route
           path="agent"
@@ -1237,7 +1582,11 @@ function WorkspaceRoutes({ me }: { me: Me }) {
         />
         <Route
           path="crm"
-          element={<CrmConnectionPage locale={locale} role={me.role} />}
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <CrmConnectionPage locale={locale} role={me.role} />
+            </SettingsShell>
+          }
         />
         <Route
           path="inquiries"
@@ -1276,41 +1625,115 @@ function WorkspaceRoutes({ me }: { me: Me }) {
           element={<PageReview locale={locale} role={me.role} />}
         />
         <Route
+          path="knowledge"
+          element={<Navigate to="/products" replace />}
+        />
+        <Route
           path="products"
-          element={<ProductsPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ProductsPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="products/new"
-          element={<ProductEditor locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ProductEditor locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="products/imports"
-          element={<ImportPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ImportPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="products/:id"
-          element={<ProductEditor locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <ProductEditor locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="assets"
-          element={<AssetsPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <AssetsPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="facts"
-          element={<FactsPage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <FactsPage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
         <Route
           path="website-reads"
-          element={<WebsitePage locale={locale} role={me.role} />}
+          element={
+            <KnowledgeShell locale={locale} role={me.role}>
+              <WebsitePage locale={locale} role={me.role} />
+            </KnowledgeShell>
+          }
         />
-        <Route path="organization" element={<OrganizationPage org={org} />} />
-        <Route path="members" element={<MembersPage />} />
-        <Route path="security" element={<SecurityPage />} />
-        <Route path="usage" element={<UsagePage />} />
-        <Route path="ai" element={<AiPage />} />
+        <Route
+          path="settings"
+          element={
+            <Navigate to={me.role === "admin" ? "/ai" : "/organization"} replace />
+          }
+        />
+        <Route
+          path="organization"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <OrganizationPage org={org} />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="members"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <MembersPage />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="security"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <SecurityPage />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="usage"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <UsagePage />
+            </SettingsShell>
+          }
+        />
+        <Route
+          path="ai"
+          element={
+            <SettingsShell locale={locale} role={me.role}>
+              <AiPage />
+            </SettingsShell>
+          }
+        />
         <Route path="accept-invitation" element={<AcceptInvite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </WorkspaceFrame>
   );
 }
@@ -1318,29 +1741,47 @@ function App() {
   const [locale, setLocaleState] = useState<Locale>(
     localStorage.getItem("globalsite_locale") === "en" ? "en" : "zh",
   );
+  const [theme, setThemeState] = useState<Theme>(
+    localStorage.getItem("globalsite_studio_theme") === "light" ? "light" : "dark",
+  );
   const setLocale = (next: Locale) => {
     setLocaleState(next);
     localStorage.setItem("globalsite_locale", next);
   };
+  const toggleTheme = () => {
+    setThemeState((prev) => {
+      const next: Theme = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("globalsite_studio_theme", next);
+      return next;
+    });
+  };
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta)
+      meta.setAttribute("content", theme === "dark" ? "#08070d" : "#f7f7f5");
+  }, [theme]);
   return (
-    <I18n.Provider
-      value={{ locale, setLocale, t: (key) => messages[locale][key] ?? key }}
-    >
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-email" element={<Verify />} />
-          <Route path="/resend-verification" element={<ResendVerification />} />
-          <Route path="/forgot-password" element={<PasswordPage />} />
-          <Route path="/reset-password" element={<PasswordPage reset />} />
-          <Route path="/*" element={<Workspace />} />
-        </Routes>
-      </BrowserRouter>
-    </I18n.Provider>
+    <ThemeCtx.Provider value={{ theme, toggleTheme }}>
+      <I18n.Provider
+        value={{ locale, setLocale, t: (key) => messages[locale][key] ?? key }}
+      >
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<Verify />} />
+            <Route path="/resend-verification" element={<ResendVerification />} />
+            <Route path="/forgot-password" element={<PasswordPage />} />
+            <Route path="/reset-password" element={<PasswordPage reset />} />
+            <Route path="/*" element={<Workspace />} />
+          </Routes>
+        </BrowserRouter>
+      </I18n.Provider>
+    </ThemeCtx.Provider>
   );
 }
 createRoot(document.getElementById("root")!).render(<App />);

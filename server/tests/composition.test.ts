@@ -7,7 +7,10 @@ import {
 } from "../src/services/site-composition.service";
 import { pageInput } from "../src/validators/sites.validator";
 import { validatePage } from "../src/services/page-validation.service";
-import { renderStaticPage } from "../src/services/static-template.service";
+import {
+  renderStaticPage,
+  pageComposition,
+} from "../src/services/static-template.service";
 import { referenceStructure } from "../src/services/reference-structure.service";
 
 test("composed pages use bounded axes, distinct structures and retain fact gates", () => {
@@ -107,4 +110,48 @@ test("reference evidence captures navigation and section depth without importing
   assert.equal(result.sections[0].words, 5);
   assert.equal(result.sections.length, 2);
   assert(!JSON.stringify(result).includes("fetch"));
+});
+test("precision pack adds one scoped body class and leaves other output unchanged", () => {
+  const page = compositionPage(0);
+  const render = (pack?: "precision") => {
+    const presentation = {
+      ...page.presentation!,
+      composition: {
+        ...page.presentation!.composition!,
+        ...(pack ? { pack } : {}),
+      },
+    };
+    const home = { ...page, presentation };
+    assert(pageInput.safeParse(home).success);
+    const snapshot = {
+      site: { name: "Fixture", templateId: "adaptive", buyerProfile: {} },
+      pages: [{ ...home, type: "home", path: "/" }],
+      products: [],
+      facts: [],
+      assets: {},
+      settings: { canonicalBaseUrl: "https://fixture.invalid" },
+      createdAt: "fixture",
+    };
+    return {
+      html: renderStaticPage(snapshot, snapshot.pages[0]),
+      pack: pageComposition(snapshot, snapshot.pages[0])?.pack,
+    };
+  };
+  const plain = render();
+  const precision = render("precision");
+  assert.match(precision.html, /<body[^>]*class="[^"]*\bpack-precision\b/);
+  assert.match(precision.html, /barlow-condensed-700\.woff2/);
+  assert.doesNotMatch(plain.html, /pack-precision|barlow-condensed/);
+  assert.equal(precision.pack, "precision");
+  assert.equal(plain.pack, undefined);
+  // Apart from the class and its font preload, the markup is identical.
+  assert.equal(
+    precision.html
+      .replace(" pack-precision", "")
+      .replace("barlow-condensed-700.woff2", "space-grotesk-700.woff2"),
+    plain.html,
+  );
+  const invalid = structuredClone(page);
+  (invalid.presentation!.composition as any).pack = "luxury";
+  assert.equal(pageInput.safeParse(invalid).success, false);
 });

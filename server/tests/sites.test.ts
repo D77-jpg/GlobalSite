@@ -542,7 +542,7 @@ test("durable step result resumes without repeating AI or data writes; transient
     1,
   );
 });
-test("quota pauses the job and resumes with its frozen input; unknown paid outcomes are never automatically repeated", async () => {
+test("quota pauses the job and resumes with its frozen input; interrupted open reservations report AI_USAGE_UNKNOWN", async () => {
   const site = await planSite(await newSite()),
     r = await queue(site),
     id = r.body.data.id,
@@ -740,7 +740,14 @@ test("FAQ lead length, product section tables, source changes and stale fences a
     0,
   );
 });
-test("provider uses configured model and meters output; no provider is a paused/manual-capable state", async () => {
+test("provider uses configured model and meters output; no provider is a paused/manual-capable state", async (t) => {
+  // Deadline assertions use the default, not a developer's local .env value.
+  const savedTimeout = process.env.AI_FULL_PAGE_TIMEOUT_MS;
+  delete process.env.AI_FULL_PAGE_TIMEOUT_MS;
+  t.after(() => {
+    if (savedTimeout !== undefined)
+      process.env.AI_FULL_PAGE_TIMEOUT_MS = savedTimeout;
+  });
   const { encrypt } = await import("../src/services/credential-crypto"),
     { callSiteAgent } = await import(
       "../src/services/site-agent-provider.service"
@@ -759,16 +766,18 @@ test("provider uses configured model and meters output; no provider is a paused/
   );
   mock.method(dns, "lookup", async () => [{ address: "8.8.8.8", family: 4 }]);
   let model = "",
-    expectedBudget = 16384;
+    expectedBudget = 32768;
   const deadlines: number[] = [];
+  const seenRequests: any[] = [];
   mock.method(AbortSignal, "timeout", (ms: number) => {
     deadlines.push(ms);
     return new AbortController().signal;
   });
   mock.method(globalThis, "fetch", async (_url: any, options: any) => {
     const request = JSON.parse(options.body);
+    seenRequests.push(request);
     model = request.model;
-    // Content needs room for both reasoning and the complete page JSON.
+    // Full-page tasks (design/content/refine) need room for both reasoning and complete page JSON.
     assert.equal(request.max_tokens, expectedBudget);
     return new Response(
       JSON.stringify({
@@ -779,7 +788,7 @@ test("provider uses configured model and meters output; no provider is a paused/
   });
   const result = await tenant(() =>
     callSiteAgent(
-      "Return JSON",
+      "UNIQUE_SYSTEM_PROMPT_MARKER",
       { task: "content" },
       randomUUID(),
       async () => {},
@@ -787,6 +796,8 @@ test("provider uses configured model and meters output; no provider is a paused/
   );
   assert.equal(result.tokens, 45);
   assert.equal(model, "configured-fixture-model");
+  assert.equal(seenRequests[0].messages[0].content, "UNIQUE_SYSTEM_PROMPT_MARKER");
+  assert(!seenRequests[0].messages[1].content.includes("UNIQUE_SYSTEM_PROMPT_MARKER"));
   expectedBudget = 32768;
   const designOperation = randomUUID();
   const design = await tenant(() =>
@@ -798,7 +809,17 @@ test("provider uses configured model and meters output; no provider is a paused/
     ),
   );
   assert.equal(design.tokens, 45);
-  assert.deepEqual(deadlines, [120000, 240000]);
+  expectedBudget = 16384;
+  await tenant(() =>
+    callSiteAgent(
+      "Review page JSON",
+      { task: "review" },
+      randomUUID(),
+      async () => {},
+    ),
+  );
+  // design/content/refine and review share AI_FULL_PAGE_TIMEOUT_MS.
+  assert.deepEqual(deadlines, [240000, 240000, 240000]);
   const reservation = await tenant(() =>
     m.UsageRecord.findOne({
       metric: "ai_tokens",
@@ -1156,7 +1177,7 @@ test("real provider retries metered invalid output with fresh operations and com
   mock.method(globalThis, "fetch", async (_url: any, options: any) => {
     const body = JSON.parse(options.body);
     assert.match(body.messages[1].content, /^Execute the website task now/);
-    assert(body.messages[1].content.includes(body.messages[0].content));
+    assert(!body.messages[1].content.includes(body.messages[0].content));
     assert.match(
       body.messages[0].content,
       /Allowed node.type values: home,category,product/,
@@ -1274,6 +1295,8 @@ test("brand presentation round-trips through HTTP, blocks unsupported claims and
     headline: "Everyday cat essentials",
     summary: "Explore the collection for a home shared with cats.",
     primaryActionLabel: "Explore collection",
+    inquiryHeading: "Tell us what you need to source",
+    inquiryLead: "Share your chosen products and intended market.",
     visualStyle: "organic",
     heroLayout: "split",
     designNotes: "A welcoming visual direction.",
@@ -1300,7 +1323,12 @@ test("brand presentation round-trips through HTTP, blocks unsupported claims and
       revision: p.revision,
       data: {
         ...draft(),
-        presentation: { ...presentation, headline: "Made for 500 customers" },
+        presentation: {
+          ...presentation,
+          headline: "Made for 500 customers",
+          inquiryHeading: "Confirmed specifications",
+          inquiryLead: "Share your plans for 500 units.",
+        },
       },
     })
   ).body.data;
@@ -1309,6 +1337,18 @@ test("brand presentation round-trips through HTTP, blocks unsupported claims and
     p.issues.some(
       (i: any) =>
         i.code === "UNSOURCED_NUMBER" && i.field === "presentation.headline",
+    ),
+  );
+  assert(
+    p.issues.some(
+      (i: any) =>
+        i.code === "UNSOURCED_NUMBER" && i.field === "presentation.inquiryLead",
+    ),
+  );
+  assert(
+    p.issues.some(
+      (i: any) =>
+        i.code === "COPY_AUDIT_LANGUAGE" && i.field === "presentation.inquiryHeading",
     ),
   );
   assert.equal(
@@ -2296,16 +2336,21 @@ test("business strategy pairs home/detail atomically, isolates previews and bloc
     (b: any) => b.type === "features",
   ).design.frame = "gallery";
   const invalid = structuredClone(data);
+  // FAQ and claim repair remove unsupported sentences from bodies, items and
+  // tables. Headings are never rewritten, so an unsupported number there must
+  // still fail validation and preserve the encrypted candidate.
+  const unsupportedClaim = "Processing capacity of 18 units";
   invalid.directions[0].page.blocks.push({
     ...invalid.directions[0].page.blocks[0],
-    key: "qa",
-    type: "faq",
-    body: "",
+    key: "capacity",
+    type: "text",
+    heading: unsupportedClaim,
+    body: "Ask our team about processing options for your project.",
     items: [],
-    faq: [{ question: "How do I choose?", answer: "Too short.", detail: "" }],
+    faq: [],
     design: {
       purpose: "context",
-      frame: "table",
+      frame: "band",
       ratio: "natural",
       fit: "contain",
       focus: "center",
@@ -2348,18 +2393,18 @@ test("business strategy pairs home/detail atomically, isolates previews and bloc
   const rejected = await tenant(() => m.AgentRun.findById(queued.body.data.id));
   assert.equal(typeof rejected!.steps[0].candidateCipher, "object");
   assert(
-    !JSON.stringify(rejected!.steps[0].candidateCipher).includes("Too short"),
+    !JSON.stringify(rejected!.steps[0].candidateCipher).includes(unsupportedClaim),
   );
   assert(
     !JSON.stringify(
       (await a.client.request("GET", "/agent-runs/" + queued.body.data.id))
         .body,
-    ).includes("Too short"),
+    ).includes(unsupportedClaim),
   );
 
   assert(
     rejected!.steps[0].validationFeedback.some(
-      (f: any) => f.qualityCode === "CONTENT_FAQ_DIRECT_ANSWER_REQUIRED",
+      (f: any) => f.qualityCode === "CONTENT_UNSOURCED_NUMBER",
     ),
   );
 
@@ -2375,7 +2420,7 @@ test("business strategy pairs home/detail atomically, isolates previews and bloc
     if (input.candidateToRepair) {
       const stored = await m.AgentRun.findById(queued.body.data.id);
       assert(!stored!.steps.some((u: any) => u.draftCandidate));
-      assert(!JSON.stringify(stored).includes("Too short"));
+      assert(!JSON.stringify(stored).includes(unsupportedClaim));
     }
     if (input.proposalKey === "primary") primaryCalls++;
     else if (++alternateCalls === 1) throw new AppError(502, "AI_TRANSIENT");

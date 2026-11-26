@@ -1,6 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { renderStaticPage, type Snapshot } from "./static-template.service";
+import {
+  renderStaticPage,
+  pageComposition,
+  type Snapshot,
+} from "./static-template.service";
 import { assertSiteEditable } from "./publication-lock.service";
 import mongoose from "mongoose";
 import {
@@ -16,12 +20,15 @@ import {
 import { runIdentity, tenantContext } from "../models/tenant-context";
 import { Organization } from "../models";
 import { plans } from "../constants/plans";
-import { ensure } from "../errors";
+import { ensure, AppError } from "../errors";
 import * as v from "../validators/sites.validator";
 import { pinAssets, productDto, factDto, sha } from "./catalog.service";
 import {
+  CONTENT_VALIDATION_VERSION,
   validatePage,
+  validationIdentifiers,
   renderPage,
+  isDemoFact,
   type Issue,
 } from "./page-validation.service";
 export async function ownSite(id: string, session?: mongoose.ClientSession) {
@@ -34,8 +41,12 @@ export function siteDto(s: any) {
     id: String(s._id),
     revision: s.revision,
     ...(s.buyerProfile ? { buyerProfile: s.buyerProfile } : {}),
+    ...(s.brandChannels ? { brandChannels: s.brandChannels } : {}),
     ...(s.designDirection ? { designDirection: s.designDirection } : {}),
     ...(s.businessBrief ? { businessBrief: s.businessBrief } : {}),
+    // S35: optional flags are omitted when off so existing DTOs/snapshots keep their shape.
+    ...(s.demoMode ? { demoMode: true } : {}),
+    ...(s.autoImages ? { autoImages: true } : {}),
     name: s.name,
     templateId: s.templateId,
     targetMarkets: s.targetMarkets,
@@ -98,12 +109,29 @@ export async function saveSite(
         409,
         "STEP_BUSY",
       );
+      const structuralChanged =
+        before.name !== data.name ||
+        before.templateId !== data.templateId ||
+        before.language !== data.language ||
+        (before.businessBrief ?? "") !== (data.businessBrief ?? "") ||
+        JSON.stringify(before.targetMarkets ?? []) !==
+          JSON.stringify(data.targetMarkets ?? []) ||
+        JSON.stringify((before.productIds ?? []).map(String)) !==
+          JSON.stringify(data.productIds) ||
+        JSON.stringify(before.buyerProfile ?? null) !==
+          JSON.stringify(data.buyerProfile ?? null);
+      const unsetFields: Record<string, 1> = {};
+      if (structuralChanged) {
+        unsetFields.confirmedPlanHash = 1;
+        unsetFields.designDirection = 1;
+      }
+      if (!data.brandChannels) unsetFields.brandChannels = 1;
       result = await Site.findOneAndUpdate(
         { _id: id, revision },
         {
           $set: data,
           $inc: { revision: 1 },
-          $unset: { confirmedPlanHash: 1, designDirection: 1 },
+          ...(Object.keys(unsetFields).length ? { $unset: unsetFields } : {}),
         },
         { session, new: true },
       );
@@ -294,6 +322,58 @@ export async function sourceRows(site: any, session?: mongoose.ClientSession) {
   ensure(facts.length <= 200, 409, "AGENT_INPUT_TOO_LARGE");
   return { products, facts };
 }
+// S37 §1.1: all candidate facts (AI-suggested or manual) are usable in demo-mode snapshots.
+export async function demoFactRows(
+  site: any,
+  session?: mongoose.ClientSession,
+) {
+  const facts = await FactSheet.find({
+    status: "candidate",
+    $or: [
+      { subjectType: "organization" },
+      { subjectType: "product", subjectId: { $in: site.productIds } },
+    ],
+  })
+    .limit(101)
+    .session(session ?? null);
+  ensure(facts.length <= 100, 409, "AGENT_INPUT_TOO_LARGE");
+  return facts;
+}
+export async function setSiteOptions(
+  id: string,
+  input: unknown,
+  actor: string,
+) {
+  const d = v.siteOptionsInput.parse(input);
+  let result: any;
+  await mongoose.connection.transaction(async (session) => {
+    const site = await ownSite(id, session);
+    await assertSiteEditable(id, session);
+    ensure(site.revision === d.revision, 409, "REVISION_CONFLICT");
+    ensure(
+      !(await AgentRun.exists({ siteId: id, active: true }).session(session)),
+      409,
+      "STEP_BUSY",
+    );
+    result = await Site.findOneAndUpdate(
+      { _id: id, revision: d.revision },
+      {
+        $set: {
+          ...(d.demoMode !== undefined ? { demoMode: d.demoMode } : {}),
+          ...(d.autoImages !== undefined ? { autoImages: d.autoImages } : {}),
+        },
+        $inc: { lockVersion: 1 },
+      },
+      { session, new: true },
+    );
+    ensure(result, 409, "REVISION_CONFLICT");
+    await AuditLog.create(
+      [{ action: "site.options.edited", actorId: actor, targetId: id }],
+      { session },
+    );
+  });
+  return siteDto(result);
+}
 export async function sources(id: string) {
   const site = await ownSite(id),
     data = await sourceRows(site);
@@ -338,9 +418,18 @@ export async function pageView(
   page: any,
   site?: any,
   session?: mongoose.ClientSession,
+  validateForApproval = false,
 ) {
   site ??= await ownSite(String(page.siteId), session);
   const data = await pageData(page, session),
+    hash = sha(
+      JSON.stringify({
+        data,
+        path: page.path,
+        siteRevision: site.revision,
+        planHash: site.confirmedPlanHash ?? null,
+      }),
+    ),
     refIds = [
       ...new Set(
         [
@@ -354,13 +443,20 @@ export async function pageView(
     ],
     facts = await FactSheet.find({ _id: { $in: refIds } }).session(
       session ?? null,
-    );
+    ),
+    // S36 review fix: model codes in product names / plan titles are identifiers.
+    productNames = (
+      await Product.find({ _id: { $in: site.productIds } })
+        .select("name")
+        .session(session ?? null)
+    ).map((p: any) => p.name);
   const node = site.plan?.nodes.find((n: any) => n.key === page.nodeKey),
     issues = validatePage(data, facts, {
       productId: page.productId ? String(page.productId) : null,
       productIds: site.productIds.map(String),
       type: page.type,
       brandName: site.name,
+      language: site.language,
       navigationLabels:
         page.type === "home"
           ? site.plan?.strategy?.navigation.map((g: any) => g.label)
@@ -368,6 +464,31 @@ export async function pageView(
       requiredProductSections: site.plan?.strategy?.productSections,
       requireComposition: !!site.designDirection?.composition,
       paths: site.plan?.nodes.map((n: any) => n.path),
+      allowDemoFacts: !!site.demoMode,
+      legacyCopyRules:
+        !validateForApproval &&
+        page.approvedHash === hash &&
+        !page.contentValidationVersion,
+      identifiers: validationIdentifiers(
+        site.name,
+        productNames,
+        site.plan?.nodes,
+      ),
+    });
+  // S35/S37: demo data (any candidate in demoMode, or ai-suggested candidate)
+  // may be previewed but never approved or published.
+  if (
+    facts.some((f: any) =>
+      site.demoMode
+        ? isDemoFact(f)
+        : isDemoFact(f) && f.source?.kind === "ai-suggested",
+    )
+  )
+    issues.push({
+      code: "DEMO_FACTS_UNCONFIRMED",
+      field: "page",
+      blockKey: null,
+      token: "",
     });
   if (
     !node ||
@@ -429,14 +550,6 @@ export async function pageView(
       blockKey: null,
       token: "",
     });
-  const hash = sha(
-    JSON.stringify({
-      data,
-      path: page.path,
-      siteRevision: site.revision,
-      planHash: site.confirmedPlanHash ?? null,
-    }),
-  );
   const status = issues.length
     ? "blocked"
     : page.approvedHash === hash
@@ -672,8 +785,13 @@ export async function reviewPage(
       { $inc: { lockVersion: 1 } },
       { session },
     );
-    const data = await pageView(page, site, session);
+    const data = await pageView(page, site, session, approve);
     if (approve) {
+      ensure(
+        !data.issues.some((i: Issue) => i.code === "DEMO_FACTS_UNCONFIRMED"),
+        409,
+        "DEMO_FACTS_UNCONFIRMED",
+      );
       ensure(!data.issues.length, 409, "PAGE_BLOCKED");
       for (const ref of [
         ...data.refs,
@@ -697,7 +815,12 @@ export async function reviewPage(
       {
         $set: {
           reviewStatus: approve ? "approved" : "rejected",
-          ...(approve ? { approvedHash: data.hash } : {}),
+          ...(approve
+            ? {
+                approvedHash: data.hash,
+                contentValidationVersion: CONTENT_VALIDATION_VERSION,
+              }
+            : {}),
           reviewedBy: actor,
           reviewedAt: new Date(),
           reviewReason: reason ?? null,
@@ -721,34 +844,82 @@ export async function reviewPage(
   });
   return pageView(result);
 }
+export async function previewDraft(id: string, input: unknown) {
+  const data = v.pageInput.parse(input);
+  const page = await ownedPage(id);
+  const site = await ownSite(String(page.siteId));
+  const planned = site.plan?.nodes.find((n: any) => n.key === page.nodeKey);
+  const node = planned ?? {
+    key: page.nodeKey,
+    path: page.path,
+    type: page.type,
+    productId: page.productId ? String(page.productId) : null,
+  };
+  return preview(id, { site, node, data });
+}
+export async function batchApprovePages(
+  siteId: string,
+  items: Array<{ id: string; revision: number }>,
+  actor: string,
+  reason?: string,
+) {
+  await ownSite(siteId);
+  const approved: string[] = [];
+  const skipped: Array<{ id: string; code: string }> = [];
+  for (const item of items) {
+    try {
+      const page = await SitePage.findOne({ _id: item.id, siteId });
+      ensure(page, 404, "NOT_FOUND");
+      await reviewPage(item.id, item.revision, true, actor, reason);
+      approved.push(item.id);
+    } catch (err) {
+      skipped.push({
+        id: item.id,
+        code: err instanceof AppError ? err.code : "APPROVAL_FAILED",
+      });
+    }
+  }
+  return { approved, skipped };
+}
 export async function preview(
   id: string,
   draft?: { site: any; node: any; data: v.PageInput },
 ) {
   const page = draft ? { siteId: draft.site._id } : await ownedPage(id),
     site = draft?.site ?? (await ownSite(String(page.siteId))),
+    draftRows = draft ? await sourceRows(site) : null,
     data = draft
       ? {
           ...draft.data,
           hash: sha(JSON.stringify(draft.data)),
           issues: validatePage(
             draft.data,
-            (await sourceRows(site)).facts.map(factDto),
+            [
+              ...(draftRows?.facts ?? []),
+              ...(site.demoMode ? await demoFactRows(site) : []),
+            ].map(factDto),
             {
               productIds: site.productIds.map(String),
               type: draft.node.type,
               productId: draft.node.productId,
               brandName: site.name,
+              language: site.language,
               requiredProductSections: site.plan?.strategy?.productSections,
               requireComposition: !!site.designDirection?.composition,
               paths: site.plan.nodes.map((n: any) => n.path),
+              allowDemoFacts: !!site.demoMode,
+              identifiers: validationIdentifiers(
+                site.name,
+                draftRows?.products ?? [],
+                site.plan?.nodes,
+              ),
             },
           ),
         }
       : await pageView(page, site);
   if (!site.buyerProfile && !draft)
     return {
-      html: renderPage(data, site),
+      html: await withPreviewNotes(renderPage(data, site), site),
       hash: data.hash,
       issues: data.issues,
     };
@@ -819,6 +990,7 @@ export async function preview(
       width: a.width ?? 640,
       height: a.height ?? 480,
       mime: a.mime,
+      ...(a.generatedConcept ? { concept: true } : {}),
     };
   const snapshot: Snapshot = {
     site: siteDto(site),
@@ -842,6 +1014,18 @@ export async function preview(
   ).replace(/@font-face\s*\{[^}]+\}/g, "");
   const current = views.find((p: any) => p.id === id);
   ensure(current, 409, "PAGE_PLAN_CHANGED");
+  // S35/S37: optional scoped rendering pack, only for pages that select it.
+  const activePack = pageComposition(snapshot, current)?.pack;
+  const packCss =
+    activePack && ["precision", "atelier", "monolith"].includes(activePack)
+      ? "\n" +
+        (
+          await fs.readFile(
+            path.resolve(__dirname, "../../builder/pack-" + activePack + ".css"),
+            "utf8",
+          )
+        ).replace(/@font-face\s*\{[^}]+\}/g, "")
+      : "";
   const html = renderStaticPage(snapshot, current)
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<link\b[^>]*>/gi, "")
@@ -849,9 +1033,35 @@ export async function preview(
       "</head>",
       '<meta name="robots" content="noindex,nofollow"><style>' +
         css +
+        packCss +
         "</style></head>",
     );
-  return { html, hash: data.hash, issues: data.issues };
+  return {
+    html: await withPreviewNotes(html, site),
+    hash: data.hash,
+    issues: data.issues,
+  };
+}
+// S35: private preview only. Demo banner when demo mode is on; the scoped
+// illustration/demo note CSS is inlined only when the page needs it.
+export const DEMO_NOTE =
+  "演示内容，未经企业确认 · Demo content, not confirmed by the company";
+async function withPreviewNotes(html: string, site: any) {
+  const demo = !!site.demoMode;
+  if (!demo && !html.includes('class="concept-note"')) return html;
+  const css = (
+    await fs.readFile(
+      path.resolve(__dirname, "../../builder/concept.css"),
+      "utf8",
+    )
+  ).replace(/@font-face\s*\{[^}]+\}/g, "");
+  let out = html.replace("</head>", "<style>" + css + "</style></head>");
+  if (demo)
+    out = out.replace(
+      "</body>",
+      '<div class="gs-demo-banner" role="note">' + DEMO_NOTE + "</div></body>",
+    );
+  return out;
 }
 export async function readiness(id: string) {
   const site = await ownSite(id),

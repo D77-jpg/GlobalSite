@@ -18,7 +18,7 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
   await login(page, request);
   await page.goto("/assets");
   await page
-    .getByRole("button", { name: "上传资料", exact: true })
+    .getByRole("button", { name: "上传资产", exact: true })
     .first()
     .click();
   // Valid one-pixel PNG fixture, re-encoded and checked by the image pipeline.
@@ -40,13 +40,11 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
     exact: true,
   });
   await openAsset.click();
-  const modal = page.getByRole("dialog", { name: "预览资料", exact: true });
-  await expect(
-    modal.getByRole("heading", { name: "fixture.png", exact: true }),
-  ).toBeVisible();
-  await expect(modal.locator("img")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(modal).toHaveCount(0);
+  const inspector = page.locator(".gs-dam-inspector");
+  await expect(inspector.locator(".gs-inspector-title")).toHaveText(
+    "fixture.png",
+  );
+  await expect(inspector.locator(".gs-inspector-frame img")).toBeVisible();
   const menu = page.getByRole("button", {
     name: "文件操作 fixture.png",
     exact: true,
@@ -86,12 +84,10 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
     ),
   ).toBe(true);
   await openAsset.click();
-  await expect(modal).toBeVisible();
-  expect(await modal.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(
-    true,
+  await expect(inspector.locator(".gs-inspector-title")).toHaveText(
+    "fixture.png",
   );
   await page.screenshot({ path: "test-results/s18-assets-mobile-preview.png" });
-  await modal.getByRole("button", { name: "关闭", exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/products/new");
   await page.getByLabel("产品名称", { exact: true }).fill("Fixture Pump");
@@ -149,24 +145,47 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
   await expect(
     page.getByRole("link", { name: "Imported Pump", exact: true }),
   ).toBeVisible();
-  await page.goto("/facts");
-  await page.getByRole("button", { name: "手工添加事实", exact: true }).click();
+  await gotoWorkspace(page, "/facts");
+  await page
+    .getByRole("button", { name: "手工添加事实", exact: true })
+    .first()
+    .click();
   await page.getByLabel("事实类型", { exact: true }).fill("company.founded");
   await page.getByLabel("值", { exact: true }).fill("1998");
   await page
     .getByLabel("原文或确认依据", { exact: true })
     .fill("Company founded in 1998");
-  await page.getByRole("button", { name: "保存", exact: true }).click();
+  const [factSave] = await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        new URL(r.url()).pathname === "/api/v1/facts" &&
+        r.request().method() === "POST",
+    ),
+    page.getByRole("button", { name: "保存", exact: true }).click(),
+  ]);
+  if (factSave.status() === 429) {
+    const delay = Number((await factSave.allHeaders())["retry-after"] ?? 60) * 1000;
+    test.setTimeout(test.info().timeout + delay + 15000);
+    await page.waitForTimeout(delay);
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+  }
+  const factsTable = page.locator(".gs-facts-table");
+  await expect(factsTable).toContainText("1998");
+  await factsTable
+    .getByRole("button", { name: "确认", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("group", { name: "状态", exact: true })
+    .getByRole("button", { name: "已确认", exact: true })
+    .click();
   await expect(
-    page.getByRole("heading", { name: "1998", exact: true }),
+    factsTable.getByText("已确认", { exact: true }).first(),
   ).toBeVisible();
-  await page.getByRole("button", { name: "确认", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "1998", exact: true }),
-  ).not.toBeVisible();
-  await page.getByLabel("状态", { exact: true }).selectOption("confirmed");
-  await expect(page.getByText("已确认", { exact: true }).last()).toBeVisible();
-  await page.getByRole("button", { name: "历史记录", exact: true }).click();
+  await factsTable
+    .getByRole("button", { name: "历史记录", exact: true })
+    .first()
+    .click();
   await expect(
     page.getByText("版本 2 · 已确认", { exact: true }),
   ).toBeVisible();
@@ -175,9 +194,7 @@ test("catalog desktop: image upload, product/spec/table editing, import worker, 
     fullPage: true,
   });
   await page.getByRole("button", { name: "切换语言", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Business facts", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator("main h1").first()).toContainText("Business facts");
   await page.goto("/website-reads");
   await page
     .getByLabel("Website URL", { exact: true })
@@ -211,16 +228,17 @@ test("catalog mobile: usable source review and upload/import layout without hori
     ).toBeTruthy();
   }
   await page.goto("/facts");
-  await page.getByRole("button", { name: "手工添加事实", exact: true }).click();
+  await page
+    .getByRole("button", { name: "手工添加事实", exact: true })
+    .first()
+    .click();
   await page.getByLabel("事实类型", { exact: true }).fill("company.capacity");
   await page.getByLabel("值", { exact: true }).fill("100 units");
   await page
     .getByLabel("原文或确认依据", { exact: true })
     .fill("Capacity 100 units");
   await page.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "100 units", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".gs-facts-table")).toContainText("100 units");
   await page.screenshot({
     path: "test-results/s3-facts-mobile.png",
     fullPage: true,

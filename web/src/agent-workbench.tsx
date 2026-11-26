@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { RunList, useLoad } from "./sites";
+import { RunList, useAgentRuns, useLoad } from "./sites";
 import type { Locale } from "./i18n";
 const labels = {
   zh: {
@@ -70,14 +70,7 @@ export function AgentWorkbench({
     base = site ? "/sites/" + site.id : "";
   const trail = history.siteId === site?.id ? history.cursors : [""],
     cursorKey = trail[trail.length - 1];
-  const runs = useLoad(
-    site
-      ? base +
-          "/agent-runs" +
-          (cursorKey ? "?cursor=" + encodeURIComponent(cursorKey) : "")
-      : null,
-    true,
-  );
+  const runs = useAgentRuns(site ? site.id : null, cursorKey);
   const context = useLoad(site ? base : null);
   const taskState = runs.data?.items
     .map((r: { id: string; status: string }) => r.id + ":" + r.status)
@@ -89,12 +82,16 @@ export function AgentWorkbench({
   return (
     <div className="agent-workbench catalog">
       <header className="agent-mast">
-        <div>
+        <div className="agent-mast-title">
           <h1>{c.title}</h1>
+          <span className="agent-live-pill">
+            <span className="live-dot" aria-hidden="true" />
+            {locale === "zh" ? "实时同步" : "Live"}
+          </span>
         </div>
         <section className="agent-picker">
           <label>
-            {c.site}
+            <span>{c.site}</span>
             <select
               value={site?.id ?? ""}
               onChange={(e) => setSelected(e.target.value)}
@@ -122,13 +119,18 @@ export function AgentWorkbench({
           )}
         </section>
         {site && (
-          <Link
-            className="button secondary agent-preview-link"
-            to={base + "/preview"}
-          >
-            {locale === "zh" ? "预览网站" : "Preview site"}
-            <ArrowUpRight size={14} />
-          </Link>
+          <div className="agent-mast-actions">
+            <Link className="button secondary agent-preview-link" to={base}>
+              {locale === "zh" ? "站点工作台" : "Site studio"}
+            </Link>
+            <Link
+              className="button secondary agent-preview-link"
+              to={base + "/preview"}
+            >
+              {locale === "zh" ? "预览网站" : "Preview site"}
+              <ArrowUpRight size={14} />
+            </Link>
+          </div>
         )}
       </header>
       {sites.error ? (

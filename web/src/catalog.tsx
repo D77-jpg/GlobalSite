@@ -1,4 +1,5 @@
-import { AssetTile, AssetPreview } from "./asset-library";
+import { AssetTile } from "./asset-library";
+import { StudioMasthead } from "./site-studio-visuals";
 import { useCatalogueQuery as useLoad } from "./catalog-query";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,14 +13,20 @@ import { api, ApiError } from "./api";
 import {
   ArrowUpRight,
   Box,
+  Check,
   FileCheck2,
+  FileText,
+  Globe2,
+  Image as ImageIcon,
+  Plus,
+  ShieldCheck,
   UploadCloud,
   LayoutGrid,
   List,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
-import "./operations.css";
 import { catalogText, catalogMessages } from "./catalog-i18n";
 import type { Locale } from "./i18n";
 type Props = { locale: Locale; role: "admin" | "editor" | "viewer" };
@@ -1060,6 +1067,11 @@ export function ImportPage({ locale, role }: Props) {
     </Frame>
   );
 }
+const IMAGE_PRESETS = [
+  { id: "openai", label: "OpenAI Images", baseUrl: "https://api.openai.com/v1", model: "gpt-image-1", mode: "images" },
+  { id: "gemini", label: "Gemini Image", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash-image", mode: "chat" },
+  { id: "openrouter", label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", model: "google/gemini-2.5-flash-image", mode: "chat" },
+] as const;
 function ImageStudio({
   locale,
   role,
@@ -1068,32 +1080,75 @@ function ImageStudio({
   const t = catalogText(locale),
     status = useLoad("/assets/image-provider"),
     action = useAction();
-  const [selectedModel, setSelectedModel] = useState(""),
-    model = selectedModel || status.data?.model || "gemini-3.1-flash-image",
+  const [selectedBaseUrl, setSelectedBaseUrl] = useState(""),
+    [selectedModel, setSelectedModel] = useState(""),
+    [selectedMode, setSelectedMode] = useState(""),
+    baseUrl = selectedBaseUrl || status.data?.baseUrl || "https://api.openai.com/v1",
+    model = selectedModel || status.data?.model || "gpt-image-1",
+    mode = selectedMode || status.data?.mode || "auto",
     [key, setKey] = useState(""),
     [subject, setSubject] = useState(""),
     [composition, setComposition] = useState("campaign"),
     [asset, setAsset] = useState("");
   return (
     <section className="catalog-panel">
-      {role === "admin" && (
+      {status.data?.managed && (
+        // S36: platform-provided image service; no model, URL or key fields.
+        <p className="muted">
+          {t(status.data.configured ? "imageManaged" : "imageManagedUnavailable")}
+        </p>
+      )}
+      {role === "admin" && !status.data?.managed && (
         <details open={status.data && !status.data.configured}>
           <summary>{t("imageConnection")}</summary>
-          <p>codex789.com · {status.data?.model}</p>
+          {status.data?.configured && (
+            <p className="muted">
+              {status.data.baseUrl} · {status.data.model}
+            </p>
+          )}
+          <div className="catalog-actions">
+            {IMAGE_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setSelectedBaseUrl(preset.baseUrl);
+                  setSelectedModel(preset.model);
+                  setSelectedMode(preset.mode);
+                }}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <label>
+            {t("imageBaseUrl")}
+            <input
+              type="url"
+              value={baseUrl}
+              onChange={(e) => setSelectedBaseUrl(e.target.value)}
+              placeholder="https://api.openai.com/v1"
+            />
+          </label>
           <label>
             {t("imageModel")}
-            <select
+            <input
+              type="text"
               value={model}
               onChange={(e) => setSelectedModel(e.target.value)}
+              placeholder="gpt-image-1"
+            />
+          </label>
+          <label>
+            {t("imageMode")}
+            <select
+              value={mode}
+              onChange={(e) => setSelectedMode(e.target.value)}
             >
-              {[
-                "gemini-3.1-flash-image",
-                "gpt-image-2",
-                "gpt-image-2.5-sunburst",
-                "gpt-image-2.6-sunburst",
-              ].map((v) => (
-                <option key={v}>{v}</option>
-              ))}
+              <option value="auto">{t("imageModeAuto")}</option>
+              <option value="images">{t("imageModeImages")}</option>
+              <option value="chat">{t("imageModeChat")}</option>
             </select>
           </label>
           <label>
@@ -1103,19 +1158,25 @@ function ImageStudio({
               autoComplete="off"
               value={key}
               onChange={(e) => setKey(e.target.value)}
+              placeholder={status.data?.configured ? t("imageKeepKey") : undefined}
             />
           </label>
           <button
-            disabled={!key.trim() || action.busy}
+            disabled={(!key.trim() && !status.data?.configured) || !model.trim() || !baseUrl.trim() || action.busy}
             onClick={() =>
               void action.run(async () => {
                 status.replace(
                   await api("/assets/image-provider", "PUT", {
-                    apiKey: key,
-                    model,
+                    ...(key.trim() ? { apiKey: key.trim() } : {}),
+                    baseUrl: baseUrl.trim(),
+                    model: model.trim(),
+                    mode,
                   }),
                 );
                 setKey("");
+                setSelectedBaseUrl("");
+                setSelectedModel("");
+                setSelectedMode("");
               })
             }
           >
@@ -1184,7 +1245,8 @@ function ImageStudio({
           </button>
         </form>
       ) : (
-        status.data && <p>{t("IMAGE_PROVIDER_MISSING")}</p>
+        status.data &&
+        !status.data.managed && <p>{t("IMAGE_PROVIDER_MISSING")}</p>
       )}
       {asset && (
         <img
@@ -1254,393 +1316,1053 @@ export function AssetsPage({ locale, role }: Props) {
       if (input.current) input.current.value = "";
     }
   }
+  const zh = locale === "zh";
+  const [search, setSearch] = useState("");
+  const allAssets: Item[] = load.data?.items ?? [];
+  const filteredAssets = search.trim()
+    ? allAssets.filter((x) =>
+        `${x.fileName ?? ""} ${x.kind ?? ""} ${x.mime ?? ""}`
+          .toLowerCase()
+          .includes(search.trim().toLowerCase()),
+      )
+    : allAssets;
+  const inspected =
+    (selected && filteredAssets.find((x) => x.id === selected.id)) ??
+    (selected && allAssets.find((x) => x.id === selected.id)) ??
+    filteredAssets[0] ??
+    allAssets[0];
+  const imgCount = allAssets.filter((x) => x.kind === "image").length;
+  const docCount = allAssets.filter((x) => x.kind === "document").length;
+  const certCount = allAssets.filter((x) => x.kind === "certificate").length;
+
   return (
-    <Frame
-      title={t("assets")}
-      sub={t("assetLibrarySub")}
-      t={t}
-      error={load.error}
-      actions={
-        role !== "viewer" && (
-          <>
-            <button
-              className="secondary"
-              aria-expanded={studioOpen}
-              onClick={() => setStudioOpen(!studioOpen)}
-            >
-              <Sparkles size={16} />
-              {t("imageStudio")}
-            </button>
-            <button
-              aria-expanded={uploadOpen}
-              onClick={() => setUploadOpen(!uploadOpen)}
-            >
-              <UploadCloud size={16} />
-              {t("uploadAssets")}
-            </button>
-          </>
-        )
-      }
-    >
-      <div className="asset-library">
-        {role !== "viewer" && studioOpen && (
-          <ImageStudio
-            locale={locale}
-            role={role}
-            onGenerated={() => {
-              setKind("");
+    <div className="catalog gs-stack">
+      <StudioMasthead
+        eyebrow={zh ? "外贸资料中心 · 视觉资产" : "Brand Media & DAM"}
+        title={zh ? "品牌产品资产库" : t("assets")}
+        enTitle="Product Asset Library"
+        subtitle={
+          zh
+            ? "集中管理产品图、品牌素材、文档与资质证书，为网站与全球营销提供统一的高质量素材。"
+            : t("assetLibrarySub")
+        }
+        action={
+          role !== "viewer" && (
+            <div className="gs-row">
+              <button
+                type="button"
+                className="gs-btn"
+                aria-expanded={studioOpen}
+                onClick={() => setStudioOpen(!studioOpen)}
+              >
+                <Sparkles size={15} aria-hidden="true" />
+                {t("imageStudio")}
+              </button>
+              <button
+                type="button"
+                className="gs-btn gs-btn-primary"
+                aria-expanded={uploadOpen}
+                onClick={() => setUploadOpen(!uploadOpen)}
+              >
+                <UploadCloud size={15} aria-hidden="true" />
+                {zh ? "上传资产" : t("uploadAssets")}
+              </button>
+            </div>
+          )
+        }
+      />
+      <Notice error={load.error ?? a.error} saved={a.saved} t={t} />
+      {role !== "viewer" && studioOpen && (
+        <ImageStudio
+          locale={locale}
+          role={role}
+          onGenerated={() => {
+            setKind("");
+            pages.reset();
+            load.reload();
+          }}
+        />
+      )}
+      {role !== "viewer" && uploadOpen && (
+        <form
+          className="asset-upload-panel"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void a.run(async () => {
+              if (!file) return;
+              const body = new FormData();
+              body.set("kind", uploadKind);
+              body.set("file", file);
+              await api("/assets", "POST", body);
+              setFile(undefined);
+              if (input.current) input.current.value = "";
               pages.reset();
               load.reload();
-            }}
-          />
-        )}
-        {role !== "viewer" && uploadOpen && (
-          <form
-            className="asset-upload-panel"
-            onSubmit={(e) => {
+            });
+          }}
+        >
+          <div
+            className={"asset-dropzone" + (dragging ? " is-dragging" : "")}
+            onDragOver={(e) => {
               e.preventDefault();
-              void a.run(async () => {
-                if (!file) return;
-                const body = new FormData();
-                body.set("kind", uploadKind);
-                body.set("file", file);
-                await api("/assets", "POST", body);
-                setFile(undefined);
-                if (input.current) input.current.value = "";
-                pages.reset();
-                load.reload();
-              });
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              pick(e.dataTransfer.files);
             }}
           >
-            <div
-              className={"asset-dropzone" + (dragging ? " is-dragging" : "")}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragging(false);
-                pick(e.dataTransfer.files);
-              }}
-            >
-              <UploadCloud size={26} />
-              <div>
-                <strong>{file ? file.name : t("assetDropTitle")}</strong>
-                <p>{t("fileHint")}</p>
-              </div>
-              <label className="button secondary asset-file-label">
-                {file ? t("replaceFile") : t("chooseFile")}
-                <input
-                  ref={input}
-                  aria-label={t("file")}
-                  type="file"
-                  disabled={a.busy}
-                  accept="image/png,image/jpeg,image/webp,application/pdf"
-                  onChange={(e) => pick(e.target.files)}
-                />
-              </label>
+            <UploadCloud size={26} />
+            <div>
+              <strong>{file ? file.name : t("assetDropTitle")}</strong>
+              <p>{t("fileHint")}</p>
             </div>
-            <div className="asset-upload-footer">
-              <label>
-                {t("kind")}
-                <select
-                  value={uploadKind}
-                  disabled={a.busy}
-                  onChange={(e) => setUploadKind(e.target.value)}
-                >
-                  {["image", "document", "certificate"].map((k) => (
-                    <option key={k} value={k}>
-                      {t(k)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div>
+            <label className="button secondary asset-file-label">
+              {file ? t("replaceFile") : t("chooseFile")}
+              <input
+                ref={input}
+                aria-label={t("file")}
+                type="file"
+                disabled={a.busy}
+                accept="image/png,image/jpeg,image/webp,application/pdf"
+                onChange={(e) => pick(e.target.files)}
+              />
+            </label>
+          </div>
+          <div className="asset-upload-footer">
+            <label>
+              {t("kind")}
+              <select
+                value={uploadKind}
+                disabled={a.busy}
+                onChange={(e) => setUploadKind(e.target.value)}
+              >
+                {["image", "document", "certificate"].map((k) => (
+                  <option key={k} value={k}>
+                    {t(k)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <button
+                type="button"
+                className="secondary"
+                disabled={a.busy}
+                onClick={() => setUploadOpen(false)}
+              >
+                {t("close")}
+              </button>
+              <button disabled={!file || a.busy}>
+                {a.busy ? t("saving") : t("upload")}
+              </button>
+            </div>
+          </div>
+          {fileError && (
+            <p role="alert" className="notice error">
+              {t("assetOneFile")}
+            </p>
+          )}
+        </form>
+      )}
+
+      {/* 3-Column Visual DAM Studio (Screen 4) */}
+      <div className="gs-dam-layout">
+        {/* Left: AI Asset Curator + Insights */}
+        <aside className="gs-card gs-dam-rail">
+          <div className="gs-copilot-agent-head">
+            <span className="gs-ai-orb" aria-hidden="true" />
+            <div className="gs-copilot-agent-meta">
+              <h2>{zh ? "AI 资产策展 Agent" : "Asset Curator"}</h2>
+              <small>{zh ? "合规整理与事实提取" : "Curate & extract facts"}</small>
+            </div>
+            <span className="gs-badge gs-badge-ok">
+              <span className="gs-dot gs-dot-ok" />
+              {zh ? "在线" : "Online"}
+            </span>
+          </div>
+          <p className="gs-copilot-intro">
+            {zh
+              ? "集中归类产品图、PDF 规格书与资质证书，支持一键 AI 提取可核验企业事实与品牌概念图。"
+              : "Organize product imagery, PDFs, and certificates, or extract verifiable facts with AI."}
+          </p>
+          {role !== "viewer" && (
+            <div className="gs-stack-sm">
+              <button
+                type="button"
+                className="gs-curator-action"
+                onClick={() => setUploadOpen(true)}
+              >
+                <UploadCloud size={15} aria-hidden="true" />
+                <div>
+                  <strong>{zh ? "上传产品图与手册" : "Upload media & PDFs"}</strong>
+                  <small>{zh ? "自动识别格式与缩略图" : "Auto thumbnails & WebP"}</small>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="gs-curator-action"
+                onClick={() => setStudioOpen(true)}
+              >
+                <Sparkles size={15} aria-hidden="true" />
+                <div>
+                  <strong>{zh ? "AI 品牌配套概念图" : "AI Brand Visuals"}</strong>
+                  <small>{zh ? "生成场景主视觉与延展图" : "Generate hero & campaign visuals"}</small>
+                </div>
+              </button>
+              {inspected && (
                 <button
                   type="button"
-                  className="secondary"
-                  disabled={a.busy}
-                  onClick={() => setUploadOpen(false)}
+                  className="gs-curator-action"
+                  onClick={() => setExtractId(inspected.id)}
                 >
-                  {t("close")}
+                  <FileCheck2 size={15} aria-hidden="true" />
+                  <div>
+                    <strong>{zh ? "提取当前资料事实" : "Extract facts from file"}</strong>
+                    <small>{inspected.fileName}</small>
+                  </div>
                 </button>
-                <button disabled={!file || a.busy}>
-                  {a.busy ? t("saving") : t("upload")}
+              )}
+            </div>
+          )}
+          <div className="gs-dam-insights">
+            <h3>{zh ? "资产洞察" : "Asset Insights"}</h3>
+            <dl>
+              <div>
+                <dt>{zh ? "当前页资产" : "Loaded assets"}</dt>
+                <dd>{allAssets.length}</dd>
+              </div>
+              <div>
+                <dt>
+                  <ImageIcon size={13} aria-hidden="true" /> {t("image")}
+                </dt>
+                <dd>{imgCount}</dd>
+              </div>
+              <div>
+                <dt>
+                  <FileText size={13} aria-hidden="true" /> {t("document")}
+                </dt>
+                <dd>{docCount}</dd>
+              </div>
+              <div>
+                <dt>
+                  <ShieldCheck size={13} aria-hidden="true" /> {t("certificate")}
+                </dt>
+                <dd>{certCount}</dd>
+              </div>
+            </dl>
+          </div>
+          {role !== "viewer" && (
+            <button
+              type="button"
+              className="gs-btn gs-btn-primary"
+              onClick={() => setStudioOpen(!studioOpen)}
+            >
+              <Sparkles size={14} aria-hidden="true" />
+              {zh ? "打开品牌配图工作室" : t("imageStudio")}
+            </button>
+          )}
+        </aside>
+
+        {/* Center: Category Filter Bar + Visual Thumbnail Grid */}
+        <section className="gs-card gs-dam-center">
+          <div className="asset-toolbar">
+            <div className="asset-filters" role="group" aria-label={t("kind")}>
+              {["", "image", "document", "certificate"].map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={kind === k}
+                  onClick={() => {
+                    pages.reset();
+                    setKind(k);
+                  }}
+                >
+                  {t(k || "all")}
+                </button>
+              ))}
+            </div>
+            <div className="asset-view-options">
+              <input
+                type="search"
+                className="asset-search-input"
+                value={search}
+                placeholder={zh ? "搜索资产名称或格式..." : "Search assets..."}
+                aria-label={zh ? "搜索资产" : "Search assets"}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {load.data && (
+                <span>
+                  {filteredAssets.length} {t("assetsOnPage")}
+                </span>
+              )}
+              <div role="group" aria-label={t("assetView")}>
+                <button
+                  type="button"
+                  aria-label={t("gridView")}
+                  aria-pressed={view === "grid"}
+                  onClick={() => setView("grid")}
+                >
+                  <LayoutGrid size={17} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t("listView")}
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  <List size={18} />
                 </button>
               </div>
             </div>
-            {fileError && (
-              <p role="alert" className="notice error">
-                {t("assetOneFile")}
-              </p>
-            )}
-          </form>
-        )}
-        <Notice error={a.error} saved={a.saved} t={t} />
-        <div className="asset-toolbar">
-          <div className="asset-filters" role="group" aria-label={t("kind")}>
-            {["", "image", "document", "certificate"].map((k) => (
-              <button
-                key={k}
-                type="button"
-                aria-pressed={kind === k}
-                onClick={() => {
-                  pages.reset();
-                  setKind(k);
+          </div>
+          {!load.data && !load.error && (
+            <div className="asset-loading" role="status">
+              {t("loading")}
+            </div>
+          )}
+          {load.data?.items.length === 0 && (
+            <div className="asset-empty">
+              <UploadCloud size={32} />
+              <h2>{t("noAssets")}</h2>
+              <p>{t(role === "viewer" ? "noAssetsViewer" : "noAssetsHint")}</p>
+              {role !== "viewer" && (
+                <button className="gs-btn gs-btn-primary" onClick={() => setUploadOpen(true)}>
+                  {t("uploadAssets")}
+                </button>
+              )}
+            </div>
+          )}
+          <div className={"asset-grid" + (view === "list" ? " asset-list" : "")}>
+            {filteredAssets.map((r: Item) => (
+              <AssetTile
+                key={r.id}
+                asset={r}
+                t={t}
+                canEdit={role !== "viewer"}
+                busy={a.busy}
+                selected={inspected?.id === r.id}
+                onPreview={() => {
+                  a.clear();
+                  setSelected(r);
                 }}
-              >
-                {t(k || "all")}
-              </button>
+                onExtract={() => {
+                  setSelected(r);
+                  setExtractId(r.id);
+                }}
+                onDelete={() => void remove(r)}
+              />
             ))}
           </div>
-          <div className="asset-view-options">
-            {load.data && (
-              <span>
-                {load.data.items.length} {t("assetsOnPage")}
-              </span>
-            )}
-            <div role="group" aria-label={t("assetView")}>
-              <button
-                type="button"
-                aria-label={t("gridView")}
-                aria-pressed={view === "grid"}
-                onClick={() => setView("grid")}
-              >
-                <LayoutGrid size={17} />
-              </button>
-              <button
-                type="button"
-                aria-label={t("listView")}
-                aria-pressed={view === "list"}
-                onClick={() => setView("list")}
-              >
-                <List size={18} />
-              </button>
+          <Pager list={load.data} pages={pages} t={t} />
+          {extractId && (
+            <section
+              className="asset-extraction"
+              ref={extractionPanel}
+              tabIndex={-1}
+            >
+              <div className="asset-extraction-heading">
+                <h2>{t("extract")}</h2>
+                <button
+                  className="secondary"
+                  aria-label={t("close")}
+                  onClick={() => setExtractId(undefined)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <Extraction key={extractId} kind="asset" id={extractId} t={t} />
+            </section>
+          )}
+        </section>
+
+        {/* Right: Persistent Live Asset Inspector + Filmstrip Carousel (Screen 4) */}
+        <aside className="gs-card gs-dam-inspector" aria-label={zh ? "资产详情" : "Asset inspector"}>
+          {inspected ? (
+            <div className="gs-stack-sm">
+              <div className="gs-row-between">
+                <strong className="gs-inspector-title" title={inspected.fileName}>
+                  {inspected.fileName}
+                </strong>
+                <span className="gs-badge gs-badge-accent">{t(inspected.kind)}</span>
+              </div>
+              <div className="gs-inspector-frame">
+                {inspected.mime?.startsWith("image/") ? (
+                  <img
+                    src={inspected.thumbnailUrl ?? inspected.url}
+                    alt={inspected.fileName}
+                  />
+                ) : (
+                  <div className="gs-inspector-doc">
+                    <FileText size={36} aria-hidden="true" />
+                    <span>{inspected.mime || "PDF"}</span>
+                  </div>
+                )}
+              </div>
+              {allAssets.length > 1 && (
+                <div className="gs-dam-filmstrip" aria-label={zh ? "快速切换资产" : "Asset filmstrip"}>
+                  {allAssets.slice(0, 5).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={
+                        "gs-dam-strip-thumb" +
+                        (item.id === inspected.id ? " is-active" : "")
+                      }
+                      title={item.fileName}
+                      onClick={() => setSelected(item)}
+                    >
+                      {item.mime?.startsWith("image/") ? (
+                        <img
+                          src={item.thumbnailUrl ?? item.url}
+                          alt={item.fileName}
+                        />
+                      ) : (
+                        <FileText size={14} aria-hidden="true" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <dl className="gs-inspector-meta">
+                <div>
+                  <dt>{zh ? "文件类型" : "Type"}</dt>
+                  <dd>{inspected.mime ?? "—"}</dd>
+                </div>
+                {inspected.width ? (
+                  <div>
+                    <dt>{zh ? "分辨率" : "Dimensions"}</dt>
+                    <dd>{inspected.width} × {inspected.height}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>{zh ? "文件大小" : "Size"}</dt>
+                  <dd>
+                    {inspected.bytes
+                      ? `${Math.max(1, Math.round(inspected.bytes / 1024))} KB`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{zh ? "归类" : "Category"}</dt>
+                  <dd>{t(inspected.kind)}</dd>
+                </div>
+                <div>
+                  <dt>{zh ? "状态" : "Status"}</dt>
+                  <dd>{t(inspected.status ?? "ready")}</dd>
+                </div>
+              </dl>
+              <div className="gs-stack-sm">
+                {role !== "viewer" && (
+                  <button
+                    type="button"
+                    className="gs-btn gs-btn-primary"
+                    onClick={() => setExtractId(inspected.id)}
+                  >
+                    <Sparkles size={14} aria-hidden="true" />
+                    {t("extract")}
+                  </button>
+                )}
+                <div className="gs-row">
+                  <a
+                    className="gs-btn gs-btn-sm"
+                    href={"/api/v1/assets/" + inspected.id + "/download"}
+                  >
+                    {zh ? "下载原件" : "Download"} <ArrowUpRight size={12} />
+                  </a>
+                  {role !== "viewer" && (
+                    <button
+                      type="button"
+                      className="gs-btn gs-btn-sm gs-btn-danger"
+                      disabled={a.busy}
+                      onClick={() => void remove(inspected)}
+                    >
+                      <Trash2 size={12} aria-hidden="true" />
+                      {t("delete")}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        {!load.data && !load.error && (
-          <div className="asset-loading" role="status">
-            {t("loading")}
-          </div>
-        )}
-        {load.data?.items.length === 0 && (
-          <div className="asset-empty">
-            <UploadCloud size={32} />
-            <h2>{t("noAssets")}</h2>
-            <p>{t(role === "viewer" ? "noAssetsViewer" : "noAssetsHint")}</p>
-            {role !== "viewer" && (
-              <button onClick={() => setUploadOpen(true)}>
-                {t("uploadAssets")}
-              </button>
-            )}
-          </div>
-        )}
-        <div className={"asset-grid" + (view === "list" ? " asset-list" : "")}>
-          {load.data?.items.map((r: Item) => (
-            <AssetTile
-              key={r.id}
-              asset={r}
-              t={t}
-              canEdit={role !== "viewer"}
-              busy={a.busy}
-              onPreview={() => {
-                a.clear();
-                setSelected(r);
-              }}
-              onExtract={() => {
-                setSelected(undefined);
-                setExtractId(r.id);
-              }}
-              onDelete={() => void remove(r)}
-            />
-          ))}
-        </div>
-        <Pager list={load.data} pages={pages} t={t} />
-        {selected && (
-          <AssetPreview
-            asset={selected}
-            t={t}
-            canEdit={role !== "viewer"}
-            busy={a.busy}
-            error={
-              a.error instanceof ApiError
-                ? t(a.error.code in catalogMessages ? a.error.code : "failed")
-                : a.error
-                  ? t("failed")
-                  : undefined
-            }
-            onClose={() => setSelected(undefined)}
-            onExtract={() => {
-              setSelected(undefined);
-              setExtractId(selected.id);
-            }}
-            onDelete={() => void remove(selected)}
-          />
-        )}
-        {extractId && (
-          <section
-            className="asset-extraction"
-            ref={extractionPanel}
-            tabIndex={-1}
-          >
-            <div className="asset-extraction-heading">
-              <h2>{t("extract")}</h2>
-              <button
-                className="secondary"
-                aria-label={t("close")}
-                onClick={() => setExtractId(undefined)}
-              >
-                <X size={18} />
-              </button>
+          ) : (
+            <div className="gs-inspector-empty">
+              <ImageIcon size={28} aria-hidden="true" />
+              <h3>{zh ? "资产详情预览" : "Asset Preview"}</h3>
+              <p>
+                {zh
+                  ? "点击左侧任意图片或 PDF 文档，可在此即时预览规格、提取企业事实或下载原件。"
+                  : "Select any image or PDF to inspect metadata, extract facts, or download."}
+              </p>
             </div>
-            <Extraction key={extractId} kind="asset" id={extractId} t={t} />
-          </section>
-        )}
+          )}
+        </aside>
       </div>
-    </Frame>
+    </div>
   );
 }
 export function FactsPage({ locale, role }: Props) {
-  const t = catalogText(locale),
+  const zh = locale === "zh",
+    t = catalogText(locale),
     [params] = useSearchParams(),
-    [status, setStatus] = useState(params.get("status") ?? "candidate"),
+    [status, setStatus] = useState(params.get("status") ?? ""),
+    // S35: "AI suggestions" filter (source.kind = ai-suggested).
+    [aiOnly, setAiOnly] = useState(params.get("source") === "ai-suggested"),
     pages = useCursor(),
     { cursor } = pages,
     [editing, setEditing] = useState<Item | null | undefined>(),
     [historyId, setHistoryId] = useState<string>(),
+    [selectedIds, setSelectedIds] = useState<string[]>([]),
     a = useAction();
   const load = useLoad(
     "/facts?" +
       new URLSearchParams({
         ...(status ? { status } : {}),
+        ...(aiOnly ? { source: "ai-suggested" } : {}),
         ...(cursor ? { cursor } : {}),
       }),
   );
+  const [categoryTab, setCategoryTab] = useState<"all" | "org" | "product" | "cert">("all");
+  const allLoaded: Item[] = load.data?.items ?? [];
+  const certRegex = /cert|iso|ce|en\s?13501|rohs|fsc|reach|ul|astm|sgs|认证|标准|资质/i;
+  const visibleFacts = allLoaded.filter((f) => {
+    if (categoryTab === "org") return f.subjectType === "organization";
+    if (categoryTab === "product") return f.subjectType === "product";
+    if (categoryTab === "cert")
+      return certRegex.test(`${f.type ?? ""} ${f.value ?? ""}`);
+    return true;
+  });
+  const confirmedFacts = allLoaded.filter((f) => f.status === "confirmed");
+  const confirmedCount = confirmedFacts.length;
+  const candidates: Item[] = allLoaded.filter((f) => f.status === "candidate");
+  const activeSelected = candidates.filter((f) => selectedIds.includes(f.id));
+  const credibilityPct = allLoaded.length
+    ? Math.round((confirmedCount / allLoaded.length) * 100)
+    : 0;
+  const ringCircumference = 2 * Math.PI * 42;
+  const ringOffset = ringCircumference * (1 - credibilityPct / 100);
+  const certFacts = confirmedFacts.filter((f) =>
+    certRegex.test(`${f.type ?? ""} ${f.value ?? ""}`),
+  );
+  const orgFactsCount = allLoaded.filter((f) => f.subjectType === "organization").length;
+  const prodFactsCount = allLoaded.filter((f) => f.subjectType === "product").length;
+
   return (
-    <Frame
-      title={t("facts")}
-      sub={t("factsSub")}
-      t={t}
-      error={load.error}
-      actions={
-        role !== "viewer" && (
-          <button onClick={() => setEditing(null)}>{t("addFact")}</button>
-        )
-      }
-    >
-      <Notice error={a.error} saved={a.saved} t={t} />
-      <div className="ops-fact-tools">
-        <label className="catalog-filter">
-          {t("status")}
-          <select
-            aria-label={t("status")}
-            value={status}
-            onChange={(e) => {
-              pages.reset();
-              setStatus(e.target.value);
-            }}
-          >
-            <option value="">{t("all")}</option>
-            {["candidate", "confirmed", "rejected"].map((s) => (
-              <option key={s} value={s}>
-                {t(s)}
-              </option>
+    <div className="catalog gs-stack">
+      <StudioMasthead
+        eyebrow={zh ? "单一可信事实源 · 零幻觉建站" : "Verified Truth Layer"}
+        title={zh ? "品牌知识与事实库" : t("facts")}
+        enTitle="Brand Facts & Knowledge"
+        subtitle={
+          zh
+            ? "集中管理品牌、公司、产品、认证与核心事实，为网站、内容与 AI 生成提供可靠的统一信息源。"
+            : t("factsSub")
+        }
+        progress={{
+          label: zh ? "当前页事实确认率" : "Verified ratio",
+          pct: credibilityPct,
+        }}
+        action={
+          <div className="gs-row">
+            {role !== "viewer" && (
+              <button
+                type="button"
+                className="gs-btn"
+                onClick={() => setEditing(null)}
+              >
+                <Plus size={15} aria-hidden="true" />
+                {t("addFact")}
+              </button>
+            )}
+            <Link className="gs-btn gs-btn-primary" to="/sites">
+              {zh ? "同步到建站项目" : "Sync to sites"}
+              <ArrowUpRight size={15} aria-hidden="true" />
+            </Link>
+          </div>
+        }
+      />
+      <Notice error={load.error ?? a.error} saved={a.saved} t={t} />
+
+      {/* 3-Column Brand Facts & Knowledge Studio (Screen 5) */}
+      <div className="gs-facts-layout">
+        {/* Left: AI Research & Fact Verification Rail */}
+        <aside className="gs-card gs-facts-rail">
+          <div className="gs-copilot-agent-head">
+            <span className="gs-ai-orb" aria-hidden="true" />
+            <div className="gs-copilot-agent-meta">
+              <h2>{zh ? "AI 研究与事实核验" : "Fact Verification"}</h2>
+              <small>{zh ? "严控数字与认证依据" : "Evidence-gated claims"}</small>
+            </div>
+            <span className="gs-badge gs-badge-ok">
+              <span className="gs-dot gs-dot-ok" />
+              {zh ? "在线" : "Online"}
+            </span>
+          </div>
+          <p className="gs-copilot-intro">{t("reviewHint")}</p>
+          <div className="gs-segmented" role="group" aria-label={t("status")}>
+            {(["", "candidate", "confirmed", "rejected"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={status === s}
+                onClick={() => {
+                  pages.reset();
+                  setSelectedIds([]);
+                  setStatus(s);
+                }}
+              >
+                {t(s || "all")}
+              </button>
             ))}
-          </select>
-        </label>
-        <p className="ops-fact-guidance">
-          <FileCheck2 size={18} aria-hidden="true" />
-          {t("reviewHint")}
-        </p>
-      </div>
-      {editing !== undefined && (
-        <FactForm
-          key={editing?.id ?? "new"}
-          fact={editing}
-          t={t}
-          done={() => {
-            setEditing(undefined);
-            load.reload();
-          }}
-          close={() => setEditing(undefined)}
-        />
-      )}
-      <div className="catalog-list fact-register">
-        <Rows items={load.data?.items} error={load.error} t={t}>
-          {(f) => (
-            <article key={f.id} className="catalog-fact">
-              <div className="catalog-heading">
-                <div>
-                  <small>
-                    {f.type} · {t(f.subjectType)} · {t("revision")} {f.revision}
-                  </small>
-                  <h2>
-                    {f.value}
-                    {f.unit ? " " + f.unit : ""}
-                  </h2>
-                </div>
-                <Badge value={f.status} t={t} />
+            <button
+              type="button"
+              aria-pressed={aiOnly}
+              onClick={() => {
+                pages.reset();
+                setSelectedIds([]);
+                setAiOnly((v) => !v);
+              }}
+            >
+              <Sparkles size={12} aria-hidden="true" /> {t("aiSuggestedFilter")}
+            </button>
+          </div>
+          {aiOnly && <p className="muted">{t("aiSuggestedHint")}</p>}
+          <div className="gs-stack-sm">
+            {role !== "viewer" && (
+              <button
+                type="button"
+                className="gs-btn gs-btn-primary"
+                onClick={() => setEditing(null)}
+              >
+                <Plus size={14} aria-hidden="true" />
+                {t("addFact")}
+              </button>
+            )}
+            <Link className="gs-curator-action" to="/website-reads">
+              <Globe2 size={15} aria-hidden="true" />
+              <div>
+                <strong>{zh ? "从旧官网提取事实" : "Read existing website"}</strong>
+                <small>{zh ? "遵守 robots.txt 安全抽取" : "Safe robots-compliant crawl"}</small>
               </div>
-              <details className="fact-evidence">
-                <summary>{t("source")}</summary>
-                <Source fact={f} t={t} />
-              </details>
-              <div className="catalog-actions">
-                {role === "admin" && (
-                  <>
-                    <button
-                      disabled={a.busy || f.status === "confirmed"}
-                      onClick={() =>
-                        void a.run(async () => {
-                          await api("/facts/" + f.id + "/confirm", "POST", {
-                            revision: f.revision,
-                          });
-                          load.reload();
-                        })
-                      }
-                    >
-                      {t("confirm")}
-                    </button>
-                    <button
-                      className="secondary"
-                      disabled={a.busy || f.status === "rejected"}
-                      onClick={() =>
-                        void a.run(async () => {
-                          await api("/facts/" + f.id + "/reject", "POST", {
-                            revision: f.revision,
-                          });
-                          load.reload();
-                        })
-                      }
-                    >
-                      {t("reject")}
-                    </button>
-                  </>
-                )}
+            </Link>
+            <Link className="gs-curator-action" to="/assets">
+              <FileCheck2 size={15} aria-hidden="true" />
+              <div>
+                <strong>{zh ? "从 PDF / 证书提取" : "Extract from PDFs"}</strong>
+                <small>{zh ? "逐字保留证据出处" : "Keep verbatim quotes"}</small>
+              </div>
+            </Link>
+          </div>
+        </aside>
+
+        {/* Center: Category Tabs + 2-Column Core Facts Bento + Compact Sources Table (Screen 5) */}
+        <section className="gs-stack">
+          <div className="gs-facts-tabs" role="tablist" aria-label={zh ? "事实维度" : "Fact categories"}>
+            {(
+              [
+                ["all", zh ? "全部事实" : "All Facts", allLoaded.length],
+                ["org", zh ? "企业信息" : "Company", orgFactsCount],
+                ["product", zh ? "产品与能力" : "Products", prodFactsCount],
+                ["cert", zh ? "认证与标准" : "Certifications", certFacts.length],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={categoryTab === key}
+                onClick={() => setCategoryTab(key)}
+              >
+                <span>{label}</span>
+                <small>{count}</small>
+              </button>
+            ))}
+          </div>
+
+          {editing !== undefined && (
+            <FactForm
+              key={editing?.id ?? "new"}
+              fact={editing}
+              t={t}
+              done={() => {
+                setEditing(undefined);
+                load.reload();
+              }}
+              close={() => setEditing(undefined)}
+            />
+          )}
+
+          {/* 2-Column High-Density Core Facts Bento */}
+          <div className="gs-facts-bento">
+            <section className="gs-card gs-facts-ledger-card">
+              <div className="gs-row-between">
+                <h2 className="gs-mini-title">
+                  <Sparkles size={14} aria-hidden="true" />
+                  {zh ? "核心事实" : "Core Facts"}
+                </h2>
                 {role !== "viewer" && (
-                  <button className="secondary" onClick={() => setEditing(f)}>
-                    {t("edit")}
+                  <button
+                    type="button"
+                    className="gs-btn gs-btn-sm"
+                    onClick={() => setEditing(null)}
+                  >
+                    <Plus size={12} aria-hidden="true" />
+                    {zh ? "添加事实" : t("addFact")}
                   </button>
                 )}
-                <button
-                  className="secondary"
-                  onClick={() =>
-                    setHistoryId(historyId === f.id ? undefined : f.id)
-                  }
-                >
-                  {t("history")}
-                </button>
               </div>
-              {historyId === f.id && <FactHistory id={f.id} t={t} />}
-            </article>
+              {visibleFacts.length > 0 ? (
+                <dl className="gs-facts-ledger">
+                  {visibleFacts.slice(0, 6).map((f) => (
+                    <div key={f.id} className="gs-facts-ledger-row">
+                      <dt>{f.type}</dt>
+                      <dd>
+                        <strong>
+                          {f.value}
+                          {f.unit ? " " + f.unit : ""}
+                        </strong>
+                        <span
+                          className={
+                            "gs-dot " +
+                            (f.status === "confirmed"
+                              ? "gs-dot-ok"
+                              : f.status === "candidate"
+                                ? "gs-dot-warn"
+                                : "gs-dot-err")
+                          }
+                          title={t(f.status)}
+                        />
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="muted gs-facts-empty">
+                  {zh ? "当前筛选下暂无事实记录，可点击右上角添加或从文档提取。" : "No facts in this view yet."}
+                </p>
+              )}
+            </section>
+
+            <section className="gs-card gs-facts-summary-card">
+              <h2 className="gs-mini-title">
+                <ShieldCheck size={14} aria-hidden="true" />
+                {zh ? "品牌定位与核验摘要" : "Verification Summary"}
+              </h2>
+              <div className="gs-facts-summary-stats">
+                <div>
+                  <span>{zh ? "已确认" : "Confirmed"}</span>
+                  <strong>{confirmedCount}</strong>
+                </div>
+                <div>
+                  <span>{zh ? "待确认" : "Pending"}</span>
+                  <strong>{candidates.length}</strong>
+                </div>
+                <div>
+                  <span>{zh ? "企业 / 产品" : "Org / Prod"}</span>
+                  <strong>{orgFactsCount}/{prodFactsCount}</strong>
+                </div>
+              </div>
+              <div className="gs-facts-tag-block">
+                <small>{zh ? "已核验资质与标签" : "Verified claims"}</small>
+                <div className="gs-positioning-tags">
+                  {(confirmedFacts.length > 0
+                    ? confirmedFacts.slice(0, 6).map((f) => f.type)
+                    : [zh ? "等待确认首条企业事实" : "Awaiting verified facts"]
+                  ).map((tag, idx) => (
+                    <span className="gs-chip" key={idx}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="gs-copilot-intro">
+                {zh
+                  ? "所有数字、交付能力与认证仅在管理员确认后才会进入站点构建与 AI 页面生成上下文。"
+                  : "Numbers, lead times, and certifications enter site generation only after admin confirmation."}
+              </p>
+            </section>
+          </div>
+
+          {role === "admin" && candidates.length > 0 && (
+            <div className="studio-batch-bar">
+              <div className="catalog-actions">
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={a.busy}
+                  onClick={() => setSelectedIds(candidates.map((f) => f.id))}
+                >
+                  {t("selectAllCandidates")} ({candidates.length})
+                </button>
+                {activeSelected.length > 0 && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={a.busy}
+                    onClick={() => setSelectedIds([])}
+                  >
+                    {t("clearSelection")}
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                className="gs-btn gs-btn-sm gs-btn-primary"
+                disabled={a.busy || !activeSelected.length}
+                onClick={() =>
+                  void a.run(async () => {
+                    await api("/facts/batch-confirm", "POST", {
+                      items: activeSelected.map((f) => ({
+                        id: f.id,
+                        revision: f.revision,
+                      })),
+                    });
+                    setSelectedIds([]);
+                    load.reload();
+                  })
+                }
+              >
+                {t("batchConfirm")} ({activeSelected.length})
+              </button>
+            </div>
           )}
-        </Rows>
+
+          {/* Compact Sources & Evidence Data Table (Ref Image 5 Bottom) */}
+          <section className="gs-card gs-facts-table-card">
+            <div className="gs-row-between">
+              <h2 className="gs-mini-title">
+                <FileCheck2 size={14} aria-hidden="true" />
+                {zh ? "资料与来源" : "Facts & Sources"}
+                <span className="gs-inline-en">
+                  {zh ? "可信度依据" : "Verified Evidence"}
+                </span>
+              </h2>
+              <span className="gs-badge">
+                {visibleFacts.length} {zh ? "条记录" : "items"}
+              </span>
+            </div>
+            {visibleFacts.length > 0 ? (
+              <div className="gs-facts-table-wrap">
+                <table className="gs-facts-table">
+                  <thead>
+                    <tr>
+                      {role === "admin" && <th aria-label={t("select")} />}
+                      <th>{zh ? "事实维度" : t("type")}</th>
+                      <th>{zh ? "数值与来源依据" : t("value")}</th>
+                      <th>{t("status")}</th>
+                      <th>{zh ? "操作" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleFacts.map((f) => (
+                      <tr key={f.id}>
+                        {role === "admin" && (
+                          <td className="gs-facts-check-col">
+                            {f.status === "candidate" ? (
+                              <input
+                                type="checkbox"
+                                aria-label={t("select") + " " + f.type}
+                                checked={selectedIds.includes(f.id)}
+                                onChange={(e) =>
+                                  setSelectedIds((old) =>
+                                    e.target.checked
+                                      ? [...new Set([...old, f.id])]
+                                      : old.filter((x) => x !== f.id),
+                                  )
+                                }
+                              />
+                            ) : null}
+                          </td>
+                        )}
+                        <td className="gs-facts-type-col">
+                          <strong>{f.type}</strong>
+                          {f.source?.kind === "ai-suggested" && (
+                            <span className="gs-chip">{t("ai-suggested")}</span>
+                          )}
+                          <small>
+                            {t(f.subjectType)} · v{f.revision}
+                          </small>
+                        </td>
+                        <td className="gs-facts-val-col">
+                          <div className="gs-facts-val-main">
+                            {f.value}
+                            {f.unit ? " " + f.unit : ""}
+                          </div>
+                          <details className="gs-facts-quote-fold">
+                            <summary>
+                              {t(f.source?.kind ?? "manual")}
+                              {f.source?.label ? " · " + f.source.label : ""}
+                            </summary>
+                            <Source fact={f} t={t} />
+                          </details>
+                          {historyId === f.id && <FactHistory id={f.id} t={t} />}
+                        </td>
+                        <td>
+                          <Badge value={f.status} t={t} />
+                        </td>
+                        <td className="gs-facts-actions-col">
+                          <div className="gs-facts-row-btns">
+                            {role === "admin" && f.status !== "confirmed" && (
+                              <button
+                                type="button"
+                                className="gs-btn gs-btn-sm gs-btn-primary"
+                                disabled={a.busy}
+                                onClick={() =>
+                                  void a.run(async () => {
+                                    await api("/facts/" + f.id + "/confirm", "POST", {
+                                      revision: f.revision,
+                                    });
+                                    load.reload();
+                                  })
+                                }
+                              >
+                                {t("confirm")}
+                              </button>
+                            )}
+                            {role === "admin" && f.status !== "rejected" && (
+                              <button
+                                type="button"
+                                className="gs-btn gs-btn-sm"
+                                disabled={a.busy}
+                                onClick={() =>
+                                  void a.run(async () => {
+                                    await api("/facts/" + f.id + "/reject", "POST", {
+                                      revision: f.revision,
+                                    });
+                                    load.reload();
+                                  })
+                                }
+                              >
+                                {t("reject")}
+                              </button>
+                            )}
+                            {role !== "viewer" && (
+                              <button
+                                type="button"
+                                className="gs-btn gs-btn-sm"
+                                onClick={() => setEditing(f)}
+                              >
+                                {t("edit")}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="gs-btn gs-btn-sm"
+                              onClick={() =>
+                                setHistoryId(historyId === f.id ? undefined : f.id)
+                              }
+                            >
+                              {t("history")}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Rows items={load.data?.items} error={load.error} t={t}>
+                {() => null}
+              </Rows>
+            )}
+          </section>
+          <Pager list={load.data} pages={pages} t={t} />
+        </section>
+
+        {/* Right: Mini Site Preview + Application Scope + Credibility Ring (Screen 5) */}
+        <aside className="gs-stack">
+          <section className="gs-card gs-facts-mini-preview">
+            <div className="gs-row-between">
+              <h3 className="gs-mini-title">
+                <Globe2 size={14} aria-hidden="true" />
+                {zh ? "网站使用预览" : "Storefront Usage"}
+              </h3>
+              <Link className="gs-mini-link" to="/sites" aria-label={t("sites")}>
+                <ArrowUpRight size={13} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="gs-facts-preview-visual">
+              <img src="/assets/studio/hero-arch.jpg" alt="" />
+              <div className="gs-facts-preview-overlay">
+                <strong>
+                  {zh
+                    ? `${confirmedCount} 条事实已可供官网引用`
+                    : `${confirmedCount} facts ready for site`}
+                </strong>
+                <span>
+                  {zh ? "首页 · 产品参数 · 资质背书" : "Home · Specs · Trust"}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section className="gs-card">
+            <h3 className="gs-mini-title">
+              <Sparkles size={15} aria-hidden="true" />
+              {zh ? "知识库应用范围" : "Where facts are used"}
+            </h3>
+            <ul className="gs-fact-checks">
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "网站内容生成（首页 / 产品 / 关于）" : "Site pages (Home / Products / About)"}</span>
+              </li>
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "强证据区块（数据条与资质墙）" : "Metrics & Certification blocks"}</span>
+              </li>
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "8 语种本地化建站与发布门禁" : "8-language storefronts & launch gate"}</span>
+              </li>
+            </ul>
+          </section>
+
+          <section className="gs-card gs-credibility-card">
+            <h3 className="gs-mini-title">
+              <ShieldCheck size={15} aria-hidden="true" />
+              {zh ? "事实可信度评估" : "Fact Credibility"}
+            </h3>
+            <div className="gs-ring-wrap">
+              <svg viewBox="0 0 100 100" className="gs-cred-ring" aria-hidden="true">
+                <circle className="gs-ring-bg" cx="50" cy="50" r="42" />
+                <circle
+                  className="gs-ring-fill"
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringOffset}
+                />
+              </svg>
+              <div className="gs-ring-label">
+                <strong>{credibilityPct}%</strong>
+                <span>{zh ? "高可信度" : "Confirmed"}</span>
+              </div>
+            </div>
+            <ul className="gs-fact-checks">
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>
+                  {zh
+                    ? `已确认 ${confirmedCount} 条 · 待审 ${candidates.length} 条`
+                    : `${confirmedCount} confirmed · ${candidates.length} pending`}
+                </span>
+              </li>
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "建站数字与认证强制溯源" : "All numbers & certs verified"}</span>
+              </li>
+              <li>
+                <Check size={12} aria-hidden="true" />
+                <span>{zh ? "修改事实自动触发页面复审" : "Edits auto-recheck pages"}</span>
+              </li>
+            </ul>
+          </section>
+        </aside>
       </div>
-      <Pager list={load.data} pages={pages} t={t} />
-    </Frame>
+    </div>
   );
 }
 function Source({

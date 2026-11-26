@@ -1,5 +1,7 @@
 # GlobalSite 协作规则
 
+> 接手开发先读 `docs/design/S37-未完成开发交接.md`（2026-11-26 整理的未完成事项与执行顺序）。
+
 ## 当前阶段与仓库边界
 
 - 本仓库 D:/Trade/genesis/GlobalSite，当前 S8–S11 B2B 建站与 Agent 质量闭环；S1 的“仅文档”限制为历史任务，已由后续功能任务明确授权取代。
@@ -125,7 +127,7 @@
 - 新组合首屏使用 composition-hero-*，禁止复用 hero-split 触发旧版全屏定位；目录不继承 legacy line-sheet。预览与构建使用同一 composition.css。质量检查除溢出外须检查桌面标题宽度/行数，截图失败不能仅以 Lighthouse 分数验收。
 - 新 B2B 首页薄内容/重复内容与单换颜色提案按已知格式错误在原三次预算内修正；审批和发布保留组合完整性检查及事实门禁。参考结构仅静态导航/区块计数，不执行脚本、不复制竞争者正文/图片/业务事实。
 
-- S22：双首页 design 调用输出上限32768 Token、总等待240秒；其他任务上限/120秒不变。更大上限必须进入原子额度预留，按已知实际用量结算；仍最多三次格式修正，未知结果保持暂停与预留，不能清除旧失败记录或绕过事实/内容门禁。详见 docs/design/S22-设计任务预算.md。
+- S22：完整整页 JSON 生成任务（`design`、`content`、`refine`）输出上限 32768 Token、总等待 240 秒；`review`（16384）、`rewrite`（8192）、`research` 仍保持 120 秒。`callSiteAgent` 仅通过 `role: "system"` 传递一次系统规范（不在 `user` 重复拼接），`unitPrompt` 按步骤裁剪无关上下文；更大上限继续走原子额度预留与实际结算，仍最多三次格式修正，未知结果保持暂停与预留，不能清除旧失败记录或绕过事实/内容门禁。详见 docs/design/S22-设计任务预算.md。
 
 - S22 预览iframe必须加载打包的受控CSS，不放宽父页面style-src。设计缩略图通过CSS容器尺寸缩放，不使用被CSP拦截的内联样式；浏览器测试须断言iframe实际计算样式。
 
@@ -144,3 +146,77 @@
 
 - S23 失败候选按组织/任务/单元独立用途加密，仅显式 reuseRunId 且来源/页面修订一致时重用；所有事实/栏目/深度门禁重新执行。未知计费操作不可免费复用；原任务历史/计量不可改写。
 - S23 图片裁切与目录索引必须验证实际计算样式和标签宽度，不能以无横向溢出代替布局合格；可信 CSS 的通用规则不能覆盖区块 contain 意图。
+
+## S24 AI 底座、生图配置与并发引擎
+- 见 docs/design/S24-AI底座与并发引擎.md。AI 与生图服务端点统一经 ai-target 的 publicUrl() SSRF 校验（禁止私网 IP、IP 字面量、保留 TLD、路径穿越与重定向），支持任意公开 HTTPS OpenAI 兼容接口及可选 AI_ALLOWED_HOSTS 域名白名单，保留非生产精确 AI_LOCAL_BASE_URL 例外。
+- 禁止在源码或文案中硬编码第三方中转域名；生图服务支持自定义 baseUrl、model 与 mode（auto/images/chat），保留加密存储、空 apiKey 断开与不重填密钥更新参数。
+- AgentAiProvider 可选 visionModelName 仅在 supportsVision=true 且附带图片输入时生效，留空回退 modelName。
+- Worker 分为 fast（mail/inquiry.*/crm.*）与 heavy（site.agent/site.build/site.deploy/catalog.*）双车道并发，默认各 2，保留租约、owner、fencingToken 与站点活动锁。
+- GET /api/v1/sites/:id/agent-runs/stream 为鉴权 SSE，必须保持组织隔离并在循环内复查会话与当前成员状态，撤销后立即断开。
+
+## S25 旗舰级官网设计引擎与多语种
+- 见 docs/design/S25-旗舰官网引擎与多语种.md。站点支持 en/es/fr/de/ja/ar/ru/zh 8 种语言（ar 自动 dir="rtl"），静态模板与 inquiry.js 动态文案统一由 storefront-i18n.service.ts 本地化；非英语站点保留全部数值/认证/邮箱/链接事实门禁。
+- 新增 gallery/metrics/certifications/showcase 四类白名单区块；metrics 与 certifications 为强证据区块，必须引用匹配的当前 confirmed 事实，渲染器同步过滤无依据条目。
+- composition 可选扩展 obsidian/ivory/ocean/brand 配色、luxury/geometric 字体及 surface/headerStyle/radius，继续禁用模型 HTML/CSS/JS；brandChannels 仅由管理员配置并严格校验协议与域名，不接受 AI 编造联系方式。
+
+## S26 分屏可视化编辑与精简审批流
+- 见 docs/design/S26-可视化编辑与审批流.md。POST /api/v1/pages/:id/preview-draft 在内存中校验并渲染未保存草稿，不修改数据库状态或页面审批，iframe 仍仅加载 trustedPreview 打包样式。
+- saveSite 仅在结构性字段（name/templateId/targetMarkets/language/productIds/businessBrief/buyerProfile）变化时清空 confirmedPlanHash 与 designDirection；仅修改 brandChannels/brandColor/logoId 时保留。
+- POST /api/v1/facts/batch-confirm 与 POST /api/v1/sites/:id/pages/batch-approve 仅限管理员，逐条执行原修订锁、审计与完整 validatePage 事实/组合门禁，禁止绕过门禁。
+
+## S27 管理台前端架构与设计系统
+- 见 docs/design/S27-前端架构与设计系统.md。工作台各功能页面保持 React.lazy 路由懒加载与 vite manualChunks 分包，避免重新引入 >500 kB 单体主包。
+- 页面草稿变更对比由纯函数 web/src/page-diff.ts 计算并保持单元测试覆盖；采购缺口就地补充仅创建 candidate 事实，不绕过管理员确认门禁。
+
+## S28 外贸增长运营、多渠道发布与对象存储
+- 见 docs/design/S28-外贸增长发布与存储.md。GA4/GTM/Meta Pixel 仅通过静态属性传递并在 inquiry.js 中严格遵守访客 optional Cookie 同意后加载，禁止静默预载或在预览页加载；301/302 重定向规则须经路径白名单校验后输出 public/_redirects；自定义 OG 图片受本组织资产与 removeAsset 引用保护。
+- 访客询盘自动确认邮件运行于 inquiry.autoreply（fast 车道），仅发送管理员模板与 receiptId，禁止回显访客原始留言，保留 attemptedAt 防重与未知 SMTP 停重发机制；GET /api/v1/inquiries/summary 保持组织隔离且仅输出脱敏来源标签。
+- 部署 Webhook（POST /api/v1/site-versions/:id/webhook）仅限管理员触发已通过 validVersion 门禁的版本，目标 URL 须通过 publicUrl() SSRF 校验并禁用重定向，可选加密密钥以 HMAC-SHA256 签名。
+- S3/R2 对象存储通过零外部依赖的 object-storage.service.ts（AWS SigV4）适配，STORAGE_DRIVER 默认 local 保持向后兼容，s3 模式严格按 ${prefix}/${organizationId}/${key} 隔离并保留 storage_bytes 计量。
+
+## S29 暗黑旗舰 UI 设计系统
+- 见 docs/design/S29-暗黑旗舰UI设计系统.md。web/src/obsidian-studio.css 与 web/src/ui/design-system.css 构建 Velvet Obsidian Luxury Visual Studio（默认暗黑绒面黑曜石 `data-theme="dark"` + 紫晶微光 + 本地建筑/山脊背景资源 `web/public/assets/studio/`，无外部运行依赖；支持顶栏/登录页一键切换浅色模式，偏好存 localStorage 的 `globalsite_studio_theme`，不存任何凭证）；严守 style-src 'self' CSP，零内联样式；预览 iframe 保持中性画布以还原独立站真实视觉。
+
+## S30–S31 外贸视觉策略工作室产品级重构
+- 见 docs/design/S30-外贸工作台产品重构.md。web/src/ui/design-system.css 在 web/src/main.tsx 中于 obsidian-studio.css 之后确定性加载，禁止在特性 TSX 中懒加载 CSS 破坏层叠顺序。
+- 侧栏以当前站点为中心：视觉策略、结构蓝图、页面精修分别进入该站点的 guide / planning / 最近页面；站点 id 与页面 id 只放 sessionStorage，不存凭证。蓝图（视觉组织树 + 子页标签 + 区块检视器）和实时预览只使用规划节点、页面区块与 `GET /pages/:id/preview`（页面精修支持 `POST /pages/:id/preview-draft` 并回退 `GET /pages/:id/preview`）。页面精修为 AI 建议+图层树 / 居中实时画布 / 右侧属性检查器三栏加底栏同站切页；产品资产库为三栏 16:10 视觉网格+胶片预览器；品牌知识事实库为维度切换+高密度双列 Bento+来源数据表+环形可信度仪。AI 同意、结构、事实、审批门禁与严格 CSP 保持不变。
+
+## S32 多风格旗舰独立站渲染引擎
+- 见 docs/design/S32-旗舰独立站渲染引擎.md。本地打包 SIL OFL 1.1 字体（Cormorant Garamond / Plus Jakarta Sans / Space Grotesk / JetBrains Mono）至 `server/builder/fonts/` 与 `web/public/assets/fonts/` 并附 `OFL-LICENSES.txt`，零外部 CDN 依赖；`server/builder/composition.css` 提供 9 套 WCAG AA 配色（含真暗黑 `obsidian`）与 5 种字体轴、4 种首屏构图及无遮挡 Cookie/询价栏协同布局。保持严格 CSP、S23 `fit-contain` 裁切语义、所有事实与审批门禁及 Lighthouse 性能/SEO >= 90。
+
+## S33 Agent 质量、模块化重构与一键出站
+- 见 docs/design/S33-优化说明.md。`server/src/services/agents/**` 与 `agent-json.service.ts` 启用 `@typescript-eslint/no-explicit-any: error`，`site-agents.service.ts` 保留对外聚合导出不变。
+- `AgentAiProvider` 可选 `outputMode`（默认 `json_object`；启用 `json_schema` 经 `toStrictOpenAiJsonSchema()` 转为严格子集，上游 400 自动回退 `json_object` 一次且不重复计费）、`taskModels` 与 `temperatureByTask`（留空不传 `temperature`，兼容推理模型）。`parseAgentJsonDetailed` 与 `agentDto.diagnostics` 只记录枚举/计数诊断，不落盘模型原文或密钥。
+- 新 B2B 首页内容区块硬上限 9 个（建议 5–8 个，避免冗长滚动页），`brand-site.md` 与 `image-studio.service.ts` 对齐 S32 配色/构图/`fit-cover`/暗亮光影规则。`/sites/new` 一键快速规划仅串联既有受限接口并需显式 AI 同意，绝不放松事实确认、地图确认或页面审批门禁。`web/src/sites.tsx` 拆分为 `web/src/sites/**` 子模块，保持现有路由导出与 CSS 精简。
+
+## S35 旗舰风格包
+- 见 docs/design/S35-旗舰风格包接入方案.md。`composition.pack` 为可选白名单轴（当前仅 `precision`），body 追加 `pack-precision`；未设置时 HTML 与 `site.css` 字节不变（构建仅在页面选用时追加 `server/builder/pack-precision.css`）。风格包 CSS 全部限定在 `.pack-precision` 下，尊重区块 `fit-contain`/`focus-*` 意图，字体本地打包（Barlow Condensed / Barlow / Source Serif 4，OFL，来源见 `fonts/SOURCE-precision.json`）。`brand-site.md` 受 17000 字节上限约束，修改前先核对体积。
+- precision 的完整布局依赖 buyerProfile。验收在实际构建产物上检查本地字体和 768–1050px 折叠菜单的键盘操作。合成质量用例通过后，真实站点仍按 S23 流程选用方案、确认试点截图并批准页面。
+- 英文设计 FAQ 修复只重排原句、补充完整匹配的当前确认事实引用，或在版式仍满足门禁时删除无效条目。原任务重试先复检无未结计费操作的已保存候选，再按原有用量和重试规则处理剩余单元。
+- S35 收尾与阶段 B/B2/C/D：演示数据（FactSheet `status: candidate` 且 `source.kind: ai-suggested`）只在站点 `demoMode` 开启时可用于 Agent 快照与预览校验，保留真实候选状态；含演示数据的页面不得批准（`DEMO_FACTS_UNCONFIRMED`）、构建或发布（`SITE_NOT_READY` / `VERSION_FACTS_CHANGED`），任何改动都不能放宽这些门禁。AI 建议事实只能由受计费保护的 `catalog.suggest` 任务写入，值逐字来自模型输出并按 originKey 去重，不建议认证。
+- AI 建议事实沿用受限 JSON 解析并逐条校验，数字只转为字符串。失败诊断只保留 `truncated`、`non_json`、`shape` 枚举，不对外返回或记录模型原文。
+- AI 自动配图默认关闭（站点 `autoImages` + 组织 images 服务），每页上限 `AUTO_IMAGE_HOME_MAX`（默认 6）/ `AUTO_IMAGE_DETAIL_MAX`（默认 3），只填缺图、不覆盖已有图片；在 site.agent 单元内先持久化资产 ID 再使用，按 run+槽位固定计费操作号，未配置/额度不足/失败只记固定事件码不使任务失败。生成图与 AI logo 均为 `generatedConcept`，前台标注示意图，不能作为事实证据；AI logo 必须提示核对拼写，确定性 SVG 字标始终作为兜底。
+- 图片服务 URL 返回只接受公网 HTTPS（`publicUrl`、禁重定向、限时限量），参数不受支持时只允许同一预留降级重试一次。密钥只经组织 AI 图片设置加密保存，禁止写入代码、环境文件、测试或文档。
+- `server/agent-skills/brand-site.md` 上限 17000 字节，当前约 14452 字节；新增规则前先核对体积并保持 ≥ 2000 字节余量，精简时不得删除约束含义或测试依赖短语。质量基线评分只有在视觉模型实际收到截图时才可标注为视觉评分，否则必须标注“结构评分”。
+- S35 验收修复：数字被抠掉的残缺句（`copy-integrity.ts`）在渲染与草稿修复中整句删除，绝不输出半截词；产品卡参数格跳过占位/采购备注与重复型号行；审查按隔离浏览器实际加载的图片判断可用性，示意图计入有图并单独标注；收尾 cta 紧邻询盘区且同指向 `#inquiry` 时不重复渲染；AI Logo 四周保留 10% 透明安全边距。详见 S35 文档“验收问题修复”。
+- S35 规格表：产品卡参数格只取每行第一个值列；详情页规格表、comparison 与 catalogue 表按 `publicTable()` 去掉采购备注列（标题含 note/remark/guidance/buyer/purchas/planning/how to/tip，或整列都是备注）、备注单元格留空、详情页去掉与本页产品标题重复的 Model/Name 行；无真实值时进入“信息待确认”汇总，不输出空表。对所有站生效，旧站重新构建后 HTML 会变。
+- S35 未知用量（取代 S3/S4/S22/J1 中“未知结果保留预留、暂停、不重复调用”的规定）：调用结果未知（超时、网络、响应过大、缺少或超出用量、解析、保存中断、上次中断）时只记录固定原因码，由平台自动吸收：释放客户预留（不扣客户额度）并在 UsageRecord 标记 `absorbed`/`unknownReason` 供平台按服务商账单核对；任务在三次尝试内用新 operationId 自动重试。每组织每月自动吸收上限 `AI_UNKNOWN_ABSORB_LIMIT`（默认 5），超限才暂停，用户重试时同样吸收。客户不承担未知用量，也不接触 Token：web 前端不显示 Token 字样或数量（API 字段保持不变）。已保存结果（pendingResult）仍按已知用量结算，不重复付费请求。整页任务等待 `AI_FULL_PAGE_TIMEOUT_MS`（默认 240000，120000–600000）。
+- S35 整站审查修复（见 S35 文档"整站审查问题修复"）：产品名、站点名、计划标题中的型号（如 VB-2G、VG-83）经 `validatePage` 的 `identifiers` 视为标识符，不做数字门禁；纯数字、带单位数字和其他代码照旧需要事实，版本门禁用快照内名称。生成修复链 `repairGeneratedPage` 只补引用、删除硬塞值或无依据内容，不写新声明。FAQ 直接回答 30–80 词且同块禁止重复答案（`FAQ_DUPLICATE_ANSWER`）；samples 小节只接受 sample 类事实；审核措辞检查覆盖有 composition 的页面。pack 页合并短采购条款、去掉同名 cta 与重复规格表。`brand-site.md` 当前 14850 字节。
+
+- S35 修复上线前已批准且批准散列仍匹配的页面、旧冻结版本沿用原文案规则。新审批在当前规则下通过后写入校验版本并随构建冻结。旧版仍校验当前事实状态、来源修订和审批散列。仅因重复而报错的 FAQ 保留给 Agent 重写，强证据区块保留字面依据校验。
+- S35 单页生成与改进仅在可选配图阶段保留原图文版式，最终校验和截图前复用设计提案的缺图回退，已有图片和事实门禁照常执行。
+
+## S36 平台统一 AI 服务与套餐额度
+- 见 docs/design/S36-平台统一AI服务与套餐额度.md（含“已决定”与“实施记录”）。正式环境 AI 文本与图片服务由平台提供：完整的 `PLATFORM_AI_*` / `PLATFORM_IMAGE_*` 优先；否则仅非生产或 `ALLOW_ORG_AI_KEYS=true`（默认 false，本期不对客户开放）回退组织加密配置；否则视为未配置。所有调用点必须经 `server/src/services/ai-provider-resolve.ts` 取服务商与密钥，禁止再直接读取 `AgentAiProvider` 发起付费调用。本条取代 S3/S6/S35 中“AI 仅用组织配置模型”“密钥只经组织设置保存”的规定。
+- 计费仍按当前组织套餐 `reserve/settle`，operationId 规则、S35 未知用量自动吸收、事实/审批/发布门禁与租户隔离不得因平台托管放宽。平台地址仍经 `aiBase()`/`aiFetch()` 的 SSRF 与 `AI_ALLOWED_HOSTS` 校验。
+- 平台密钥只通过环境变量或密钥管理注入，不入库、不进日志、错误、代码、测试、文档与聊天；配置问题只记录变量名。托管时 AI 设置读取接口只返回 `{ managed, enabled, configured }`，保存/测试返回 `409 PLATFORM_MANAGED`；平台模型名不写入 Agent 记录。
+- 客户界面不暴露模型名、服务商、地址、密钥和 Token：AI 额度显示百分比，图片显示“已用 N / 上限”，并提供重置日期、80% 提醒与“升级套餐”入口（`PLATFORM_UPGRADE_URL` 仅 https/mailto）。
+- 跨组织运营统计只能走 `npm run ops:usage`（`server/src/scripts/ops-usage.ts`）：组织列表用既有 identity 上下文，其余逐个组织在 `runWithTenant` 中只读查询，不新增绕过、不写入、不执行迁移；不得为此新增跨租户 Web 后台或业务接口。
+
+## S37 交付与维护约束
+- 见 `docs/design/S37-未完成开发交接.md` 第 7 节与 `docs/design/S37-风格与标杆参照库.md`。
+- 演示模式（`site.demoMode === true`）下所有 `status === "candidate"` 事实（手动录入与 AI 建议）均可引用并满足 readiness 演示缺口，但审批仍被 `409 DEMO_FACTS_UNCONFIRMED` 拦截，`canPublish` 与发布门禁始终只认 `confirmed`（`allowDemoFacts: false`）。
+- 风格包规则模块化存放于 `server/agent-skills/packs/{precision,atelier,monolith}.md`，按 `composition.pack` 白名单经 `site-skill-profile.ts` 加载，保持 `brand-site.md` 远低于 15000 字节测试上限；新增风格包须同步覆盖非拉丁字体回退、RTL、375px 移动端零溢出与 `test:quality`。
+- 询盘垃圾识别与测试连接路径统一接入 S35 `absorbUnknownUsage`，隐私模板须保留平台托管 AI 脱敏处理说明（zh/en）；长任务流式读取（`AI_STREAM_LONG_TASKS`）、审查抽样（`REVIEW_SAMPLE_THRESHOLD`）与自动配图受限并发（`AUTO_IMAGE_CONCURRENCY`）必须保留原 `operationId`、租约围栏与 `reserve/settle` 语义。
+- 非英文页面（全部 8 种语言）与英文页面共用内部审核措辞、FAQ 直接回答与截断型号保护；`BuyerReadiness.enrichmentGaps` 仅作为资料补全引导，不改变发布门禁。
+- 运维基础：Worker 异常须经 `error-monitor.service.ts` 脱敏上报（仅事件码/任务类型/原因码，严禁敏感数据），任务与 AI 指标经 `metrics.service.ts` 记录；MongoDB 与持久卷备份/演练使用 `scripts/ops/backup.mjs` 与 `scripts/ops/restore.mjs`（首次启动 `db.ts` 登记 `s35-s36-v1` 迁移账本）。

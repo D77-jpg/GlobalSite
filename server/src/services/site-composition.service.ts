@@ -97,7 +97,7 @@ export function compositionBrief(site: any, node?: any) {
       type === "home"
         ? {
             usefulWords: "400–800 when evidence allows",
-            purposefulSections: "6–10",
+            purposefulSections: "5–8 (<= 8 substantive blocks, avoid scroll fatigue)",
             decisions: [
               "offer and audience",
               "range or capability discovery",
@@ -136,11 +136,19 @@ export function compositionBrief(site: any, node?: any) {
     ],
   };
 }
-const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+const words = (s: string) => {
+  const cjk = (s.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu) ?? []).length;
+  const nonCjk = s
+    .replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return nonCjk + Math.ceil(cjk / 2);
+};
 const normalized = (s: string) =>
   s
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 function bodyText(b: PageInput["blocks"][number]) {
   return [
@@ -182,6 +190,7 @@ export function compositionIssues(page: PageInput, type: string) {
   }
   if (type === "home") {
     if (blocks.length < 5) add("CONTENT_SECTIONS_REQUIRED");
+    if (blocks.length > 9) add("CONTENT_HOME_TOO_LONG");
     if (
       !blocks.some(
         (b) =>

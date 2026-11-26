@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login } from "./helpers/site-login";
+import { login, gotoWorkspace } from "./helpers/site-login";
 
 test("site desktop: create, edit and confirm map, blocked facts, safe preview, approval invalidation and paused AI", async ({
   page,
@@ -80,16 +80,21 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   );
   expect(siteData.buyerProfile.audiences).toEqual(["Wholesale buyers"]);
 
-  await expect(
-    page.getByRole("heading", { name: "建站向导", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator("main h1").first()).toContainText(
+    "网站视觉策略工作室",
+  );
   await page.screenshot({ path: "test-results/s16-guide-desktop.png" });
   await page
-    .getByRole("button", { name: "关键词与站点地图", exact: true })
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /页面结构/ })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "Fixture Export", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator("main h1").first()).toContainText(
+    "网站结构与蓝图",
+  );
+  await expect(page.locator(".gs-studio-masthead")).toContainText(
+    "Fixture Export",
+  );
+  await page.getByText("编辑栏目、路径与策略字段", { exact: true }).click();
   await page.getByRole("button", { name: "添加页面", exact: true }).click();
   const node = page.locator(".sites-tree-node").last();
   await node.getByLabel("页面标题", { exact: true }).fill("About");
@@ -99,12 +104,15 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   await page.getByRole("button", { name: "确认站点地图", exact: true }).click();
   await expect(page.getByText("站点地图已确认", { exact: true })).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.locator(".catalog h1").click();
+  await page.locator(".catalog h1").first().click();
   await page.screenshot({
     path: "test-results/s4-sitemap-desktop.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "内容与审核", exact: true }).click();
+  await page
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /内容创意/ })
+    .click();
   await page
     .getByRole("button", { name: "手工创建页面", exact: true })
     .first()
@@ -119,7 +127,7 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     page.getByText("数字缺少匹配的已确认依据 · 1998").first(),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "批准整页", exact: true }),
+    page.getByRole("button", { name: "批准页面", exact: true }),
   ).toBeDisabled();
   await page.screenshot({
     path: "test-results/s4-blocked-review-desktop.png",
@@ -130,18 +138,16 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     .fill("Contact our team to discuss your project.");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "批准整页", exact: true }),
+    page.getByRole("button", { name: "批准页面", exact: true }),
   ).toBeEnabled();
-  await page
-    .getByRole("button", { name: "查看已保存的预览", exact: true })
-    .click();
   await expect(
     page
       .frameLocator("iframe")
       .getByRole("heading", { name: "Home", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "批准整页", exact: true }).click();
-  await expect(page.getByText("已批准", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "批准页面", exact: true }).click();
+  await expect(page.getByText("已批准", { exact: true }).first()).toBeVisible();
+  await page.getByRole("tab", { name: "样式", exact: true }).click();
   await page.getByRole("button", { name: "添加品牌展示", exact: true }).click();
   await page
     .getByLabel("首屏标题", { exact: true })
@@ -151,19 +157,26 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     .fill("Explore our products and share your requirements.");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await page.reload();
+  await page.getByRole("tab", { name: "样式", exact: true }).click();
   await expect(page.getByLabel("首屏标题", { exact: true })).toHaveValue(
     "A clear product collection",
   );
   await expect(page.getByText("待审核", { exact: true }).first()).toBeVisible();
+  await page.getByRole("tab", { name: "内容", exact: true }).click();
   await page
     .getByLabel("段落正文", { exact: true })
     .fill("Contact our team for application guidance.");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByText("待审核", { exact: true }).first()).toBeVisible();
-  await page.getByRole("link", { name: "站点", exact: true }).last().click();
-  await expect(
-    page.getByRole("heading", { name: "建站向导", exact: true }),
-  ).toBeVisible();
+  await page.getByRole("link", { name: "站点", exact: true }).first().click();
+  await page
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /网站蓝图/ })
+    .click();
+  await expect(page.locator("main h1").first()).toContainText(
+    "网站视觉策略工作室",
+  );
+  await page.getByText("展开完整分步建站清单", { exact: true }).click();
   await page
     .getByRole("button", { name: "预览并选择设计方案", exact: true })
     .click();
@@ -175,7 +188,11 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   await expect(generate).toBeDisabled();
   await page.locator(".design-consent input").check();
   await generate.click();
-  await page.getByRole("button", { name: "建站向导", exact: true }).click();
+  await page
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /网站蓝图/ })
+    .click();
+  await page.getByText("展开完整分步建站清单", { exact: true }).click();
   await expect(page.locator(".guide-next [role=status]")).toContainText(
     "已暂停",
     { timeout: 20000 },
@@ -186,8 +203,43 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
   await expect(
     page.getByText("请先由管理员配置 AI 服务商，再恢复任务", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "取消任务", exact: true }).click();
-  await expect(page.getByText("已取消", { exact: true }).first()).toBeVisible();
+  let cancelRateHit: number | undefined;
+  const onCancelResponse = (r: {
+    url: () => string;
+    status: () => number;
+    headers: () => Record<string, string>;
+  }) => {
+    if (
+      r.status() === 429 &&
+      new URL(r.url()).pathname.startsWith("/api/v1/")
+    ) {
+      cancelRateHit = Number(r.headers()["retry-after"] ?? 60) * 1000;
+    }
+  };
+  page.on("response", onCancelResponse);
+  try {
+    await page.getByRole("button", { name: "取消任务", exact: true }).click();
+    try {
+      await expect(
+        page.getByText("已取消", { exact: true }).first(),
+      ).toBeVisible({ timeout: 8000 });
+    } catch (error) {
+      if (!cancelRateHit) throw error;
+      test.setTimeout(test.info().timeout + cancelRateHit + 15000);
+      await page.waitForTimeout(cancelRateHit);
+      cancelRateHit = undefined;
+      const cancelBtn = page.getByRole("button", {
+        name: "取消任务",
+        exact: true,
+      });
+      if (await cancelBtn.isVisible()) await cancelBtn.click();
+      await expect(
+        page.getByText("已取消", { exact: true }).first(),
+      ).toBeVisible({ timeout: 10000 });
+    }
+  } finally {
+    page.off("response", onCancelResponse);
+  }
   await page.getByRole("button", { name: "切换语言", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Agent jobs", exact: true }),
@@ -196,13 +248,51 @@ test("site desktop: create, edit and confirm map, blocked facts, safe preview, a
     .getByRole("button", { name: "Change language", exact: true })
     .click();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
+  const reloadUrl = page.url();
+  let reloadRateHit: number | undefined;
+  const onReloadResponse = (r: {
+    url: () => string;
+    status: () => number;
+    headers: () => Record<string, string>;
+  }) => {
+    if (
+      r.status() === 429 &&
+      new URL(r.url()).pathname.startsWith("/api/v1/")
+    ) {
+      reloadRateHit = Number(r.headers()["retry-after"] ?? 60) * 1000;
+    }
+  };
+  page.on("response", onReloadResponse);
+  try {
+    await gotoWorkspace(page, reloadUrl);
+    try {
+      await expect(
+        page.getByRole("button", { name: "Agent 任务", exact: true }),
+      ).toHaveClass(/is-active/, { timeout: 10000 });
+    } catch (error) {
+      if (!reloadRateHit) throw error;
+      test.setTimeout(test.info().timeout + reloadRateHit + 15000);
+      await page.waitForTimeout(reloadRateHit);
+      reloadRateHit = undefined;
+      await gotoWorkspace(page, reloadUrl);
+    }
+    if (reloadRateHit) {
+      test.setTimeout(test.info().timeout + reloadRateHit + 15000);
+      await page.waitForTimeout(reloadRateHit);
+      reloadRateHit = undefined;
+      await gotoWorkspace(page, reloadUrl);
+    }
+  } finally {
+    page.off("response", onReloadResponse);
+  }
   await expect(
     page.getByRole("button", { name: "Agent 任务", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  ).toHaveClass(/is-active/);
   await page
-    .getByRole("button", { name: "关键词与站点地图", exact: true })
+    .locator(".gs-visual-tabs")
+    .getByRole("button", { name: /页面结构/ })
     .click();
+  await page.getByText("编辑栏目、路径与策略字段", { exact: true }).click();
   await page.getByRole("button", { name: "添加页面", exact: true }).click();
   await page.getByRole("button", { name: "添加页面", exact: true }).click();
   await page

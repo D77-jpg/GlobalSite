@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "start:worker": "node dist/worker.js",
     "migrate": "tsx src/scripts/migrate.ts",
+    "ops:usage": "tsx src/scripts/ops-usage.ts",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts"
   },
   "dependencies": {

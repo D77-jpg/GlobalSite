@@ -3,8 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { api, ApiError } from "./api";
 import type { Locale } from "./i18n";
-import "./sites.css";
-import "./studio.css";
 import {
   ClipboardCheck,
   PackageCheck,
@@ -38,23 +36,61 @@ export function PublishPage({
     [saved, setSaved] = useState(false),
     [historyLoaded, setHistoryLoaded] = useState(false),
     [domain, setDomain] = useState<Row>(),
-    [clear, setClear] = useState(false);
+    [clear, setClear] = useState(false),
+    [clearWebhookSecret, setClearWebhookSecret] = useState(false),
+    [assets, setAssets] = useState<Row[]>([]),
+    [webhookMsg, setWebhookMsg] = useState("");
   const form = useForm<Row>(),
     edit = role !== "viewer",
     admin = role === "admin";
+  function formatRedirects(list: Row[] | undefined) {
+    return (list ?? []).map((r) => `${r.from} ${r.to} ${r.status}`).join("\n");
+  }
+  function parseRedirects(raw: string) {
+    return raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [from, to, code] = line.split(/\s+/);
+        return {
+          from: from || "",
+          to: to || "",
+          status: code === "302" ? 302 : 301,
+        };
+      });
+  }
   useEffect(() => {
     let live = true;
     void Promise.all([
       api(base),
       api(base + "/publishing-settings"),
       api(base + "/preflight"),
+      api<{ items: Row[] }>("/assets?limit=100").catch(() => ({ items: [] })),
     ])
-      .then(([s, c, r]) => {
+      .then(([s, c, r, a]) => {
         if (!live) return;
         setSite(s);
         setCfg(c);
         setReport(r);
-        form.reset({ ...c, token: "" });
+        setAssets(
+          (a.items ?? []).filter((item: Row) =>
+            String(item.mime || "").startsWith("image/"),
+          ),
+        );
+        const seo = c.seoAnalytics ?? {};
+        form.reset({
+          ...c,
+          token: "",
+          webhookSecret: "",
+          ga4MeasurementId: seo.ga4MeasurementId ?? "",
+          gtmContainerId: seo.gtmContainerId ?? "",
+          metaPixelId: seo.metaPixelId ?? "",
+          googleSiteVerification: seo.googleSiteVerification ?? "",
+          bingSiteVerification: seo.bingSiteVerification ?? "",
+          ogImageAssetId: seo.ogImageAssetId ?? "",
+          redirectsText: formatRedirects(seo.redirects),
+        });
       })
       .catch((e) => {
         if (live) setError(e.code ?? "error");
@@ -135,6 +171,11 @@ export function PublishPage({
           {t("saved")}
         </p>
       )}
+      {webhookMsg && (
+        <p className="notice success" role="status">
+          {webhookMsg}
+        </p>
+      )}
       <nav className="release-nav" aria-label={t("title")}>
         <a href="#release-versions">{t("versions")}</a>
         <a href="#release-preflight">{t("check")}</a>
@@ -200,6 +241,26 @@ export function PublishPage({
                               >
                                 {t("download")}
                               </a>
+                              {admin && cfg?.deployWebhookUrl && (
+                                <button
+                                  type="button"
+                                  className="secondary"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void action(async () => {
+                                      setWebhookMsg("");
+                                      await api(
+                                        "/site-versions/" + v.id + "/webhook",
+                                        "POST",
+                                        {},
+                                      );
+                                      setWebhookMsg(t("webhookSent"));
+                                    })
+                                  }
+                                >
+                                  {t("triggerWebhook")}
+                                </button>
+                              )}
                               {admin && cfg?.configured && (
                                 <>
                                   <button
@@ -388,15 +449,45 @@ export function PublishPage({
                     projectName: d.projectName || null,
                     productionBranch: d.productionBranch || "main",
                     domain: d.domain || null,
+                    deployWebhookUrl: d.deployWebhookUrl?.trim() || null,
                     ...(clear
                       ? { token: null }
                       : d.token
                         ? { token: d.token }
                         : {}),
+                    ...(clearWebhookSecret
+                      ? { webhookSecret: null }
+                      : d.webhookSecret
+                        ? { webhookSecret: d.webhookSecret }
+                        : {}),
+                    seoAnalytics: {
+                      ga4MeasurementId: d.ga4MeasurementId?.trim() || null,
+                      gtmContainerId: d.gtmContainerId?.trim() || null,
+                      metaPixelId: d.metaPixelId?.trim() || null,
+                      googleSiteVerification:
+                        d.googleSiteVerification?.trim() || null,
+                      bingSiteVerification:
+                        d.bingSiteVerification?.trim() || null,
+                      ogImageAssetId: d.ogImageAssetId || null,
+                      redirects: parseRedirects(d.redirectsText || ""),
+                    },
                   });
                   setCfg(next);
-                  form.reset({ ...next, token: "" });
+                  const seo = next.seoAnalytics ?? {};
+                  form.reset({
+                    ...next,
+                    token: "",
+                    webhookSecret: "",
+                    ga4MeasurementId: seo.ga4MeasurementId ?? "",
+                    gtmContainerId: seo.gtmContainerId ?? "",
+                    metaPixelId: seo.metaPixelId ?? "",
+                    googleSiteVerification: seo.googleSiteVerification ?? "",
+                    bingSiteVerification: seo.bingSiteVerification ?? "",
+                    ogImageAssetId: seo.ogImageAssetId ?? "",
+                    redirectsText: formatRedirects(seo.redirects),
+                  });
                   setClear(false);
+                  setClearWebhookSecret(false);
                 }),
               )}
             >
@@ -438,6 +529,93 @@ export function PublishPage({
                   />
                   {t("clear")}
                 </label>
+                <details className="studio-subdetails">
+                  <summary>{t("seoSection")}</summary>
+                  <p className="ops-caption">{t("seoHint")}</p>
+                  <div className="catalog-grid">
+                    <label>
+                      {t("ga4")}
+                      <input
+                        {...form.register("ga4MeasurementId")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label>
+                      {t("gtm")}
+                      <input
+                        {...form.register("gtmContainerId")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label>
+                      {t("metaPixel")}
+                      <input
+                        {...form.register("metaPixelId")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label>
+                      {t("googleVerify")}
+                      <input
+                        {...form.register("googleSiteVerification")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label>
+                      {t("bingVerify")}
+                      <input
+                        {...form.register("bingSiteVerification")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label>
+                      {t("ogImage")}
+                      <select {...form.register("ogImageAssetId")}>
+                        <option value="">{t("ogImageAuto")}</option>
+                        {assets.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.fileName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <label>
+                    {t("redirects")}
+                    <textarea
+                      rows={3}
+                      {...form.register("redirectsText")}
+                      placeholder="/old-products /products 301"
+                    />
+                  </label>
+                </details>
+                <details className="studio-subdetails">
+                  <summary>{t("webhookSection")}</summary>
+                  <label>
+                    {t("webhookUrl")}
+                    <input
+                      {...form.register("deployWebhookUrl")}
+                      autoComplete="off"
+                      placeholder="https://api.example.com/deploy-hook"
+                    />
+                  </label>
+                  <label>
+                    {t("webhookSecret")}
+                    <input
+                      type="password"
+                      {...form.register("webhookSecret")}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={clearWebhookSecret}
+                      onChange={(e) => setClearWebhookSecret(e.target.checked)}
+                    />
+                    {t("clearWebhookSecret")}
+                  </label>
+                </details>
                 <button className="primary" disabled={busy || !cfg}>
                   {t("save")}
                 </button>
@@ -456,7 +634,30 @@ export function PublishPage({
                 {t("domainCheck")}
               </button>
             )}
-            {domain && <p role="status">{t(domain.status)}</p>}
+            {domain && (
+              <div className="diag-panel" role="status">
+                <p>{t(domain.status)}</p>
+                {domain.recommendedRecord && (
+                  <p className="diag-record">
+                    <strong>{t("recommendedDns")}:</strong>{" "}
+                    <code>
+                      {domain.recommendedRecord.type}{" "}
+                      {domain.recommendedRecord.name} →{" "}
+                      {domain.recommendedRecord.target}
+                    </code>
+                  </p>
+                )}
+                {!!domain.diagnostics?.length && (
+                  <ul className="diag-list">
+                    {domain.diagnostics.map((d: Row, idx: number) => (
+                      <li key={idx} className={d.ok ? "is-ok" : "is-fail"}>
+                        {d.step.toUpperCase()} · {t(d.detailCode)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </details>
         </aside>
       </div>

@@ -67,6 +67,11 @@ export type UsageRow = TenantBase & {
   amount: number;
   state: string;
   actual?: number;
+  /** S35: unknown AI outcome released by the platform for reconciliation. */
+  absorbed?: boolean;
+  unknownReason?: string;
+  absorbedAt?: Date;
+  absorbedBy?: "auto" | "retry";
 };
 export type BucketRow = TenantBase & {
   period: string;
@@ -76,6 +81,8 @@ export type BucketRow = TenantBase & {
 };
 export type AssetRow = TenantBase & {
   generatedConcept?: boolean;
+  /** S35: stable reuse key for generated illustrations/logos. */
+  originKey?: string;
   key: string;
   fileName?: string;
   kind?: string;
@@ -103,7 +110,12 @@ export type TaskRow = TenantBase & {
 export type ProviderRow = TenantBase & {
   name: string;
   modelName: string;
+  visionModelName?: string;
   supportsVision?: boolean;
+  outputMode?: "json_object" | "json_schema";
+  taskModels?: Record<string, string>;
+  temperatureByTask?: Record<string, number>;
+  mode?: "auto" | "images" | "chat";
   baseUrl: string;
   enabled: boolean;
   secret?: EncryptedSecret;

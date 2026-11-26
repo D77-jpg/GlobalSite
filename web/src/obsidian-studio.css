@@ -1,0 +1,2300 @@
+/* ==========================================================================
+   GlobalSite Velvet Obsidian Luxury Visual Studio Theme (S31)
+   Default: Deep Velvet Obsidian + Luminous Amethyst Glass + Architectural Photography.
+   Toggle:  Warm Alabaster Light Mode preserved.
+   Strict CSP compliant (zero inline styles).
+   ========================================================================== */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --font-editorial: "Playfair Display", Georgia, "Times New Roman", serif;
+  --ui-bg: #08070d;
+  --ui-bg-aura:
+    radial-gradient(900px 380px at 50% -10%, rgba(124, 92, 252, 0.14), transparent 68%),
+    radial-gradient(700px 320px at 88% 4%, rgba(201, 141, 104, 0.08), transparent 64%);
+  --ui-sidebar: #0d0b14;
+  --ui-topbar: rgba(11, 9, 18, 0.86);
+  --ui-rail: #110f1b;
+  --ui-surface: #141221;
+  --ui-surface-2: #1c192c;
+  --ui-surface-hover: #242038;
+  --ui-well: #0b0a12;
+  --ui-glass: rgba(20, 18, 33, 0.86);
+
+  --ui-border: rgba(255, 255, 255, 0.08);
+  --ui-border-strong: rgba(255, 255, 255, 0.15);
+  --ui-border-glow: rgba(164, 139, 255, 0.44);
+  --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.065);
+
+  --ui-text: #f5f3ff;
+  --ui-text-2: #c4bedb;
+  --ui-muted: #847da0;
+
+  --ui-accent: #7c5cfc;
+  --ui-accent-bright: #a48bff;
+  --ui-accent-fg: #ffffff;
+  --ui-accent-soft: rgba(124, 92, 252, 0.16);
+  --ui-accent-border: rgba(164, 139, 255, 0.36);
+  --ui-accent-grad: linear-gradient(135deg, #8b6bff 0%, #6a4af5 55%, #5636e5 100%);
+  --ui-accent-grad-hover: linear-gradient(135deg, #9b7eff 0%, #7b5cff 55%, #6545f0 100%);
+  --ui-accent-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 8px 24px -6px rgba(124, 92, 252, 0.56);
+
+  --ui-ok: #34d399;
+  --ui-ok-bg: rgba(16, 185, 129, 0.14);
+  --ui-ok-border: rgba(52, 211, 153, 0.3);
+  --ui-warn: #fbbf24;
+  --ui-warn-bg: rgba(245, 158, 11, 0.14);
+  --ui-warn-border: rgba(251, 191, 36, 0.3);
+  --ui-info: #60a5fa;
+  --ui-info-bg: rgba(59, 130, 246, 0.14);
+  --ui-info-border: rgba(96, 165, 250, 0.3);
+  --ui-danger: #fb7185;
+  --ui-danger-bg: rgba(244, 63, 94, 0.14);
+  --ui-danger-border: rgba(251, 113, 133, 0.3);
+
+  --ui-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.34);
+  --ui-shadow-md: 0 14px 36px -10px rgba(0, 0, 0, 0.58);
+  --ui-shadow-lg: 0 28px 70px -14px rgba(0, 0, 0, 0.74);
+  --ui-backdrop: rgba(4, 3, 9, 0.78);
+
+  --ink: var(--ui-text);
+  --primary: var(--ui-accent);
+  --brand: var(--ui-accent-bright);
+  --muted: var(--ui-muted);
+  --line: var(--ui-border);
+  --card: var(--ui-surface);
+  --ws-bg: var(--ui-bg);
+  --ws-tint: var(--ui-accent-soft);
+  --ws-border: var(--ui-border-strong);
+  --ws-focus: var(--ui-accent-bright);
+  --surface-active: var(--ui-accent-soft);
+  --gs-surface-tint: var(--ui-well);
+  --gs-surface-elevated: var(--ui-surface);
+  --gs-shadow-sm: var(--ui-shadow-sm);
+  --gs-shadow-md: var(--ui-shadow-md);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --font-editorial: "Playfair Display", Georgia, "Times New Roman", serif;
+  --ui-bg: #f6f5f9;
+  --ui-bg-aura: none;
+  --ui-sidebar: #efedf5;
+  --ui-topbar: rgba(246, 245, 249, 0.88);
+  --ui-rail: #faf9fc;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f3f1f8;
+  --ui-surface-hover: #eae6f4;
+  --ui-well: #f4f2f8;
+  --ui-glass: rgba(255, 255, 255, 0.94);
+
+  --ui-border: rgba(24, 20, 44, 0.09);
+  --ui-border-strong: rgba(24, 20, 44, 0.16);
+  --ui-border-glow: rgba(106, 74, 245, 0.38);
+  --ui-specular: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  --ui-text: #161326;
+  --ui-text-2: #4b4566;
+  --ui-muted: #766f91;
+
+  --ui-accent: #6545f0;
+  --ui-accent-bright: #5636e5;
+  --ui-accent-fg: #ffffff;
+  --ui-accent-soft: rgba(101, 69, 240, 0.09);
+  --ui-accent-border: rgba(101, 69, 240, 0.25);
+  --ui-accent-grad: linear-gradient(135deg, #7c5cfc 0%, #5636e5 100%);
+  --ui-accent-grad-hover: linear-gradient(135deg, #8b6bff 0%, #6545f0 100%);
+  --ui-accent-shadow: 0 6px 18px -6px rgba(101, 69, 240, 0.42);
+
+  --ui-ok: #047857;
+  --ui-ok-bg: #ecfdf5;
+  --ui-ok-border: #a7f3d0;
+  --ui-warn: #b45309;
+  --ui-warn-bg: #fffbeb;
+  --ui-warn-border: #fde68a;
+  --ui-info: #1d4ed8;
+  --ui-info-bg: #eff6ff;
+  --ui-info-border: #bfdbfe;
+  --ui-danger: #be123c;
+  --ui-danger-bg: #fff1f2;
+  --ui-danger-border: #fecdd3;
+
+  --ui-shadow-sm: 0 1px 3px rgba(24, 20, 44, 0.05);
+  --ui-shadow-md: 0 10px 28px -10px rgba(24, 20, 44, 0.11);
+  --ui-shadow-lg: 0 22px 54px -14px rgba(24, 20, 44, 0.16);
+  --ui-backdrop: rgba(20, 16, 36, 0.42);
+
+  --ink: var(--ui-text);
+  --primary: var(--ui-accent);
+  --brand: var(--ui-accent);
+  --muted: var(--ui-muted);
+  --line: var(--ui-border);
+  --card: var(--ui-surface);
+  --ws-bg: var(--ui-bg);
+  --ws-tint: var(--ui-accent-soft);
+  --ws-border: var(--ui-border-strong);
+  --ws-focus: var(--ui-accent);
+  --surface-active: var(--ui-accent-soft);
+  --gs-surface-tint: var(--ui-well);
+  --gs-surface-elevated: var(--ui-surface);
+  --gs-shadow-sm: var(--ui-shadow-sm);
+  --gs-shadow-md: var(--ui-shadow-md);
+}
+
+/* ==========================================================================
+   1. Base Typography, Links, Code & Scrollbars
+   ========================================================================== */
+html,
+body {
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "PingFang SC",
+    "Segoe UI Variable",
+    "Segoe UI",
+    "Microsoft YaHei",
+    sans-serif;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-image: var(--ui-bg-aura);
+  background-attachment: fixed;
+}
+
+a {
+  color: var(--ui-accent-bright);
+  transition: color 140ms ease;
+}
+
+a:hover {
+  color: var(--ui-text);
+}
+
+code,
+pre,
+kbd {
+  font-family: "JetBrains Mono", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+code {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.86em;
+}
+
+pre {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.initial-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+  color: var(--ui-text-2);
+  background: var(--ui-bg);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ui-border-strong);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-muted);
+}
+
+/* ==========================================================================
+   2. Flagship Split-Screen Auth Studio
+   ========================================================================== */
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--ui-bg);
+  background-image: var(--ui-bg-aura);
+}
+
+.auth-page .auth-story {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  padding: 48px 56px;
+  background: #111113;
+  color: #f4f4f5;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.auth-page .auth-story::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 10%, transparent 82%);
+  pointer-events: none;
+}
+
+.auth-page .auth-story > * {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-page .auth-story .brand {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.auth-page .auth-story .brand-icon,
+.auth-page .auth-main .auth-mark .brand-icon,
+.product-shell .brand-icon {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: var(--ui-accent);
+  color: var(--ui-accent-fg);
+  box-shadow: none;
+}
+
+.auth-page .auth-story .brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: #f4f4f5;
+  color: #09090b;
+}
+
+.auth-page .auth-story .brand-dot {
+  color: #a1a1aa;
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.auth-page .story-content {
+  padding: 28px 0;
+  margin: auto 0;
+  max-width: 480px;
+}
+
+.auth-page .story-content .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d4d4d8;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.auth-page .story-content h1 {
+  font-size: clamp(32px, 3vw, 44px);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  margin: 18px 0 14px;
+  color: #fafafa;
+}
+
+.auth-page .story-lead {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: #a1a1aa;
+  margin-bottom: 32px;
+}
+
+.auth-page .story-content h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #71717a;
+  margin-bottom: 14px;
+}
+
+.auth-page .auth-workflow {
+  list-style: none;
+  counter-reset: auth-step;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-page .auth-workflow li {
+  counter-increment: auth-step;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 2px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e4e4e7;
+  font-size: 13.5px;
+  font-weight: 450;
+}
+
+.auth-page .auth-workflow li::before {
+  content: "0" counter(auth-step);
+  display: inline-block;
+  width: 24px;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  color: #71717a;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  flex-shrink: 0;
+}
+
+.auth-page .story-footer {
+  font-size: 12px;
+  color: #6b768f;
+}
+
+.auth-page .auth-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px 24px;
+  background: transparent;
+}
+
+.auth-page .auth-controls {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-page .auth-main .auth-mark {
+  display: none;
+}
+
+.auth-page .auth-form {
+  width: 100%;
+  max-width: 420px;
+  margin: auto 0;
+  padding: 34px 32px 30px;
+  background: var(--ui-glass);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 18px;
+  box-shadow: var(--ui-specular), var(--ui-shadow-lg);
+  backdrop-filter: blur(20px);
+}
+
+.auth-page .auth-form h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--ui-text);
+  margin: 0 0 8px;
+}
+
+.auth-page .auth-form .sub {
+  color: var(--ui-muted);
+  font-size: 13.5px;
+  margin-bottom: 24px;
+}
+
+.auth-page .auth-form label {
+  color: var(--ui-text-2);
+}
+
+.auth-page .auth-form input,
+.auth-page .auth-form select {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 10px 13px;
+}
+
+.auth-page .auth-form input:focus,
+.auth-page .auth-form select:focus {
+  border-color: var(--ui-accent-bright);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
+  outline: none;
+}
+
+.auth-page .auth-form button.primary {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: var(--ui-accent-grad);
+  color: var(--ui-accent-fg);
+  font-weight: 550;
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.auth-page .auth-form button.primary:hover {
+  background: var(--ui-accent-grad-hover);
+  color: var(--ui-accent-fg);
+}
+
+.auth-page .auth-switch {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--ui-muted);
+}
+
+.auth-page .auth-main footer {
+  color: var(--ui-muted);
+  font-size: 12px;
+  padding-top: 20px;
+}
+
+.dev-mail {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+.dev-mail .mail-body {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 9px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+}
+
+@media (max-width: 960px) {
+.auth-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .auth-page .auth-story {
+    display: none;
+  }
+  .auth-page .auth-main .auth-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px auto 16px;
+    color: var(--ui-text);
+    font-size: 19px;
+    font-weight: 700;
+  }
+}
+
+/* ==========================================================================
+   3. Shell Navigation, Sidebar, Glass Topbar & Command Palette
+   ========================================================================== */
+.theme-toggle,
+.language {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 9px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text-2);
+  font-size: 12.5px;
+  font-weight: 550;
+  box-shadow: var(--ui-specular);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.theme-toggle {
+  width: 34px;
+  padding: 0;
+}
+
+.theme-toggle:hover,
+.language:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+.product-shell {
+  --ws-nav: 244px;
+  background: transparent;
+  color: var(--ui-text);
+  font-size: 13.5px;
+  accent-color: var(--ui-accent);
+  min-height: 100dvh;
+}
+
+.product-shell[data-nav-collapsed="true"] {
+  --ws-nav: 68px;
+}
+
+.product-shell > .sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--ws-nav);
+  overflow: hidden;
+  background-color: var(--ui-sidebar);
+  border-right: 1px solid var(--ui-border);
+  padding: 18px 12px 14px;
+}
+
+.ws-drawer .sidebar {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--ui-sidebar);
+  border-right: 1px solid var(--ui-border);
+  padding: 18px 12px 14px;
+}
+
+.product-shell .main-shell {
+  margin-left: var(--ws-nav);
+  width: calc(100% - var(--ws-nav));
+  min-width: 0;
+}
+
+:root[data-theme="dark"] .product-shell > .sidebar::after,
+:root[data-theme="dark"] .ws-drawer .sidebar::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 320px;
+  background:
+    linear-gradient(180deg, #0d0b14 0%, rgba(13, 11, 20, 0.22) 50%, rgba(13, 11, 20, 0.88) 100%),
+    url("/assets/studio/sidebar-horizon.jpg") center bottom / cover no-repeat;
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.product-shell > .sidebar > *,
+.ws-drawer .sidebar > * {
+  position: relative;
+  z-index: 1;
+}
+
+.product-shell .sidebar > .brand {
+  margin: 2px 6px 18px;
+  gap: 10px;
+  color: var(--ui-text);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.product-shell .brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.product-shell .brand-pill {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--ui-accent-soft);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+}
+
+.product-shell[data-nav-collapsed="true"] .brand-pill {
+  display: none;
+}
+
+.product-shell .workspace-label {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 11px;
+  padding: 9px 10px;
+  margin-bottom: 18px;
+  color: var(--ui-text);
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell .workspace-label:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  text-decoration: none;
+}
+
+.product-shell .workspace-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--ui-accent-soft);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+}
+
+.product-shell .workspace-label small {
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.product-shell .workspace-label strong {
+  color: var(--ui-text);
+  font-size: 13px;
+}
+
+.product-shell .sidebar nav a {
+  padding: 9px 11px;
+  min-height: 44px;
+  border-radius: 10px;
+  gap: 11px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ui-text-2);
+  border: 1px solid transparent;
+  align-items: center;
+}
+
+.product-shell .sidebar nav a .nav-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.product-shell .sidebar nav a .nav-item-label {
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-shell .sidebar nav a .nav-item-sub {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--ui-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-shell[data-nav-collapsed="true"] .sidebar nav a .nav-item-text {
+  display: none;
+}
+
+.product-shell .sidebar nav a > svg {
+  color: var(--ui-muted);
+  flex-shrink: 0;
+}
+
+.product-shell .sidebar nav a:hover {
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+.product-shell .sidebar nav a:hover > svg {
+  color: var(--ui-text);
+}
+
+.product-shell .sidebar nav a.active {
+  background: linear-gradient(
+    90deg,
+    rgba(124, 92, 252, 0.38) 0%,
+    rgba(106, 74, 245, 0.16) 100%
+  );
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 6px 18px -8px rgba(124, 92, 252, 0.55);
+}
+
+.product-shell .sidebar nav a.active .nav-item-sub {
+  color: var(--ui-text-2);
+}
+
+.product-shell .sidebar nav a.active > svg {
+  color: var(--ui-accent-bright);
+}
+
+.product-shell .topbar .breadcrumb {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.product-shell .topbar .breadcrumb-en {
+  font-size: 12.5px;
+  color: var(--ui-muted);
+  font-weight: 400;
+}
+
+.product-shell .gs-icon-link {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  color: var(--ui-muted);
+  flex-shrink: 0;
+}
+
+.product-shell .gs-icon-link:hover {
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+}
+
+.product-shell .account-box {
+  border-top: 1px solid var(--ui-border);
+  padding: 14px 4px 2px;
+  color: var(--ui-text);
+}
+
+.product-shell .account-box .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-accent-bright);
+  font-weight: 700;
+}
+
+.product-shell .account-box strong {
+  color: var(--ui-text);
+}
+
+.product-shell .account-box small {
+  color: var(--ui-muted);
+}
+
+.product-shell .account-box button {
+  color: var(--ui-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.product-shell .account-box button:hover {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.product-shell .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 56px;
+  min-height: 56px;
+  padding: 0 24px;
+  background: var(--ui-topbar);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .topbar .breadcrumb {
+  color: var(--ui-muted);
+  font-size: 13px;
+}
+
+.product-shell .topbar .breadcrumb strong {
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
+.product-shell .nav-collapse,
+.product-shell .mobile-menu {
+  color: var(--ui-text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.product-shell .nav-collapse:hover,
+.product-shell .mobile-menu:hover {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+.product-shell .topbar .ws-search {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 9px;
+  height: 34px;
+  color: var(--ui-muted);
+  padding: 0 11px;
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell .topbar .ws-search:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+}
+
+.product-shell .ws-search kbd {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text-2);
+  border-radius: 5px;
+  padding: 2px 5px;
+  font-size: 10.5px;
+}
+
+.product-shell .topbar-right {
+  gap: 8px;
+}
+
+dialog.ws-palette,
+dialog.ws-drawer,
+dialog.asset-preview-dialog,
+.product-shell dialog {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 16px;
+  box-shadow: var(--ui-specular), var(--ui-shadow-lg);
+}
+
+dialog::backdrop {
+  background: var(--ui-backdrop);
+  backdrop-filter: blur(6px);
+}
+
+.ws-palette .ws-search-field {
+  background: var(--ui-well);
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-text);
+}
+
+.ws-palette .ws-search-field input {
+  background: transparent;
+  color: var(--ui-text);
+  border: 0;
+}
+
+.ws-palette a,
+.ws-palette button {
+  color: var(--ui-text-2);
+  border-radius: 8px;
+}
+
+.ws-palette a:hover,
+.ws-palette button:hover {
+  background: var(--ui-accent-soft);
+  color: var(--ui-text);
+}
+
+/* ==========================================================================
+   4. Clean Button Hierarchy (NO Blanket Purple Buttons!)
+   ========================================================================== */
+.product-shell :is(button, .button) {
+  border-radius: 9px;
+  font-weight: 550;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+/* Neutral default action button inside .catalog and .secondary anywhere */
+.product-shell .catalog button,
+.product-shell .catalog .button,
+.product-shell .catalog .secondary,
+.product-shell button.secondary,
+.product-shell .button.secondary,
+.product-shell .account-page button.secondary {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  box-shadow: var(--ui-specular);
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.product-shell .catalog button:hover:not(:disabled),
+.product-shell .catalog .button:hover:not(:disabled),
+.product-shell .catalog .secondary:hover:not(:disabled),
+.product-shell button.secondary:hover:not(:disabled),
+.product-shell .button.secondary:hover:not(:disabled),
+.product-shell .account-page button.secondary:hover:not(:disabled) {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+.product-shell .ops-product-thumb {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-muted);
+}
+
+/* Explicit Primary CTA buttons ONLY */
+.product-shell
+  :is(
+    button.primary,
+    .button.primary,
+    .catalog button.primary,
+    .catalog .button.primary,
+    .catalog form > button:not(.secondary):not([type="button"]),
+    .catalog fieldset > button:not(.secondary):not([type="button"])
+  ) {
+  background: var(--ui-accent-grad);
+  border: 1px solid transparent;
+  color: var(--ui-accent-fg);
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell
+  :is(
+    button.primary,
+    .button.primary,
+    .catalog button.primary,
+    .catalog .button.primary,
+    .catalog form > button:not(.secondary):not([type="button"]),
+    .catalog fieldset > button:not(.secondary):not([type="button"])
+  ):hover:not(:disabled) {
+  background: var(--ui-accent-grad-hover);
+  color: var(--ui-accent-fg);
+  text-decoration: none;
+}
+
+.product-shell :is(button, .button):disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* Form Controls */
+.product-shell
+  :is(
+    .catalog input:not([type="checkbox"]):not([type="radio"]),
+    .catalog textarea,
+    .catalog select,
+    .field input,
+    .field select,
+    select,
+    textarea
+  ) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 9px;
+  color: var(--ui-text);
+  font-size: 13px;
+}
+
+.product-shell
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]),
+    textarea,
+    select
+  ):focus {
+  border-color: var(--ui-accent-bright);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
+  outline: none;
+}
+
+.product-shell label,
+.product-shell .field label,
+.product-shell legend {
+  color: var(--ui-text-2);
+  font-weight: 550;
+}
+
+.product-shell input::placeholder,
+.product-shell textarea::placeholder {
+  color: var(--ui-muted);
+}
+
+.product-shell option {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+/* ==========================================================================
+   5. Universal Dark/Light Surfaces, Cards, Tables & Badges
+   ========================================================================== */
+.product-shell .content {
+  padding: 20px 26px 44px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.product-shell .content > *,
+.product-shell .catalog,
+.product-shell .sites-workspace,
+.product-shell .gs-studio-shell {
+  max-width: 1640px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.product-shell .sites-consent {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 10px;
+  color: var(--ui-text-2);
+  padding: 12px 14px;
+}
+
+.product-shell .studio-batch-bar {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-accent-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--ui-text);
+}
+
+.product-shell .asset-view-options > div {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  ) {
+  border-bottom: 1px solid var(--ui-border);
+  padding-bottom: 18px;
+}
+
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  )
+  :is(h1, h2) {
+  color: var(--ui-text);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.product-shell
+  :is(
+    .catalog-heading,
+    .ops-header,
+    .page-heading,
+    .project-heading,
+    .mission-hero
+  )
+  p {
+  color: var(--ui-muted);
+}
+
+.product-shell
+  :is(
+    .catalog-panel,
+    .panel,
+    .site-guide,
+    .ops-table-panel,
+    .fact-register,
+    .usage-ledger,
+    .member-table,
+    .mission-body .mission-panel,
+    .inquiry-reading-layout > .inquiry-letter,
+    .inquiry-reading-layout > .inquiry-followup,
+    .account-page .panel,
+    .account-page .settings-section,
+    .asset-tile,
+    .design-card,
+    .journey-card,
+    .studio-diff-box,
+    .studio-preview-pane,
+    .funnel-card,
+    .site-design-card,
+    .journey-step-card,
+    .ops-card
+  ) {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  color: var(--ui-text);
+}
+
+.product-shell
+  :is(
+    .guide-next,
+    .gap-quick-form,
+    .studio-subdetails,
+    .diag-panel,
+    .catalog-subpanel,
+    .result-document,
+    .result-finding,
+    .result-plan-card
+  ) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  color: var(--ui-text);
+}
+
+.product-shell :is(p, li, small, dd, dt) {
+  color: var(--ui-text-2);
+}
+
+.product-shell :is(strong, b, h1, h2, h3, h4) {
+  color: var(--ui-text);
+}
+
+/* Tables */
+.product-shell :is(table, .publish-table) {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.product-shell :is(th, .ops-colheads),
+.product-shell :is(.catalog, .ops-workspace, .inquiry-table, .publish-table, .account-page) th,
+.product-shell thead,
+.product-shell thead tr {
+  background: var(--ui-well);
+  color: var(--ui-muted);
+  border-color: var(--ui-border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.product-shell td {
+  color: var(--ui-text-2);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell tbody tr:hover,
+.product-shell .ops-product-line:hover {
+  background: var(--ui-surface-2);
+}
+
+/* Badges & Notices */
+.product-shell :is(.badge, .catalog-badge, .mission-state, .task-state) {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.product-shell
+  :is(
+    .badge.active,
+    .catalog-badge.confirmed,
+    .catalog-badge.confirmedPlan,
+    .catalog-badge.approved,
+    .catalog-badge.live,
+    .catalog-badge.resolved,
+    .catalog-badge.ready,
+    .mission-state.state-succeeded,
+    .task-state.state-succeeded
+  ) {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell
+  :is(
+    .catalog-badge.candidate,
+    .catalog-badge.draft,
+    .catalog-badge.unconfirmedPlan,
+    .catalog-badge.pending,
+    .catalog-badge.following,
+    .mission-state.state-queued,
+    .task-state.state-paused
+  ) {
+  background: var(--ui-warn-bg);
+  border-color: var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell
+  :is(
+    .catalog-badge.running,
+    .catalog-badge.ai,
+    .catalog-badge.new,
+    .mission-state.state-running,
+    .task-state.state-running,
+    .task-state.state-queued
+  ) {
+  background: var(--ui-info-bg);
+  border-color: var(--ui-info-border);
+  color: var(--ui-info);
+}
+
+.product-shell
+  :is(
+    .catalog-badge.blocked,
+    .catalog-badge.failed,
+    .catalog-badge.rejected,
+    .catalog-badge.spam,
+    .mission-state.state-failed,
+    .task-state.state-failed
+  ) {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.notice,
+.product-shell :is(.notice, .mission-feedback) {
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 13px;
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-2);
+}
+
+.notice.success,
+.product-shell .notice.success {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.notice.error,
+.product-shell .notice.error {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+/* S36: plan allowance reminder (80% used). */
+.notice.warning,
+.product-shell .notice.warning {
+  background: var(--ui-warn-bg);
+  border-color: var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+/* ==========================================================================
+   6. REDESIGNED LAYOUT #1: Agent Studio (/agent) — True 3-Pane AI Workbench
+   ========================================================================== */
+.product-shell[data-page="agent"] .content {
+  padding: 18px 24px 24px;
+}
+
+.product-shell .agent-mast {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  min-height: 54px;
+  padding: 0 0 16px;
+}
+
+.product-shell .agent-mast-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+}
+
+.product-shell .agent-mast h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ui-text);
+  margin: 0;
+}
+
+.product-shell .agent-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ui-ok-bg);
+  border: 1px solid var(--ui-ok-border);
+  color: var(--ui-ok);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.product-shell .agent-live-pill .live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ui-ok);
+  box-shadow: 0 0 8px var(--ui-ok);
+}
+
+.product-shell .agent-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 4px 8px 4px 12px;
+}
+
+.product-shell .agent-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ui-muted);
+  margin: 0;
+}
+
+.product-shell .agent-picker select {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 7px;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-mast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.product-shell .agent-preview-link {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+/* Outer 3-pane Studio Frame */
+.product-shell .agent-studio {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+}
+
+.product-shell .agent-studio .task-split {
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr) 348px;
+  height: calc(100dvh - 156px);
+  min-height: 600px;
+}
+
+/* Left Rail: Task Feed */
+.product-shell .agent-studio .task-navigation {
+  background: var(--ui-rail);
+  border-right: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-center-heading {
+  padding: 16px 16px 12px;
+}
+
+.product-shell .agent-studio .task-center-heading h2 {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio .task-center-heading > span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Filter Pill Segmented Grid (NO purple blocks!) */
+.product-shell .agent-studio .task-toolbar {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-toolbar > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-toolbar button {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--ui-muted);
+  border-radius: 7px;
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  justify-content: space-between;
+}
+
+.product-shell .agent-studio .task-toolbar button:hover {
+  background: var(--ui-surface);
+  color: var(--ui-text-2);
+}
+
+.product-shell .agent-studio .task-toolbar button[aria-pressed="true"] {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+  font-weight: 600;
+  box-shadow: var(--ui-specular);
+}
+
+.product-shell .agent-studio .task-toolbar button span {
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+/* Task Feed Cards */
+.product-shell .agent-studio .task-index {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.product-shell .agent-studio button.task-index-item {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 62px;
+  padding: 11px 11px;
+  text-align: left;
+  background: transparent;
+  color: var(--ui-text);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.product-shell .agent-studio button.task-index-item:hover {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+}
+
+.product-shell .agent-studio button.task-index-item[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  box-shadow: inset 3px 0 0 var(--ui-accent-bright);
+}
+
+.product-shell .agent-studio .task-index-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  margin-top: 1px;
+}
+
+.product-shell .agent-studio .task-index-icon.state-succeeded {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell .agent-studio .task-index-icon.state-failed {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.product-shell .agent-studio .task-index-icon.state-paused {
+  background: var(--ui-warn-bg);
+  border-color: var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell .agent-studio .task-index-icon.state-running,
+.product-shell .agent-studio .task-index-icon.state-queued {
+  background: var(--ui-info-bg);
+  border-color: var(--ui-info-border);
+  color: var(--ui-info);
+}
+
+.product-shell .agent-studio .task-index-copy strong {
+  color: var(--ui-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.product-shell .agent-studio .task-index-copy small {
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.product-shell .agent-studio .task-history-footer {
+  background: var(--ui-well);
+  border-top: 1px solid var(--ui-border);
+  padding: 12px 14px;
+}
+
+.product-shell .agent-studio .task-pagination button {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  min-height: 28px;
+  padding: 4px 10px;
+}
+
+/* Center Stage: Artifact & Inspector */
+.product-shell .agent-studio .task-detail.studio-run {
+  background: var(--ui-surface);
+}
+
+.product-shell .agent-studio .task-detail > header {
+  padding: 22px 26px 14px;
+}
+
+.product-shell .agent-studio .task-detail > header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ui-text);
+}
+
+/* Clean Underline Tabs (NO purple blocks!) */
+.product-shell .agent-studio .task-result-tabs {
+  gap: 20px;
+  padding: 0 26px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-result-tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 550;
+  min-height: 42px;
+  padding: 10px 2px;
+}
+
+.product-shell .agent-studio .task-result-tabs button:hover {
+  background: transparent;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio .task-result-tabs button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--ui-text);
+  border-bottom-color: var(--ui-accent-bright);
+  font-weight: 650;
+}
+
+.product-shell .agent-studio .task-result-tabs button span {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  color: var(--ui-text-2);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.product-shell .agent-studio .task-result-tabs > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: var(--ui-accent-soft);
+  border: 1px solid var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.product-shell .agent-studio .task-result-tabs > a:hover {
+  background: var(--ui-accent);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.product-shell .agent-studio .task-canvas {
+  padding: 20px 26px 28px;
+}
+
+.product-shell .agent-studio .task-canvas > .task-result-intro {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  margin-bottom: 16px;
+}
+
+.product-shell .agent-studio .result-category button {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  box-shadow: none;
+  border-radius: 999px;
+  padding: 4px 11px;
+  min-height: 28px;
+  font-size: 11.5px;
+}
+
+.product-shell .agent-studio .result-category button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio .task-diagnostics {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-diagnostics dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.product-shell .agent-studio .task-diagnostics dl > div {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-diagnostics dd {
+  color: var(--ui-text);
+  font-weight: 650;
+  font-size: 15px;
+}
+
+/* Right Rail: Dark Mission Composer */
+.product-shell .agent-studio .task-control {
+  background: var(--ui-rail);
+  border-left: 1px solid var(--ui-border);
+  padding: 18px 20px;
+}
+
+.product-shell .agent-studio .task-control > header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-control h2 {
+  color: var(--ui-text);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.product-shell .agent-studio .work-indicator {
+  width: 8px;
+  height: 8px;
+  background: var(--ui-ok);
+  box-shadow: 0 0 10px var(--ui-ok);
+}
+
+.product-shell .agent-studio .task-context {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-shell .agent-studio .task-context .task-problem {
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--ui-warn-bg);
+  border: 1px solid var(--ui-warn-border);
+  color: var(--ui-warn);
+  font-size: 12px;
+}
+
+.product-shell .agent-studio .task-composer {
+  padding: 18px 0;
+  gap: 14px;
+}
+
+.product-shell .agent-studio .task-composer :is(input, textarea, select) {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-text);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 12.5px;
+}
+
+.product-shell .agent-studio .task-composer > button.primary {
+  width: 100%;
+  min-height: 40px;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 2x2 Bento Handoff Dock in Right Rail */
+.product-shell .agent-studio .task-control .agent-handoffs {
+  padding: 16px 0 0;
+  margin-top: auto;
+  border-top: 1px solid var(--ui-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.product-shell .agent-studio .task-control .agent-handoffs h3 {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ui-muted);
+  margin: 0 0 2px;
+}
+
+.product-shell .agent-studio .task-control .agent-handoffs a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-2);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.product-shell .agent-studio .task-control .agent-handoffs a:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   7. REDESIGNED LAYOUT #2: Sites Portfolio Grid & Full-Width Site Studio
+   ========================================================================== */
+.product-shell .studio-site-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.product-shell .studio-site-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px 16px;
+  align-items: start;
+  padding: 20px;
+  border-radius: 15px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.product-shell .studio-site-row:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--ui-specular), var(--ui-shadow-md);
+}
+
+.product-shell .studio-site-row .sites-brand {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 650;
+  background: var(--ui-accent);
+  color: var(--ui-accent-fg);
+  box-shadow: none;
+}
+
+.product-shell .studio-site-row .catalog-actions {
+  grid-column: 1 / -1;
+}
+
+.product-shell .studio-site-row .studio-site-links {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-border);
+}
+
+.product-shell .studio-site-row .studio-site-links > a.button {
+  margin-left: auto;
+  color: var(--ui-text);
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+}
+
+.product-shell .studio-site-row .studio-site-links > a.button:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-border-glow);
+  color: var(--ui-text);
+}
+
+/* Full-Width Site Workspace: Horizontal Sticky Pill Tab Bar ABOVE Full Canvas */
+
+/* Site Studio KPI Strip (4 Bento Tiles) */
+.product-shell .studio-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.product-shell .studio-metrics > button {
+  min-height: 82px;
+  padding: 15px 18px;
+  border-radius: 13px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-specular), var(--ui-shadow-sm);
+  color: var(--ui-text-2);
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-shell .studio-metrics > button:hover {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-glow);
+}
+
+.product-shell .studio-metrics strong {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   8. REDESIGNED LAYOUT #3: Bento Executive Mission Overview (/)
+   ========================================================================== */
+
+.product-shell .stage-symbol {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  color: var(--ui-muted);
+}
+
+.product-shell .stage-symbol.done {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+/* ==========================================================================
+   9. Operations, Inquiries Funnel, Asset Library, Journey & Editor Polish
+   ========================================================================== */
+.product-shell .ops-status-tabs {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.product-shell .ops-status-tabs button,
+.product-shell .asset-filters button,
+.product-shell .asset-view-options button {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--ui-muted);
+}
+
+.product-shell .ops-status-tabs button:hover,
+.product-shell .asset-filters button:hover,
+.product-shell .asset-view-options button:hover {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+
+.product-shell .ops-status-tabs button[aria-pressed="true"],
+.product-shell .asset-filters button[aria-pressed="true"],
+.product-shell .catalog .asset-filters button[aria-pressed="true"],
+.product-shell .asset-view-options button[aria-pressed="true"],
+.product-shell .catalog .asset-view-options button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
+.product-shell .catalog .asset-thumbnail {
+  background: var(--ui-well);
+}
+
+.product-shell .catalog .asset-name,
+.product-shell .catalog .asset-menu-trigger,
+.product-shell .catalog .asset-thumbnail {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--ui-text);
+}
+
+.product-shell .catalog .asset-menu-trigger:hover,
+.product-shell .catalog .asset-menu-trigger[aria-expanded="true"] {
+  background: var(--ui-surface-2);
+}
+
+.product-shell .catalog .asset-menu-content {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 11px;
+  box-shadow: var(--ui-shadow-md);
+}
+
+.product-shell .catalog .asset-menu-content :is(a, button) {
+  background: transparent;
+  color: var(--ui-text-2);
+  border: 0;
+  box-shadow: none;
+}
+
+.product-shell .catalog .asset-menu-content :is(a, button):hover {
+  background: var(--ui-surface-hover);
+  color: var(--ui-text);
+}
+
+.product-shell .catalog .asset-delete {
+  color: var(--ui-danger);
+}
+
+/* Site Journey, Design Proposals, Empty States & Agent Results Dark/Light Polish */
+.product-shell
+  :is(
+    .design-workspace,
+    .proposal,
+    .creation-surface,
+    .site-guide,
+    .journey-step,
+    .journey-option,
+    .journey-shell,
+    .journey-panel,
+    .design-proposal,
+    .design-option,
+    .catalog-empty,
+    .studio-empty,
+    .mission-empty,
+    .creation-empty
+  ) {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+.product-shell .design-selected {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-text);
+}
+
+.product-shell .proposal-canvas {
+  background: var(--ui-well);
+}
+
+.product-shell .proposal-issues {
+  background: var(--ui-warn-bg);
+  border-top: 1px solid var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell .creation-steps li > span,
+.product-shell .guide-index {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text-2);
+}
+
+.product-shell .is-done .guide-index {
+  background: var(--ui-ok-bg);
+  border-color: var(--ui-ok-border);
+  color: var(--ui-ok);
+}
+
+.product-shell .creation-steps li[aria-current="step"] > span,
+.product-shell .is-current .guide-index {
+  background: var(--ui-accent-grad);
+  border-color: transparent;
+  color: var(--ui-accent-fg);
+}
+
+.product-shell .creation-surface input:not([type="radio"]):not([type="checkbox"]),
+.product-shell .creation-surface textarea,
+.product-shell .creation-surface select {
+  background: var(--ui-well);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+}
+
+.product-shell .site-creation button.secondary,
+.product-shell .project-heading .button.secondary {
+  background: var(--ui-surface-2);
+  border-color: var(--ui-border-strong);
+  color: var(--ui-text);
+}
+
+.product-shell .site-creation button.primary,
+.product-shell .guide-primary,
+.product-shell .site-guide .guide-next > button,
+.product-shell .site-guide .guide-next > a.button {
+  background: var(--ui-accent-grad);
+  border-color: transparent;
+  color: var(--ui-accent-fg);
+  box-shadow: var(--ui-accent-shadow);
+}
+
+.product-shell .site-creation button.primary:hover:not(:disabled),
+.product-shell .guide-primary:hover:not(:disabled),
+.product-shell .site-guide .guide-next > button:hover:not(:disabled),
+.product-shell .site-guide .guide-next > a.button:hover:not(:disabled) {
+  background: var(--ui-accent-grad-hover);
+  color: var(--ui-accent-fg);
+}
+
+.product-shell .agent-studio .result-unit-picker select {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 8px;
+  color: var(--ui-text);
+  padding: 7px 12px;
+}
+
+.product-shell .agent-studio button.result-finding {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--ui-text);
+}
+
+.product-shell .agent-studio button.result-finding:hover {
+  background: var(--ui-surface-2);
+}
+
+.product-shell .agent-studio .finding-level {
+  background: var(--ui-warn-bg);
+  border: 1px solid var(--ui-warn-border);
+  color: var(--ui-warn);
+}
+
+.product-shell .agent-studio .finding-level.error {
+  background: var(--ui-danger-bg);
+  border: 1px solid var(--ui-danger-border);
+  color: var(--ui-danger);
+}
+
+.product-shell .agent-studio .result-screenshots img,
+.product-shell .agent-studio .result-image-error {
+  background: var(--ui-well);
+  border-color: var(--ui-border);
+}
+
+.product-shell .proposal-view-tabs button {
+  background: var(--ui-well);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  box-shadow: none;
+}
+
+.product-shell .proposal-view-tabs button[aria-pressed="true"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-border);
+  color: var(--ui-text);
+}
+
+/* Funnel Cards — clean architectural surface (no gradient stripe) */
+.product-shell .funnel-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+/* Keep Storefront Preview Iframes Neutral White */
+.product-shell iframe {
+  background: #ffffff;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 10px;
+}
+
+.product-shell .provider-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.product-shell .studio-preflight.is-ready,
+.product-shell .diag-list .is-ok {
+  color: var(--ui-ok);
+}
+
+.product-shell .studio-preflight.is-blocked,
+.product-shell .diag-list .is-fail {
+  color: var(--ui-danger);
+}
+
+/* ==========================================================================
+   10. Responsive Breakpoints (1100px & 760px)
+   ========================================================================== */
+@media (max-width: 1180px) {
+.product-shell .agent-studio .task-split {
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
+  }
+  .product-shell .agent-studio .task-diagnostics dl {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+.product-shell .main-shell {
+    margin-left: 0;
+    width: 100%;
+  }
+  .product-shell .mission-metrics,
+  .product-shell .studio-metrics,
+  .product-shell .mission-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .product-shell .agent-studio .task-split {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .product-shell .agent-studio .task-mobile-switch {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-rail);
+  }
+  .product-shell .agent-studio .task-mobile-switch button {
+    flex: 1;
+    background: transparent;
+    border: 1px solid transparent;
+    box-shadow: none;
+    color: var(--ui-muted);
+  }
+  .product-shell .agent-studio .task-mobile-switch button[aria-pressed="true"] {
+    background: var(--ui-accent-soft);
+    border-color: var(--ui-accent-border);
+    color: var(--ui-text);
+  }
+  .product-shell .agent-studio[data-panel="tasks"] .task-detail,
+  .product-shell .agent-studio[data-panel="tasks"] .task-control,
+  .product-shell .agent-studio[data-panel="result"] .task-navigation,
+  .product-shell .agent-studio[data-panel="result"] .task-control,
+  .product-shell .agent-studio[data-panel="controls"] .task-navigation,
+  .product-shell .agent-studio[data-panel="controls"] .task-detail {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+.product-shell .topbar {
+    padding: 0 14px;
+    height: 52px;
+    min-height: 52px;
+  }
+  .product-shell .content {
+    padding: 18px 14px 36px;
+  }
+  .product-shell .studio-site-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .auth-page .auth-form {
+    padding: 26px 20px;
+  }
+}

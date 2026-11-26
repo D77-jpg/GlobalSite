@@ -15,6 +15,16 @@ export async function connectDatabase(uri = config.mongo) {
 }
 export async function migrate() {
   for (const model of models) await model.init();
+  // S37 §4.9-2: record S35–S36 schema/index additions (Asset/FactSheet originKey
+  // unique partial indexes, Site demoMode/autoImages/logoDesign, UsageRecord
+  // absorbed/unknownReason, AgentRun invalidReason) created via model.init().
+  await runIdentity(() =>
+    Migration.updateOne(
+      { key: "s35-s36-v1" },
+      { $setOnInsert: { completedAt: new Date() } },
+      { upsert: true },
+    ),
+  );
   await runIdentity(() =>
     Migration.updateOne(
       { key: "j1-s7-crm-v1" },
